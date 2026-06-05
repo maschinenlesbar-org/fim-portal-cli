@@ -9,6 +9,11 @@
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
 
+    /* Load Node's ambient globals (process, Buffer, setTimeout) and built-in
+       modules (node:http, node:test, ...). Required explicitly under TS 6.0,
+       which no longer auto-includes every @types/* package. */
+    "types": ["node"],
+
     /* Emit */
     "outDir": "dist",
     "rootDir": ".",
