@@ -88,6 +88,12 @@ test("--base-url is forwarded to the client", async () => {
   assert.equal(new URL(cli.mt.last().url).host, "schema.fim.fitko.net");
 });
 
+test("--max-response-bytes is forwarded to the transport", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  await run(["--max-response-bytes", "2048", "schemas", "search"], cli.deps);
+  assert.equal(cli.mt.last().maxResponseBytes, 2048);
+});
+
 test("a 404 from the API maps to exit code 4 and an error message", async () => {
   const cli = makeCli(() => jsonResponse({ detail: "Schema not found" }, 404));
   const code = await run(["--max-retries", "0", "schemas", "get", "NOPE", "1.0"], cli.deps);

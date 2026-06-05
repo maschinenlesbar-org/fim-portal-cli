@@ -49,6 +49,7 @@ commands stream raw bytes (XML/PDF/CSV) to stdout or to a file via `-o/--output`
 | `--timeout <ms>` | Per-request timeout (default `30000`) |
 | `--user-agent <ua>` | `User-Agent` header value |
 | `--max-retries <n>` | Retries for transient `429`/`503` responses (default `2`) |
+| `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB) |
 | `--compact` | Print JSON on a single line |
 | `-o, --output <file>` | For downloads: write bytes to a file instead of stdout |
 
@@ -150,7 +151,8 @@ try {
 new FimPortalClient({
   baseUrl: "https://schema.fim.fitko.net",
   timeoutMs: 15_000,
-  maxRetries: 3,          // 429 / 503 are retried with linear backoff
+  maxRetries: 3,             // 429 / 503 are retried with linear backoff
+  maxResponseBytes: 50 << 20, // abort responses larger than 50 MiB (0 = unlimited)
   userAgent: "my-app/1.0",
   transport: customTransport, // inject your own HTTP transport (see below)
 });

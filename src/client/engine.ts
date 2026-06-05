@@ -28,9 +28,16 @@ export interface EngineOptions {
   maxRetries?: number;
   /** Base backoff between retries in milliseconds (grows linearly). */
   retryDelayMs?: number;
+  /**
+   * Hard cap on response body size in bytes (defends against memory exhaustion
+   * from a hostile/buggy endpoint). Defaults to 100 MiB; set to 0 for no limit.
+   */
+  maxResponseBytes?: number;
   /** Injectable sleep, primarily for deterministic tests. */
   sleep?: (ms: number) => Promise<void>;
 }
+
+const DEFAULT_MAX_RESPONSE_BYTES = 100 * 1024 * 1024;
 
 const realSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -42,6 +49,7 @@ export class RequestEngine {
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly retryDelayMs: number;
+  private readonly maxResponseBytes: number;
   private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(options: EngineOptions = {}) {
@@ -51,6 +59,7 @@ export class RequestEngine {
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.maxRetries = options.maxRetries ?? 2;
     this.retryDelayMs = options.retryDelayMs ?? 200;
+    this.maxResponseBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
     this.sleep = options.sleep ?? realSleep;
   }
 
@@ -81,6 +90,7 @@ export class RequestEngine {
         url,
         headers,
         timeoutMs: this.timeoutMs,
+        ...(this.maxResponseBytes > 0 ? { maxResponseBytes: this.maxResponseBytes } : {}),
       });
 
       const status = response.status;

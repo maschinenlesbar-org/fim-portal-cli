@@ -33,6 +33,9 @@ before(async () => {
       } else if (req.url === "/boom") {
         res.writeHead(500, { "content-type": "application/json" });
         res.end(JSON.stringify({ detail: "kaboom" }));
+      } else if (req.url === "/big") {
+        res.writeHead(200, { "content-type": "application/octet-stream" });
+        res.end(Buffer.alloc(1000, 0x61)); // 1000 'a' bytes
       } else {
         res.writeHead(404).end("nope");
       }
@@ -86,4 +89,28 @@ test("nodeHttpTransport rejects with FimNetworkError on an invalid URL", async (
     () => nodeHttpTransport({ method: "GET", url: "not-a-url" }),
     (err: unknown) => err instanceof FimNetworkError,
   );
+});
+
+test("nodeHttpTransport rejects unsupported protocols before connecting", async () => {
+  await assert.rejects(
+    () => nodeHttpTransport({ method: "GET", url: "file:///etc/passwd" }),
+    (err: unknown) => err instanceof FimNetworkError && /Unsupported protocol/.test(err.message),
+  );
+});
+
+test("nodeHttpTransport aborts and rejects when the body exceeds maxResponseBytes", async () => {
+  await assert.rejects(
+    () => nodeHttpTransport({ method: "GET", url: `${base}/big`, maxResponseBytes: 100 }),
+    (err: unknown) => err instanceof FimNetworkError && /maxResponseBytes/.test(err.message),
+  );
+});
+
+test("nodeHttpTransport returns the body when it is within maxResponseBytes", async () => {
+  const res = await nodeHttpTransport({
+    method: "GET",
+    url: `${base}/big`,
+    maxResponseBytes: 10_000,
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.length, 1000);
 });

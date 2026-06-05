@@ -19,6 +19,8 @@ export interface HttpRequest {
   body?: string | Buffer;
   /** Per-request timeout in milliseconds. */
   timeoutMs?: number;
+  /** Hard cap on the response body size in bytes; the request aborts if exceeded. */
+  maxResponseBytes?: number;
 }
 
 export interface HttpResponse {
@@ -44,8 +46,17 @@ export const nodeHttpTransport: Transport = (request) =>
       return;
     }
 
+    // Only http/https are supported. Reject anything else up front with a clear,
+    // typed error instead of letting Node throw an opaque ERR_INVALID_PROTOCOL
+    // (and so this never reaches the file:/ftp:/etc. drivers).
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      reject(new FimNetworkError(`Unsupported protocol "${url.protocol}" in URL: ${request.url}`));
+      return;
+    }
+
     const isHttps = url.protocol === "https:";
     const driver = isHttps ? https : http;
+    const maxBytes = request.maxResponseBytes;
 
     const req = driver.request(
       url,
@@ -55,17 +66,32 @@ export const nodeHttpTransport: Transport = (request) =>
       },
       (res) => {
         const chunks: Buffer[] = [];
-        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        let received = 0;
+        let aborted = false;
+
+        res.on("data", (chunk: Buffer) => {
+          if (aborted) return;
+          received += chunk.length;
+          if (maxBytes !== undefined && received > maxBytes) {
+            aborted = true;
+            res.destroy();
+            reject(new FimNetworkError(`Response exceeded maxResponseBytes (${maxBytes})`));
+            return;
+          }
+          chunks.push(chunk);
+        });
         res.on("end", () => {
+          if (aborted) return;
           resolve({
             status: res.statusCode ?? 0,
             headers: res.headers,
             body: Buffer.concat(chunks),
           });
         });
-        res.on("error", (err) =>
-          reject(new FimNetworkError(`Response stream error: ${err.message}`, { cause: err })),
-        );
+        res.on("error", (err) => {
+          if (aborted) return; // we already rejected with the size-cap error
+          reject(new FimNetworkError(`Response stream error: ${err.message}`, { cause: err }));
+        });
       },
     );
 

@@ -90,6 +90,27 @@ test("invalid JSON in a 2xx response throws FimParseError", async () => {
   await assert.rejects(() => engine.getJson("/api/v1/schemas"), FimParseError);
 });
 
+test("a default maxResponseBytes is passed to the transport", async () => {
+  const mt = makeMockTransport(() => jsonResponse({}));
+  const engine = new RequestEngine({ transport: mt.transport });
+  await engine.getJson("/x");
+  assert.equal(mt.last().maxResponseBytes, 100 * 1024 * 1024);
+});
+
+test("a custom maxResponseBytes is forwarded to the transport", async () => {
+  const mt = makeMockTransport(() => jsonResponse({}));
+  const engine = new RequestEngine({ transport: mt.transport, maxResponseBytes: 4096 });
+  await engine.getJson("/x");
+  assert.equal(mt.last().maxResponseBytes, 4096);
+});
+
+test("maxResponseBytes=0 disables the cap (no value sent to transport)", async () => {
+  const mt = makeMockTransport(() => jsonResponse({}));
+  const engine = new RequestEngine({ transport: mt.transport, maxResponseBytes: 0 });
+  await engine.getJson("/x");
+  assert.equal(mt.last().maxResponseBytes, undefined);
+});
+
 test("FimApiError.isRetryable reflects 429/503", () => {
   const e1 = new FimApiError({ status: 429, url: "u", method: "GET", body: "" });
   const e2 = new FimApiError({ status: 404, url: "u", method: "GET", body: "" });
