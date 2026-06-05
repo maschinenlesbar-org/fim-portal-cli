@@ -3,9 +3,14 @@
 
 import { Command, InvalidArgumentError, Option } from "commander";
 import type { CliDeps } from "./io.js";
+import { FimError } from "../client/errors.js";
 import type { EngineOptions, RawResponse } from "../client/engine.js";
 import type { QueryParams } from "../client/query.js";
-import { FreigabeStatusValues } from "../client/enums.js";
+import {
+  FreigabeStatusValues,
+  XdfVersionValues,
+  DatenfelderSearchOrderValues,
+} from "../client/enums.js";
 
 /** commander value-parser: a non-negative integer. */
 export function parseIntArg(value: string): number {
@@ -14,6 +19,36 @@ export function parseIntArg(value: string): number {
     throw new InvalidArgumentError("Expected a non-negative integer.");
   }
   return n;
+}
+
+/**
+ * Build a commander value-parser for an integer constrained to [min, max].
+ * Thrown at parse time, so commander prints a clear message and exits.
+ */
+export function parseBoundedInt(min: number, max?: number): (value: string) => number {
+  return (value: string) => {
+    const n = Number(value);
+    if (!Number.isInteger(n)) throw new InvalidArgumentError("Expected an integer.");
+    if (n < min) throw new InvalidArgumentError(`Must be >= ${min}.`);
+    if (max !== undefined && n > max) throw new InvalidArgumentError(`Must be <= ${max}.`);
+    return n;
+  };
+}
+
+/**
+ * Validate a positional argument against an allowed set (commander does not
+ * support .choices() on positional args). Throws a FimError so run() prints a
+ * clear message and exits 1.
+ */
+export function assertEnum<T extends string>(
+  value: string,
+  allowed: readonly T[],
+  argName: string,
+): T {
+  if (!(allowed as readonly string[]).includes(value)) {
+    throw new FimError(`Invalid ${argName} "${value}". Expected one of: ${allowed.join(", ")}.`);
+  }
+  return value as T;
 }
 
 /** commander value-parser/accumulator for repeatable string options. */
@@ -113,8 +148,8 @@ export function action(
 /** Add the shared offset/limit pagination options to a command. */
 export function addPagination(cmd: Command): Command {
   return cmd
-    .option("--offset <n>", "offset within the total dataset", parseIntArg)
-    .option("--limit <n>", "max number of results (1..200)", parseIntArg);
+    .option("--offset <n>", "offset within the total dataset (>= 0)", parseIntArg)
+    .option("--limit <n>", "max number of results (1..200)", parseBoundedInt(1, 200));
 }
 
 /** Add an Option constrained to a fixed set of choices. */
@@ -167,19 +202,10 @@ export function addCommonDatenfelderSearchOptions(cmd: Command): Command {
       .option("--versionshinweis <text>", "filter by Versionshinweis")
       .option("--updated-since <iso>", "filter by last-update timestamp (ISO-8601)")
       .addOption(
-        choiceOption("--xdf-version <v>", "filter by XDatenfelder version", ["2.0", "3.0.0"]),
+        choiceOption("--xdf-version <v>", "filter by XDatenfelder version", XdfVersionValues),
       )
       .option("--fts-query <q>", "full-text search query")
       .option("--is-latest", "only results that are the latest version of their kind")
-      .addOption(
-        choiceOption("--order-by <order>", "result order", [
-          "geaendert_datum_zeit_desc",
-          "geaendert_datum_zeit_asc",
-          "name_asc",
-          "name_desc",
-          "id_asc",
-          "id_desc",
-        ]),
-      ),
+      .addOption(choiceOption("--order-by <order>", "result order", DatenfelderSearchOrderValues)),
   );
 }

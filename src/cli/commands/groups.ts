@@ -9,6 +9,7 @@ import {
   renderRaw,
 } from "../shared.js";
 import type { GroupSearchParams } from "../../client/params.js";
+import { GruppeSucheInValues } from "../../client/enums.js";
 
 export function registerGroupCommands(program: Command, deps: CliDeps): void {
   const groups = program.command("groups").description("Datenfeldgruppen (data groups)");
@@ -17,11 +18,11 @@ export function registerGroupCommands(program: Command, deps: CliDeps): void {
     .command("search")
     .description("Search/filter data groups")
     .addOption(
-      choiceOption("--suche-nur-in <module>", "restrict full-text search to a module", [
-        "Rechtsgrundlagen",
-        "Status_gesetzt_durch",
-        "Versionshinweis",
-      ]),
+      choiceOption(
+        "--suche-nur-in <module>",
+        "restrict full-text search to a module",
+        GruppeSucheInValues,
+      ),
     );
   addCommonDatenfelderSearchOptions(search).action(
     action(deps, async ({ client, global, opts }) => {

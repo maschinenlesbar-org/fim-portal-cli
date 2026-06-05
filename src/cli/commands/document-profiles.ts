@@ -11,7 +11,12 @@ import {
   renderRaw,
 } from "../shared.js";
 import type { DocumentProfileSearchParams } from "../../client/params.js";
-import { DokumentartValues } from "../../client/enums.js";
+import {
+  DokumentartValues,
+  SteckbriefSucheInValues,
+  XdfVersionValues,
+  DatenfelderSearchOrderValues,
+} from "../../client/enums.js";
 
 export function registerDocumentProfileCommands(program: Command, deps: CliDeps): void {
   const dp = program
@@ -36,27 +41,18 @@ export function registerDocumentProfileCommands(program: Command, deps: CliDeps)
     .option("--bezug <text>", "filter by Bezug")
     .option("--fts-query <q>", "full-text search query")
     .addOption(
-      choiceOption("--suche-nur-in <module>", "restrict full-text search to a module", [
-        "Rechtsgrundlagen",
-        "Status_gesetzt_durch",
-        "Versionshinweis",
-      ]),
+      choiceOption(
+        "--suche-nur-in <module>",
+        "restrict full-text search to a module",
+        SteckbriefSucheInValues,
+      ),
     )
     .option("--versionshinweis <text>", "filter by Versionshinweis")
     .option("--updated-since <iso>", "filter by last-update timestamp (ISO-8601)")
-    .addOption(choiceOption("--xdf-version <v>", "filter by XDatenfelder version", ["2.0", "3.0.0"]))
+    .addOption(choiceOption("--xdf-version <v>", "filter by XDatenfelder version", XdfVersionValues))
     .option("--stichwort <text>", "filter by Stichwort (XDF3 only)")
     .option("--is-latest", "only the latest version of each kind")
-    .addOption(
-      choiceOption("--order-by <order>", "result order", [
-        "geaendert_datum_zeit_desc",
-        "geaendert_datum_zeit_asc",
-        "name_asc",
-        "name_desc",
-        "id_asc",
-        "id_desc",
-      ]),
-    );
+    .addOption(choiceOption("--order-by <order>", "result order", DatenfelderSearchOrderValues));
   addPagination(search).action(
     action(deps, async ({ client, global, opts }) => {
       const params = pruneUndefined({

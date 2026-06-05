@@ -9,7 +9,7 @@ import {
   renderRaw,
 } from "../shared.js";
 import type { FieldSearchParams } from "../../client/params.js";
-import { FeldartValues, DatentypValues } from "../../client/enums.js";
+import { FeldartValues, DatentypValues, FeldSucheInValues } from "../../client/enums.js";
 
 export function registerFieldCommands(program: Command, deps: CliDeps): void {
   const fields = program.command("fields").description("Datenfelder (data fields)");
@@ -18,11 +18,11 @@ export function registerFieldCommands(program: Command, deps: CliDeps): void {
     .command("search")
     .description("Search/filter data fields")
     .addOption(
-      choiceOption("--suche-nur-in <module>", "restrict full-text search to a module", [
-        "Rechtsgrundlagen",
-        "Status_gesetzt_durch",
-        "Versionshinweis",
-      ]),
+      choiceOption(
+        "--suche-nur-in <module>",
+        "restrict full-text search to a module",
+        FeldSucheInValues,
+      ),
     )
     .addOption(choiceOption("--feldart <art>", "filter by Feldart", FeldartValues))
     .addOption(choiceOption("--datentyp <typ>", "filter by Datentyp", DatentypValues));

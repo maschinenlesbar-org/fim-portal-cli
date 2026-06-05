@@ -3,6 +3,7 @@ import type { CliDeps } from "../io.js";
 import {
   action,
   addPagination,
+  assertEnum,
   choiceOption,
   collectFreigabeStatus,
   pruneUndefined,
@@ -16,7 +17,6 @@ import {
   HandlungsformValues,
   DetaillierungsstufeValues,
   AnwendungsgebietValues,
-  type Detaillierungsstufe,
 } from "../../client/enums.js";
 
 export function registerProcessCommands(program: Command, deps: CliDeps): void {
@@ -109,29 +109,31 @@ function registerProcesses(program: Command, deps: CliDeps): void {
     .description("Get a specific process (stufe: 101..105)")
     .action(
       action(deps, async ({ client, global }, [id, version, stufe]) => {
-        renderJson(deps, global, await client.processes.get(id!, version!, stufe as Detaillierungsstufe));
+        const s = assertEnum(stufe!, DetaillierungsstufeValues, "Detaillierungsstufe");
+        renderJson(deps, global, await client.processes.get(id!, version!, s));
       }),
     );
 
-  const downloads: Array<[string, keyof typeof downloadMap]> = [
-    ["xprozess <id> <version> <stufe>", "downloadXprozess"],
-    ["report <id> <version> <stufe>", "downloadReport"],
-    ["visualization <id> <version> <stufe>", "downloadVisualization"],
-    ["visualization-display <id> <version> <stufe>", "downloadVisualizationDisplay"],
-  ];
   const downloadMap = {
     downloadXprozess: "Download the XProzess XML for a process",
     downloadReport: "Download the report XML for a process",
     downloadVisualization: "Download the visualization XML for a process",
     downloadVisualizationDisplay: "Download the display visualization XML for a process",
   } as const;
+  const downloads: Array<[string, keyof typeof downloadMap]> = [
+    ["xprozess <id> <version> <stufe>", "downloadXprozess"],
+    ["report <id> <version> <stufe>", "downloadReport"],
+    ["visualization <id> <version> <stufe>", "downloadVisualization"],
+    ["visualization-display <id> <version> <stufe>", "downloadVisualizationDisplay"],
+  ];
 
   for (const [signature, method] of downloads) {
     p.command(signature)
       .description(downloadMap[method])
       .action(
         action(deps, async ({ client, global }, [id, version, stufe]) => {
-          const res = await client.processes[method](id!, version!, stufe as Detaillierungsstufe);
+          const s = assertEnum(stufe!, DetaillierungsstufeValues, "Detaillierungsstufe");
+          const res = await client.processes[method](id!, version!, s);
           renderRaw(deps, global, res);
         }),
       );

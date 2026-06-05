@@ -9,6 +9,7 @@ import {
   renderRaw,
 } from "../shared.js";
 import type { SchemaSearchParams } from "../../client/params.js";
+import { SchemaSucheInValues } from "../../client/enums.js";
 
 export function registerSchemaCommands(program: Command, deps: CliDeps): void {
   const schemas = program.command("schemas").description("Datenschemata (XDatenfelder)");
@@ -20,12 +21,11 @@ export function registerSchemaCommands(program: Command, deps: CliDeps): void {
     .option("--bezeichnung <text>", "filter by Bezeichnung")
     .option("--stichwort <text>", "filter by Stichwort (XDF3 only)")
     .addOption(
-      choiceOption("--suche-nur-in <module>", "restrict full-text search to a module", [
-        "Rechtsgrundlagen",
-        "Status_gesetzt_durch",
-        "Versionshinweis",
-        "Stichwort",
-      ]),
+      choiceOption(
+        "--suche-nur-in <module>",
+        "restrict full-text search to a module",
+        SchemaSucheInValues,
+      ),
     );
   addCommonDatenfelderSearchOptions(search).action(
     action(deps, async ({ client, global, opts }) => {

@@ -1,6 +1,13 @@
 import { Command } from "commander";
 import type { CliDeps } from "../io.js";
-import { action, parseIntArg, pruneUndefined, renderJson, renderRaw } from "../shared.js";
+import {
+  action,
+  parseIntArg,
+  parseBoundedInt,
+  pruneUndefined,
+  renderJson,
+  renderRaw,
+} from "../shared.js";
 import type { CursorPagination } from "../../client/params.js";
 import type { FimPortalClient } from "../../client/client.js";
 
@@ -22,8 +29,8 @@ function registerEntity(
   cmd
     .command("list")
     .description(`List ${name} (cursor paginated)`)
-    .option("--cursor <n>", "pagination cursor", parseIntArg)
-    .option("--limit <n>", "max number of results", parseIntArg)
+    .option("--cursor <n>", "pagination cursor (>= 0)", parseIntArg)
+    .option("--limit <n>", "max number of results (1..200)", parseBoundedInt(1, 200))
     .action(
       action(deps, async ({ client, global, opts }) => {
         const params = pruneUndefined({

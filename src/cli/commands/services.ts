@@ -3,6 +3,7 @@ import type { CliDeps } from "../io.js";
 import {
   action,
   addPagination,
+  assertEnum,
   choiceOption,
   collect,
   collectFreigabeStatus,
@@ -16,10 +17,11 @@ import type {
 } from "../../client/params.js";
 import {
   LeistungSucheInValues,
+  LeistungSteckbriefSearchOrderValues,
+  LeistungStammtextSearchOrderValues,
   SpracheValues,
   BehoerdeValues,
   XzufiSourceValues,
-  type XzufiSource,
 } from "../../client/enums.js";
 
 export function registerServiceCommands(program: Command, deps: CliDeps): void {
@@ -57,7 +59,11 @@ function registerServiceProfiles(program: Command, deps: CliDeps): void {
     .option("--leistungsadressat <code>", "filter by Leistungsadressat (repeatable)", collect)
     .option("--ozg-themenfeld <field>", "filter by OZG Themenfeld (repeatable)", collect)
     .option("--ozg-id <id>", "filter by OZG id")
-    .addOption(choiceOption("--vollzugsbehoerde <code>", "filter by Vollzugsbehoerde", BehoerdeValues));
+    .addOption(choiceOption("--vollzugsbehoerde <code>", "filter by Vollzugsbehoerde", BehoerdeValues))
+    .option("--lagen-portalverbund <text>", "filter by Lagen (Portalverbund)")
+    .addOption(
+      choiceOption("--order-by <order>", "result order", LeistungSteckbriefSearchOrderValues),
+    );
   addPagination(search).action(
     action(deps, async ({ client, global, opts }) => {
       const params = pruneUndefined({
@@ -73,6 +79,7 @@ function registerServiceProfiles(program: Command, deps: CliDeps): void {
         freigabe_status: opts["freigabeStatus"],
         einheitlicher_ansprechpartner: opts["einheitlicherAnsprechpartner"],
         updated_since: opts["updatedSince"],
+        lagen_portalverbund: opts["lagenPortalverbund"],
         sdg: opts["sdg"],
         sdg_relevant: opts["sdgRelevant"],
         sprache: opts["sprache"],
@@ -80,6 +87,7 @@ function registerServiceProfiles(program: Command, deps: CliDeps): void {
         ozg_themenfeld: opts["ozgThemenfeld"],
         ozg_id: opts["ozgId"],
         vollzugsbehoerde: opts["vollzugsbehoerde"],
+        order_by: opts["orderBy"],
         offset: opts["offset"],
         limit: opts["limit"],
       }) as LeistungSteckbriefSearchParams;
@@ -136,7 +144,11 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .option("--einheitlicher-ansprechpartner", "only services with Einheitlicher Ansprechpartner")
     .addOption(choiceOption("--source <src>", "filter by XZuFi source", XzufiSourceValues))
     .option("--fts-query <q>", "full-text search query")
-    .addOption(choiceOption("--suche-nur-in <module>", "restrict full-text search", LeistungSucheInValues));
+    .addOption(choiceOption("--suche-nur-in <module>", "restrict full-text search", LeistungSucheInValues))
+    .option("--lagen-portalverbund <text>", "filter by Lagen (Portalverbund)")
+    .addOption(
+      choiceOption("--order-by <order>", "result order", LeistungStammtextSearchOrderValues),
+    );
   addPagination(search).action(
     action(deps, async ({ client, global, opts }) => {
       const params = pruneUndefined({
@@ -149,6 +161,7 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
         leistungstyp: opts["leistungstyp"],
         typisierung: opts["typisierung"],
         updated_since: opts["updatedSince"],
+        lagen_portalverbund: opts["lagenPortalverbund"],
         leistungsadressat: opts["leistungsadressat"],
         ozg_themenfeld: opts["ozgThemenfeld"],
         ozg_id: opts["ozgId"],
@@ -157,6 +170,7 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
         source: opts["source"],
         fts_query: opts["ftsQuery"],
         suche_nur_in: opts["sucheNurIn"],
+        order_by: opts["orderBy"],
         offset: opts["offset"],
         limit: opts["limit"],
       }) as LeistungStammtextSearchParams;
@@ -168,11 +182,8 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .description("Get a single Leistungsstammtext (source: leika|landesredaktion|pvog)")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source]) => {
-        renderJson(
-          deps,
-          global,
-          await client.serviceTexts.get(redaktionId!, leistungId!, source as XzufiSource),
-        );
+        const src = assertEnum(source!, XzufiSourceValues, "source");
+        renderJson(deps, global, await client.serviceTexts.get(redaktionId!, leistungId!, src));
       }),
     );
 
@@ -180,11 +191,8 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .description("Download the XZuFi XML for a Leistungsstammtext")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source]) => {
-        renderRaw(
-          deps,
-          global,
-          await client.serviceTexts.downloadXzufi(redaktionId!, leistungId!, source as XzufiSource),
-        );
+        const src = assertEnum(source!, XzufiSourceValues, "source");
+        renderRaw(deps, global, await client.serviceTexts.downloadXzufi(redaktionId!, leistungId!, src));
       }),
     );
 
@@ -192,10 +200,11 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .description("Export a Leistungsstammtext as PDF")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source, lang]) => {
+        const src = assertEnum(source!, XzufiSourceValues, "source");
         renderRaw(
           deps,
           global,
-          await client.serviceTexts.exportPdf(redaktionId!, leistungId!, source as XzufiSource, lang!),
+          await client.serviceTexts.exportPdf(redaktionId!, leistungId!, src, lang!),
         );
       }),
     );
@@ -204,11 +213,8 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .description("Get the parsed XZuFi JSON (INSTABLE per API docs)")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source]) => {
-        renderJson(
-          deps,
-          global,
-          await client.serviceTexts.parsedXzufi(redaktionId!, leistungId!, source as XzufiSource),
-        );
+        const src = assertEnum(source!, XzufiSourceValues, "source");
+        renderJson(deps, global, await client.serviceTexts.parsedXzufi(redaktionId!, leistungId!, src));
       }),
     );
 }

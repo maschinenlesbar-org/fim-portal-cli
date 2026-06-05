@@ -1,14 +1,21 @@
 import { Command } from "commander";
 import type { CliDeps } from "../io.js";
-import { action, parseIntArg, pruneUndefined, renderJson, renderRaw } from "../shared.js";
+import {
+  action,
+  parseIntArg,
+  parseBoundedInt,
+  pruneUndefined,
+  renderJson,
+  renderRaw,
+} from "../shared.js";
 import type { Pagination } from "../../client/params.js";
 
 export function registerMiscCommands(program: Command, deps: CliDeps): void {
   program
     .command("code-lists")
     .description("List the code lists referenced by data fields")
-    .option("--offset <n>", "offset within the total dataset", parseIntArg)
-    .option("--limit <n>", "max number of results", parseIntArg)
+    .option("--offset <n>", "offset within the total dataset (>= 0)", parseIntArg)
+    .option("--limit <n>", "max number of results (1..200)", parseBoundedInt(1, 200))
     .action(
       action(deps, async ({ client, global, opts }) => {
         const params = pruneUndefined({
@@ -36,14 +43,14 @@ export function registerMiscCommands(program: Command, deps: CliDeps): void {
     .action(
       action(deps, async ({ client, global, opts }) => {
         const params = pruneUndefined({
-          resource: opts["resource"] as string | undefined,
-          term: opts["term"] as string | undefined,
-          xdf_version: opts["xdfVersion"] as string | undefined,
-          order_by: opts["orderBy"] as string | undefined,
-          feldart: opts["feldart"] as string | undefined,
-          datentyp: opts["datentyp"] as string | undefined,
-          dokumentart: opts["dokumentart"] as string | undefined,
-          sprache: opts["sprache"] as string | undefined,
+          resource: opts["resource"],
+          term: opts["term"],
+          xdf_version: opts["xdfVersion"],
+          order_by: opts["orderBy"],
+          feldart: opts["feldart"],
+          datentyp: opts["datentyp"],
+          dokumentart: opts["dokumentart"],
+          sprache: opts["sprache"],
         }) as Record<string, string | undefined>;
         renderRaw(deps, global, await client.tools.searchCsvDownload(params));
       }),

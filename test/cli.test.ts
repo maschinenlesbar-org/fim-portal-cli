@@ -120,3 +120,104 @@ test("unknown command is a usage error (non-zero exit, no HTTP call)", async () 
   assert.notEqual(code, 0);
   assert.equal(cli.mt.calls.length, 0);
 });
+
+// ---- H1: service searches expose order_by and lagen_portalverbund ----
+
+test("service-profiles search forwards --order-by and --lagen-portalverbund", async () => {
+  const cli = makeCli(() => jsonResponse({ items: [] }));
+  const code = await run(
+    [
+      "service-profiles",
+      "search",
+      "--order-by",
+      "titel_asc",
+      "--lagen-portalverbund",
+      "Familie",
+    ],
+    cli.deps,
+  );
+  assert.equal(code, 0);
+  const q = new URL(cli.mt.last().url).searchParams;
+  assert.equal(q.get("order_by"), "titel_asc");
+  assert.equal(q.get("lagen_portalverbund"), "Familie");
+});
+
+test("service-profiles search rejects an order value from a different enum", async () => {
+  const cli = makeCli(() => jsonResponse({ items: [] }));
+  // "name_asc" is a Datenfelder order, not a Leistungsteckbrief order.
+  const code = await run(["service-profiles", "search", "--order-by", "name_asc"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+test("service-texts search forwards --order-by", async () => {
+  const cli = makeCli(() => jsonResponse(fx.stammtextSearchResult));
+  await run(["service-texts", "search", "--order-by", "relevance"], cli.deps);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("order_by"), "relevance");
+});
+
+// ---- H2: --limit is bounded to 1..200 ----
+
+test("--limit accepts a value within 1..200", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["schemas", "search", "--limit", "50"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("limit"), "50");
+});
+
+for (const bad of ["0", "201", "999999", "-1", "1.5"]) {
+  test(`--limit rejects ${bad}`, async () => {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["schemas", "search", "--limit", bad], cli.deps);
+    assert.notEqual(code, 0);
+    assert.equal(cli.mt.calls.length, 0);
+  });
+}
+
+test("organizational-units --limit is also bounded", async () => {
+  const cli = makeCli(() => jsonResponse(fx.orgUnitListResult));
+  const code = await run(["organizational-units", "list", "--limit", "500"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+// ---- L3: positional enum args are validated client-side ----
+
+test("processes get rejects an invalid Detaillierungsstufe without an HTTP call", async () => {
+  const cli = makeCli(() => jsonResponse({}));
+  const code = await run(["processes", "get", "P1", "1.0", "999"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+  assert.match(cli.err.join("\n"), /Invalid Detaillierungsstufe "999"/);
+});
+
+test("processes get accepts a valid Detaillierungsstufe", async () => {
+  const cli = makeCli(() => jsonResponse({ ok: true }));
+  const code = await run(["processes", "get", "P1", "1.0", "101"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/processes/P1/1.0/101");
+});
+
+test("service-texts get rejects an invalid source without an HTTP call", async () => {
+  const cli = makeCli(() => jsonResponse({}));
+  const code = await run(["service-texts", "get", "R1", "L1", "bogus"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+  assert.match(cli.err.join("\n"), /Invalid source "bogus"/);
+});
+
+// ---- M3: choice options reuse the spec enums (incl. schema-only "Stichwort") ----
+
+test("schemas search accepts the schema-only suche-nur-in value Stichwort", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["schemas", "search", "--suche-nur-in", "Stichwort"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("suche_nur_in"), "Stichwort");
+});
+
+test("fields search rejects the schema-only value Stichwort (not in FeldSucheIn)", async () => {
+  const cli = makeCli(() => jsonResponse(fx.fieldSearchResult));
+  const code = await run(["fields", "search", "--suche-nur-in", "Stichwort"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});

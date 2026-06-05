@@ -12,6 +12,9 @@ A TypeScript **API client** and **command-line interface** for the open endpoint
 - **Read-only scope** — only the endpoints that need **no authentication** are implemented. Uploads,
   converters, quality-check tools and token introspection (all `Access-Token`-protected) are intentionally omitted.
 
+New to FIM, XDatenfelder/XZuFi/XProzess, or terms like *Nummernkreis* and *Freigabestatus*?
+See **[GLOSSARY.md](GLOSSARY.md)** for the domain concepts and the project's own vocabulary.
+
 ## Requirements
 
 - Node.js **>= 20** (uses the stable built-in test runner, ESM and top-level `await`).
