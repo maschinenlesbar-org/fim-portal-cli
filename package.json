@@ -15,7 +15,9 @@
     }
   },
   "files": [
-    "dist/src"
+    "dist/src",
+    "LICENSING.md",
+    "CONTRIBUTING.md"
   ],
   "engines": {
     "node": ">=20"
@@ -39,8 +41,8 @@
     "cli",
     "api-client"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Sebastian Schürmann <sebs@2xs.org>",
+  "license": "AGPL-3.0-or-later",
   "dependencies": {
     "commander": "15.0.0"
   },

@@ -225,4 +225,14 @@ GitHub Actions workflows under `.github/workflows/`:
 
 ## License
 
-ISC
+**Dual-licensed** — use it under **either**:
+
+- **[AGPL-3.0-or-later](LICENSE)** (default, free). Note the AGPL's §13 network
+  clause: if you run a modified version as a network service, you must offer that
+  modified source to the service's users.
+- **Commercial license** (paid), for closed-source / proprietary or SaaS use
+  without the AGPL's obligations.
+
+See **[LICENSING.md](LICENSING.md)** for details, and **[CONTRIBUTING.md](CONTRIBUTING.md)**
+for the contribution policy (this project does not accept external code
+contributions). Commercial enquiries: **sebs@2xs.org**.
