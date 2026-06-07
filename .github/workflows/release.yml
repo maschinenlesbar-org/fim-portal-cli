@@ -57,8 +57,30 @@ jobs:
           npm pack --pack-destination dist-artifacts
           ls -la dist-artifacts
 
+      # CycloneDX SBOMs with exact, pinned versions and the full transitive
+      # closure, read from the installed tree (npm ci ran above). Two files:
+      #  - *.cdx.json      runtime/production graph — what consumers install
+      #  - *.dev.cdx.json  full graph incl. devDependencies — the build env
+      - name: Generate SBOMs (CycloneDX)
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          base="dist-artifacts/fim-portal-cli-${VERSION}"
+          npx --yes @cyclonedx/cyclonedx-npm@4.2.1 \
+            --omit dev \
+            --spec-version 1.6 \
+            --output-format JSON \
+            --output-file "${base}.cdx.json"
+          npx --yes @cyclonedx/cyclonedx-npm@4.2.1 \
+            --spec-version 1.6 \
+            --output-format JSON \
+            --output-file "${base}.dev.cdx.json"
+          ls -la dist-artifacts
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
-          files: dist-artifacts/*.tgz
+          files: |
+            dist-artifacts/*.tgz
+            dist-artifacts/*.cdx.json
           generate_release_notes: true
