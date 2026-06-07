@@ -1,5 +1,5 @@
 {
-  "name": "fim-portal-cli",
+  "name": "@maschinenlesbar.org/fim-portal-cli",
   "version": "1.0.0",
   "description": "TypeScript API client and CLI for the FIM Portal REST API (fimportal.de)",
   "type": "module",
@@ -51,6 +51,9 @@
     "url": "https://github.com/maschinenlesbar-org/fim-portal-cli/issues"
   },
   "homepage": "https://github.com/maschinenlesbar-org/fim-portal-cli#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "commander": "15.0.0"
   },

@@ -136,7 +136,7 @@ Exit codes: `0` success, `4` on a `404` from the API, `1` for any other error, n
 ## Library usage
 
 ```ts
-import { FimPortalClient, FimApiError } from "fim-portal-cli";
+import { FimPortalClient, FimApiError } from "@maschinenlesbar.org/fim-portal-cli";
 
 const client = new FimPortalClient(); // defaults to https://fimportal.de
 
