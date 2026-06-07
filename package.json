@@ -1,6 +1,6 @@
 {
   "name": "@maschinenlesbar.org/fim-portal-cli",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "TypeScript API client and CLI for the FIM Portal REST API (fimportal.de)",
   "type": "module",
   "bin": {
