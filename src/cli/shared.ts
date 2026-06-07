@@ -12,10 +12,27 @@ import {
   DatenfelderSearchOrderValues,
 } from "../client/enums.js";
 
+/**
+ * Parse a plain decimal integer literal exactly.
+ *
+ * Returns `undefined` for anything that is not a base-10 integer in the
+ * canonical form `[+-]?digits`. This deliberately rejects the many alternative
+ * numeric forms `Number()` would silently accept (hex `0x10`, binary `0b101`,
+ * scientific `1e2`, whitespace-padded `" 5 "`, leading `+`), and rejects values
+ * that overflow the safe-integer range (e.g. `99999999999999999999`, which
+ * `Number()` would round to a different value before transmitting it).
+ */
+function parseDecimalInt(value: string): number | undefined {
+  if (!/^-?\d+$/.test(value)) return undefined;
+  const n = Number(value);
+  if (!Number.isSafeInteger(n)) return undefined;
+  return n;
+}
+
 /** commander value-parser: a non-negative integer. */
 export function parseIntArg(value: string): number {
-  const n = Number(value);
-  if (!Number.isInteger(n) || n < 0) {
+  const n = parseDecimalInt(value);
+  if (n === undefined || n < 0) {
     throw new InvalidArgumentError("Expected a non-negative integer.");
   }
   return n;
@@ -27,12 +44,20 @@ export function parseIntArg(value: string): number {
  */
 export function parseBoundedInt(min: number, max?: number): (value: string) => number {
   return (value: string) => {
-    const n = Number(value);
-    if (!Number.isInteger(n)) throw new InvalidArgumentError("Expected an integer.");
+    const n = parseDecimalInt(value);
+    if (n === undefined) throw new InvalidArgumentError("Expected an integer.");
     if (n < min) throw new InvalidArgumentError(`Must be >= ${min}.`);
     if (max !== undefined && n > max) throw new InvalidArgumentError(`Must be <= ${max}.`);
     return n;
   };
+}
+
+/** commander value-parser: a non-empty (after trimming) string. */
+export function parseNonEmpty(value: string): string {
+  if (value.trim() === "") {
+    throw new InvalidArgumentError("Expected a non-empty value.");
+  }
+  return value;
 }
 
 /**
@@ -95,27 +120,59 @@ export function pruneUndefined<T extends Record<string, unknown>>(obj: T): Parti
   return out as Partial<T>;
 }
 
-/** Render a JSON value to stdout, pretty by default, compact with --compact. */
+/**
+ * Render a JSON value, pretty by default and compact with --compact. Honors
+ * --output by writing the JSON (UTF-8) to that file instead of stdout, so the
+ * flag is not silently ignored on JSON commands; otherwise prints to stdout.
+ */
 export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown): void {
   const text = global.compact ? JSON.stringify(value) : JSON.stringify(value, null, 2);
-  deps.io.out(text);
+  if (global.output) {
+    const data = Buffer.from(text + "\n", "utf8");
+    try {
+      deps.io.writeFile(global.output, data);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new FimError(`could not write ${global.output}: ${reason}`, { cause: err });
+    }
+    deps.io.err(`Wrote ${data.length} bytes to ${global.output}`);
+  } else {
+    deps.io.out(text);
+  }
 }
 
 /**
  * Render a raw (binary/text) download. Writes to the file given by --output, or
  * to stdout otherwise. Prints a short confirmation to stderr when writing a file
  * so stdout stays clean for piping.
+ *
+ * The confirmation reports the server's Content-Type so the user can tell what
+ * the bytes actually are (e.g. a PDF returned where XML was requested, or an
+ * HTML/JSON error page served with a 200). When writing to stdout the same
+ * Content-Type note goes to stderr, keeping stdout byte-clean for piping.
+ *
+ * The --output path is trusted input (the user owns their shell). A failed write
+ * (missing directory, permissions, read-only FS) is wrapped in a FimError so it
+ * exits 1 with a clean `Error: could not write ...` message rather than falling
+ * through to the generic "Unexpected error" handler.
  */
 export function renderRaw(
   deps: CliDeps,
   global: GlobalOptions,
   response: RawResponse,
 ): void {
+  const typeNote = response.contentType ? ` (Content-Type: ${response.contentType})` : "";
   if (global.output) {
-    deps.io.writeFile(global.output, response.data);
-    deps.io.err(`Wrote ${response.data.length} bytes to ${global.output}`);
+    try {
+      deps.io.writeFile(global.output, response.data);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new FimError(`could not write ${global.output}: ${reason}`, { cause: err });
+    }
+    deps.io.err(`Wrote ${response.data.length} bytes to ${global.output}${typeNote}`);
   } else {
     deps.io.outBinary(response.data);
+    deps.io.err(`Wrote ${response.data.length} bytes to stdout${typeNote}`);
   }
 }
 

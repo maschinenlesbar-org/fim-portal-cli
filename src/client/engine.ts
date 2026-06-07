@@ -131,10 +131,39 @@ export class RequestEngine {
     let detail: string | undefined;
     try {
       const parsed = JSON.parse(text) as { detail?: unknown };
-      if (parsed && typeof parsed.detail === "string") detail = parsed.detail;
+      detail = formatDetail(parsed?.detail);
     } catch {
       // Non-JSON error body; leave detail undefined.
     }
     return new FimApiError({ status, url, method, body: text, detail });
   }
+}
+
+/**
+ * Turn the API's `detail` field into a human-readable string.
+ *
+ * The API uses two shapes:
+ *   - a plain string (its own `ErrorMessage` bodies), and
+ *   - an array of validation-error objects (FastAPI 422 responses), shaped like
+ *     `{ loc: ["query", "gueltig_am"], msg: "Input should be a valid date" }`.
+ * Returns `undefined` when there is nothing useful to surface.
+ */
+function formatDetail(detail: unknown): string | undefined {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const parts = detail
+      .map((item) => {
+        if (item && typeof item === "object") {
+          const obj = item as { loc?: unknown; msg?: unknown };
+          const loc = Array.isArray(obj.loc) ? obj.loc.join(".") : undefined;
+          const msg = typeof obj.msg === "string" ? obj.msg : undefined;
+          if (loc && msg) return `${loc}: ${msg}`;
+          return msg ?? loc;
+        }
+        return typeof item === "string" ? item : undefined;
+      })
+      .filter((p): p is string => typeof p === "string" && p.length > 0);
+    if (parts.length > 0) return parts.join("; ");
+  }
+  return undefined;
 }

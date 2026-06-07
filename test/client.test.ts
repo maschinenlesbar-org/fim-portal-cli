@@ -140,3 +140,40 @@ test("a custom baseUrl is honoured", async () => {
   await client.schemas.search();
   assert.equal(new URL(mt.last().url).host, "schema.fim.fitko.net");
 });
+
+// ---- code-lists ----
+
+test("codeLists.list hits /api/v0/code-lists and parses the paginated envelope", async () => {
+  const { client, mt } = clientReturning(fx.codeListResult);
+  const result = await client.codeLists.list({ offset: 0, limit: 20 });
+  assert.deepEqual(result, fx.codeListResult);
+  assert.equal(result.total_count, 1);
+  assert.equal(result.items[0]?.short_name, "Geschlecht");
+  assert.equal(new URL(mt.last().url).pathname, "/api/v0/code-lists");
+  const q = queryOf(mt.last());
+  assert.equal(q.get("offset"), "0");
+  assert.equal(q.get("limit"), "20");
+});
+
+// ---- tools / search-csv ----
+
+test("tools.searchCsvDownload hits /tools/search-csv-download and forwards params", async () => {
+  const mt = makeMockTransport(() => rawResponse(fx.csvBody, "text/csv"));
+  const client = new FimPortalClient({ transport: mt.transport });
+  const res = await client.tools.searchCsvDownload({
+    resource: "fields",
+    term: "Name",
+    xdf_version: "2.0",
+    feldart: "input",
+  });
+  assert.equal(res.data.toString("utf8"), fx.csvBody);
+  assert.equal(res.contentType, "text/csv");
+  const url = new URL(mt.last().url);
+  assert.equal(url.pathname, "/tools/search-csv-download");
+  assert.equal(url.searchParams.get("resource"), "fields");
+  assert.equal(url.searchParams.get("term"), "Name");
+  assert.equal(url.searchParams.get("xdf_version"), "2.0");
+  assert.equal(url.searchParams.get("feldart"), "input");
+  // Requests a CSV Accept header.
+  assert.equal(mt.last().headers?.["accept"] ?? mt.last().headers?.["Accept"], "text/csv");
+});

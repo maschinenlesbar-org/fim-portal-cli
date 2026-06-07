@@ -6,6 +6,7 @@ import type { CliDeps } from "../src/cli/io.js";
 import type { HttpRequest, HttpResponse } from "../src/client/http.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 import * as fx from "./fixtures.js";
+import { FimNetworkError } from "../src/client/errors.js";
 
 function makeCli(responder: (req: HttpRequest) => HttpResponse) {
   const out: string[] = [];
@@ -226,4 +227,141 @@ test("fields search rejects the schema-only value Stichwort (not in FeldSucheIn)
   const code = await run(["fields", "search", "--suche-nur-in", "Stichwort"], cli.deps);
   assert.notEqual(code, 0);
   assert.equal(cli.mt.calls.length, 0);
+});
+
+// ---- code-lists ----
+
+test("code-lists hits /api/v0/code-lists and forwards pagination", async () => {
+  const cli = makeCli(() => jsonResponse(fx.codeListResult));
+  const code = await run(["code-lists", "--offset", "0", "--limit", "20"], cli.deps);
+  assert.equal(code, 0);
+  assert.deepEqual(JSON.parse(cli.out.join("\n")), fx.codeListResult);
+  const url = new URL(cli.mt.last().url);
+  assert.equal(url.pathname, "/api/v0/code-lists");
+  assert.equal(url.searchParams.get("offset"), "0");
+  assert.equal(url.searchParams.get("limit"), "20");
+});
+
+test("code-lists --limit is bounded to 1..200", async () => {
+  const cli = makeCli(() => jsonResponse(fx.codeListResult));
+  const code = await run(["code-lists", "--limit", "500"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+// ---- search-csv (unvalidated pass-through) ----
+
+test("search-csv maps options to query params and streams CSV to stdout", async () => {
+  const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+  const code = await run(
+    [
+      "search-csv",
+      "--resource",
+      "fields",
+      "--term",
+      "Name",
+      "--xdf-version",
+      "2.0",
+      "--order-by",
+      "name_asc",
+      "--feldart",
+      "input",
+      "--datentyp",
+      "text",
+      "--dokumentart",
+      "001",
+      "--sprache",
+      "Deutsch",
+    ],
+    cli.deps,
+  );
+  assert.equal(code, 0);
+  assert.equal(cli.out.join(""), fx.csvBody);
+  const q = new URL(cli.mt.last().url).searchParams;
+  assert.equal(new URL(cli.mt.last().url).pathname, "/tools/search-csv-download");
+  assert.equal(q.get("resource"), "fields");
+  assert.equal(q.get("term"), "Name");
+  assert.equal(q.get("xdf_version"), "2.0");
+  assert.equal(q.get("order_by"), "name_asc");
+  assert.equal(q.get("feldart"), "input");
+  assert.equal(q.get("datentyp"), "text");
+  assert.equal(q.get("dokumentart"), "001");
+  assert.equal(q.get("sprache"), "Deutsch");
+});
+
+test("search-csv requires --resource", async () => {
+  const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+  const code = await run(["search-csv", "--term", "Name"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+test("search-csv forwards unvalidated values verbatim (no enum guard)", async () => {
+  // The CSV command is a documented pass-through: bogus values are forwarded, not rejected.
+  const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+  const code = await run(
+    ["search-csv", "--resource", "fields", "--feldart", "bogus"],
+    cli.deps,
+  );
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("feldart"), "bogus");
+});
+
+test("search-csv writes the CSV to --output and reports bytes on stderr", async () => {
+  const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+  const code = await run(
+    ["--output", "/tmp/fields.csv", "search-csv", "--resource", "fields"],
+    cli.deps,
+  );
+  assert.equal(code, 0);
+  assert.equal(cli.files.get("/tmp/fields.csv")?.toString("utf8"), fx.csvBody);
+  assert.equal(cli.out.length, 0);
+  assert.match(cli.err.join("\n"), /Wrote \d+ bytes to \/tmp\/fields\.csv/);
+});
+
+// ---- error paths through run() ----
+
+test("a transport-level network error maps to exit 1 with a clean Error message", async () => {
+  const out: string[] = [];
+  const err: string[] = [];
+  const deps: CliDeps = {
+    io: {
+      out: (s) => out.push(s),
+      err: (s) => err.push(s),
+      writeFile: () => {},
+      outBinary: (d) => out.push(d.toString("utf8")),
+    },
+    createClient: (opts) =>
+      new FimPortalClient({
+        ...opts,
+        transport: () => Promise.reject(new FimNetworkError("connection reset")),
+      }),
+  };
+  const code = await run(["--max-retries", "0", "schemas", "search"], deps);
+  assert.equal(code, 1);
+  assert.equal(out.length, 0);
+  assert.match(err.join("\n"), /^Error: connection reset/);
+});
+
+test("a failed -o write degrades to exit 1 with a clean Error (not Unexpected error)", async () => {
+  const out: string[] = [];
+  const err: string[] = [];
+  const mt = makeMockTransport(() => rawResponse(fx.xmlBody, "application/xml"));
+  const deps: CliDeps = {
+    io: {
+      out: (s) => out.push(s),
+      err: (s) => err.push(s),
+      writeFile: () => {
+        const e = new Error("ENOENT: no such file or directory, open '/nope/out.xml'");
+        throw e;
+      },
+      outBinary: (d) => out.push(d.toString("utf8")),
+    },
+    createClient: (opts) => new FimPortalClient({ ...opts, transport: mt.transport }),
+  };
+  const code = await run(["--output", "/nope/out.xml", "schemas", "xdf", "S1", "1.0"], deps);
+  assert.equal(code, 1);
+  const errText = err.join("\n");
+  assert.match(errText, /^Error: could not write \/nope\/out\.xml/);
+  assert.doesNotMatch(errText, /Unexpected error/);
 });

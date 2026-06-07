@@ -9,6 +9,7 @@ import type {
   DatenfeldgruppeOut,
   LeistungStammtextOut,
   CursorPaginationResult,
+  CodeList,
 } from "../src/client/types.js";
 
 export const schemaOut: SchemaOut = {
@@ -194,4 +195,23 @@ export const orgUnitListResult: CursorPaginationResult<{ id: string }> = {
   next_cursor: null,
 };
 
+export const codeListItem: CodeList = {
+  id: 1,
+  url: "urn:example:codelist:1",
+  short_name: "Geschlecht",
+  long_name: "Codeliste Geschlecht",
+  genericode_canonical_version_uri: "urn:example:codelist:1:1",
+  is_external: false,
+};
+
+export const codeListResult: PaginatedResult<CodeList> = {
+  items: [codeListItem],
+  offset: 0,
+  limit: 200,
+  count: 1,
+  total_count: 1,
+};
+
 export const xmlBody = '<?xml version="1.0" encoding="UTF-8"?><xdf:schema/>';
+
+export const csvBody = "fim_id,name\nS07000009,Geburt\n";

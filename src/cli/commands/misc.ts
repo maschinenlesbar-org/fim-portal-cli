@@ -26,6 +26,11 @@ export function registerMiscCommands(program: Command, deps: CliDeps): void {
       }),
     );
 
+  // search-csv is a deliberate unvalidated pass-through: it exposes a convenient
+  // subset of the CSV filters and forwards their values verbatim. The OpenAPI
+  // spec types every search-csv-download parameter as a free-form string with no
+  // enum, so there are intentionally no choices() guards here (unlike `fields
+  // search`); the server validates the values.
   program
     .command("search-csv")
     .description("Download a search result as CSV (tools/search-csv-download)")

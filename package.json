@@ -43,6 +43,14 @@
   ],
   "author": "Sebastian Schürmann <sebs@2xs.org>",
   "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maschinenlesbar-org/fim-portal-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/maschinenlesbar-org/fim-portal-cli/issues"
+  },
+  "homepage": "https://github.com/maschinenlesbar-org/fim-portal-cli#readme",
   "dependencies": {
     "commander": "15.0.0"
   },

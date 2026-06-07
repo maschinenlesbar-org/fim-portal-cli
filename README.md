@@ -55,6 +55,12 @@ commands stream raw bytes (XML/PDF/CSV) to stdout or to a file via `-o/--output`
 
 Global options go **before** the command, e.g. `fim-portal --compact schemas get S07000009`.
 
+The `-o/--output` path is **trusted input** — it is written verbatim with no
+traversal or overwrite guard (you own your shell). If the write fails (for
+example the parent directory does not exist, or the path is not writable) the CLI
+reports a clean `Error: could not write <path>: ...` and exits `1` rather than a
+generic "Unexpected error".
+
 ### Commands
 
 ```text
@@ -74,6 +80,11 @@ search-csv         (tools/search-csv-download)
 ```
 
 ### Examples
+
+> The identifiers below (e.g. `L100001`, `99050048262000`) are **illustrative
+> placeholders**, not guaranteed-live records — substitute IDs from a real
+> `search` result. Note also that PDF exports expect a concrete language code
+> as served by the API (not the generic `de`).
 
 ```bash
 # Full-text search schemas, latest versions only, as compact JSON
@@ -104,12 +115,19 @@ fim-portal organizational-units list --cursor 50
 
 # Prozesse (XProzess)
 fim-portal processes search --detaillierungsstufe 101 --is-musterprozess
-fim-portal -o vis.bpmn processes visualization PROC1 1.0 101
+fim-portal -o vis.pdf processes visualization PROC1 1.0 101
 
 # Code lists & CSV export
 fim-portal code-lists --limit 20
 fim-portal -o fields.csv search-csv --resource fields --term Name
 ```
+
+> **Note on `search-csv`:** this command is a deliberate *unvalidated pass-through*
+> to `tools/search-csv-download`. It exposes a convenient subset of the CSV
+> filters and forwards their values verbatim — the OpenAPI spec types every CSV
+> parameter as a free-form string (no `enum`), so unlike the validated
+> `fields search` / `schemas search` paths there are no `choices()` guards here.
+> The server validates the values.
 
 Exit codes: `0` success, `4` on a `404` from the API, `1` for any other error, non-zero for usage errors.
 

@@ -6,7 +6,7 @@ import { Command } from "commander";
 import type { CliDeps } from "./io.js";
 import { defaultIO } from "./io.js";
 import { FimPortalClient } from "../client/client.js";
-import { parseIntArg } from "./shared.js";
+import { parseIntArg, parseNonEmpty } from "./shared.js";
 import { registerSchemaCommands } from "./commands/schemas.js";
 import { registerDocumentProfileCommands } from "./commands/document-profiles.js";
 import { registerFieldCommands } from "./commands/fields.js";
@@ -35,7 +35,7 @@ export function buildProgram(deps: CliDeps = defaultDeps): Command {
     .version(VERSION)
     .option("--base-url <url>", "API base URL", "https://fimportal.de")
     .option("--timeout <ms>", "per-request timeout in milliseconds", parseIntArg)
-    .option("--user-agent <ua>", "User-Agent header value")
+    .option("--user-agent <ua>", "User-Agent header value", parseNonEmpty)
     .option("--max-retries <n>", "retries for transient 429/503 responses", parseIntArg)
     .option(
       "--max-response-bytes <n>",

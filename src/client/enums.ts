@@ -149,7 +149,10 @@ export type Verfahrensart = (typeof VerfahrensartValues)[number];
 export const VertrauensniveauValues = ["10", "15", "20", "30", "40", "00"] as const;
 export type Vertrauensniveau = (typeof VertrauensniveauValues)[number];
 
-export const XdfVersionValues = ["2.0", "3.0.0"] as const;
+// The API accepts "2.0" as a filter value but returns "2.0.0" in result items;
+// we accept both the filter form and the form users see in the data so a value
+// copied from a result ("2.0.0") is not rejected by choices() validation.
+export const XdfVersionValues = ["2.0", "2.0.0", "3.0.0"] as const;
 export type XdfVersion = (typeof XdfVersionValues)[number];
 
 export const XzufiSourceValues = ["leika", "landesredaktion", "pvog"] as const;

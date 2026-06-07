@@ -267,14 +267,16 @@ class ProcessesResource {
     return this.e.getRaw(`/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/xprozess`, ACCEPT_XML);
   }
 
+  // The report and visualization endpoints serve PDF, not XML, so we negotiate
+  // application/pdf to match what the server actually returns.
   downloadReport(id: string, version: string, stufe: Detaillierungsstufe): Promise<RawResponse> {
-    return this.e.getRaw(`/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/report`, ACCEPT_XML);
+    return this.e.getRaw(`/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/report`, ACCEPT_PDF);
   }
 
   downloadVisualization(id: string, version: string, stufe: Detaillierungsstufe): Promise<RawResponse> {
     return this.e.getRaw(
       `/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/visualization`,
-      ACCEPT_XML,
+      ACCEPT_PDF,
     );
   }
 
@@ -285,7 +287,7 @@ class ProcessesResource {
   ): Promise<RawResponse> {
     return this.e.getRaw(
       `/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/visualization_display`,
-      ACCEPT_XML,
+      ACCEPT_PDF,
     );
   }
 }
@@ -294,7 +296,7 @@ class ProcessesResource {
 class CodeListsResource {
   constructor(private readonly e: RequestEngine) {}
 
-  list(params: Pagination = {}): Promise<CodeList[] | JsonObject> {
+  list(params: Pagination = {}): Promise<PaginatedResult<CodeList>> {
     return this.e.getJson("/api/v0/code-lists", params as QueryParams);
   }
 }

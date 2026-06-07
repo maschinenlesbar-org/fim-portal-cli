@@ -116,9 +116,9 @@ function registerProcesses(program: Command, deps: CliDeps): void {
 
   const downloadMap = {
     downloadXprozess: "Download the XProzess XML for a process",
-    downloadReport: "Download the report XML for a process",
-    downloadVisualization: "Download the visualization XML for a process",
-    downloadVisualizationDisplay: "Download the display visualization XML for a process",
+    downloadReport: "Download the report PDF for a process",
+    downloadVisualization: "Download the visualization PDF for a process",
+    downloadVisualizationDisplay: "Download the display visualization PDF for a process",
   } as const;
   const downloads: Array<[string, keyof typeof downloadMap]> = [
     ["xprozess <id> <version> <stufe>", "downloadXprozess"],
