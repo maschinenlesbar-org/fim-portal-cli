@@ -107,7 +107,7 @@ fim-portal schemas quality-report S07000009 latest
 # Leistungen (XZuFi)
 fim-portal service-profiles search --fts-query "Personalausweis" --sprache Deutsch
 fim-portal service-texts get L100001 L1 leika
-fim-portal -o service.pdf service-profiles pdf 99050048262000 de
+fim-portal -o service.pdf service-profiles pdf 99008001012012 de-DE
 
 # XZuFi entities (cursor paginated)
 fim-portal organizational-units list --limit 50

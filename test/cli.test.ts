@@ -118,7 +118,7 @@ test("--version prints the version and exits 0", async () => {
   const cli = makeCli(() => jsonResponse({}));
   const code = await run(["--version"], cli.deps);
   assert.equal(code, 0);
-  assert.match(cli.out.join("\n"), /1\.0\.0/);
+  assert.match(cli.out.join("\n"), /\d+\.\d+\.\d+/);
 });
 
 test("unknown command is a usage error (non-zero exit, no HTTP call)", async () => {

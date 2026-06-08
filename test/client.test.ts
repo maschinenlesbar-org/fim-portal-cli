@@ -38,7 +38,7 @@ const cases: Array<{ name: string; run: (c: FimPortalClient) => Promise<unknown>
 
   { name: "serviceProfiles.get", run: (c) => c.serviceProfiles.get("99050048262000"), url: `${BASE}/api/v0/leistung-steckbriefe/99050048262000` },
   { name: "serviceProfiles.downloadXzufi", run: (c) => c.serviceProfiles.downloadXzufi("K1"), url: `${BASE}/api/v0/leistung-steckbriefe/K1/xzufi` },
-  { name: "serviceProfiles.exportPdf", run: (c) => c.serviceProfiles.exportPdf("K1", "de"), url: `${BASE}/api/v0/leistung-steckbriefe/K1/de/pdf` },
+  { name: "serviceProfiles.exportPdf", run: (c) => c.serviceProfiles.exportPdf("K1", "de-DE"), url: `${BASE}/api/v0/leistung-steckbriefe/K1/de-DE/pdf` },
 
   { name: "serviceTexts.get", run: (c) => c.serviceTexts.get("R1", "L1", "leika"), url: `${BASE}/api/v0/leistung-stammtexte/R1/L1/leika` },
   { name: "serviceTexts.downloadXzufi", run: (c) => c.serviceTexts.downloadXzufi("R1", "L1", "pvog"), url: `${BASE}/api/v0/leistung-stammtexte/R1/L1/pvog/xzufi` },
