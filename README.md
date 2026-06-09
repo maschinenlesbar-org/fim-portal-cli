@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/maschinenlesbar-org/fim-portal-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/maschinenlesbar-org/fim-portal-cli/actions/workflows/ci.yml)
 [![Release](https://github.com/maschinenlesbar-org/fim-portal-cli/actions/workflows/release.yml/badge.svg)](https://github.com/maschinenlesbar-org/fim-portal-cli/actions/workflows/release.yml)
-[![GitHub release](https://img.shields.io/github/v/release/maschinenlesbar-org/fim-portal-cli)](https://github.com/maschinenlesbar-org/fim-portal-cli/releases/latest)
 [![npm](https://img.shields.io/npm/v/@maschinenlesbar.org/fim-portal-cli)](https://www.npmjs.com/package/@maschinenlesbar.org/fim-portal-cli)
 
 Browse Germany's **FIM Portal** — the authoritative catalogue of XDatenfelder schemas,
