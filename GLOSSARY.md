@@ -268,33 +268,6 @@ process class serves its XProzess representation as JSON.
 
 ---
 
-## Project / technical terms
-
-**API client.** [`FimPortalClient`](src/client/client.ts) — the typed,
-resource-grouped wrapper over the API. Usable as a library independently of the
-CLI.
-
-**Resource group.** A cohesive set of client methods for one part of the API
-(`client.schemas`, `client.processes`, …), and the matching top-level CLI
-command.
-
-**Transport.** A single function `(HttpRequest) => Promise<HttpResponse>`
-([`http.ts`](src/client/http.ts)). The default uses Node's built-in
-`http`/`https`; tests inject a mock. This is the only HTTP seam.
-
-**Request engine.** [`RequestEngine`](src/client/engine.ts) — builds URLs,
-serialises queries, applies retry/backoff, decodes JSON/raw responses and maps
-errors. Sits between the client's resource methods and the transport.
-
-**RawResponse.** The result of a download method: `{ data: Buffer, contentType,
-status }` — raw bytes, never lossily decoded.
-
-**CliDeps / CliIO.** The dependency-injection seam for the CLI
-([`io.ts`](src/cli/io.ts)): a client factory plus an I/O object
-(`out`/`err`/`writeFile`/`outBinary`). Lets the whole CLI run in tests with a
-mocked client and captured output — no subprocess.
-
-**Error types.** [`errors.ts`](src/client/errors.ts): `FimApiError` (non-2xx,
-carries `status`/`detail`), `FimNetworkError` (transport failure/timeout),
-`FimParseError` (bad JSON), all extending `FimError`. The CLI maps a `404` to
-exit code `4`, other errors to `1`.
+> **Library & internals.** Terms for the TypeScript client and its internals —
+> `FimPortalClient`, resource groups, the request engine, transport, retry/backoff,
+> error types, query builder — now live in **[DEVELOPING.md](DEVELOPING.md)**.
