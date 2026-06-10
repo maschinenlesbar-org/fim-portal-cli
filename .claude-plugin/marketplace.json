@@ -1,0 +1,39 @@
+{
+  "name": "fim-portal-skills",
+  "owner": {
+    "name": "Sebastian Schürmann",
+    "email": "sebs@2xs.org"
+  },
+  "metadata": {
+    "description": "German FIM Portal intelligence skills powered by the fim-portal-cli (XDatenfelder/XZuFi/XProzess catalogue API)"
+  },
+  "plugins": [
+    {
+      "name": "fim-portal",
+      "source": "./",
+      "description": "Assemble service dossiers, lay out data-schema form blueprints, audit schema quality, and find reusable data fields — all over the open, key-free FIM Portal API via the fim-portal-cli.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Sebastian Schürmann",
+        "email": "sebs@2xs.org"
+      },
+      "license": "AGPL-3.0-or-later",
+      "repository": "https://github.com/maschinenlesbar-org/fim-portal-cli",
+      "homepage": "https://github.com/maschinenlesbar-org/fim-portal-cli#readme",
+      "category": "government",
+      "keywords": [
+        "fim",
+        "fimportal",
+        "xdatenfelder",
+        "xzufi",
+        "xprozess",
+        "leistungskatalog",
+        "fitko",
+        "ozg",
+        "egovernment",
+        "germany",
+        "bund.dev"
+      ]
+    }
+  ]
+}
