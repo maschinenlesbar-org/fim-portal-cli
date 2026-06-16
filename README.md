@@ -317,6 +317,17 @@ These apply to every command and may be given **before or after** it:
 - **[GLOSSARY.md](GLOSSARY.md)** — every domain term and flag explained.
 - **[DEVELOPING.md](DEVELOPING.md)** — TypeScript library usage, architecture, testing, CI.
 
+## Data license
+
+This CLI is a **client** — it accesses data it does not own or redistribute. The
+upstream data is © its provider and licensed **separately from this tool's code**.
+See **[DATA_LICENSE.md](DATA_LICENSE.md)**.
+
+> [!WARNING]
+> **Data license not declared by the provider.** FITKO publishes no explicit license
+> for the FIM catalogue data (CC0 / DL-DE Zero is only inferred, not confirmed).
+> Attribute as good practice and verify with FITKO before commercial reuse.
+
 ## License
 
 **Dual-licensed** — use it under **either**:
