@@ -173,6 +173,19 @@ carries `status`/`detail`), `FimNetworkError` (transport failure/timeout),
 `FimParseError` (bad JSON), all extending `FimError`. The CLI maps a `404` to exit
 code `4`, other errors to `1`.
 
+**Security invariant — response data is render-only.** The JSON body is decoded
+with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.
+That cast is only safe because every parsed value flows into exactly two sinks:
+`JSON.stringify` re-rendering (stdout) and the human-readable error `detail`
+string (sanitised of control characters in `engine.ts` before it reaches stderr).
+No parsed value is ever used to build a path, URL, header, file operation or a
+follow-up request. Preserve this: if a future feature makes a response value drive
+control flow (auto-pagination that follows a response cursor, response-driven
+downloads, writing a server-supplied filename), add runtime validation *first* —
+the current `as T` cast trusts the shape and must not gate anything security-
+relevant. The only sensitive data flow in this keyless repo is the user-chosen
+`-o` output path, which is self-trusted.
+
 ## Testing
 
 ```bash
