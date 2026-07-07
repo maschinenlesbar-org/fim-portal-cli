@@ -58,6 +58,19 @@ export const nodeHttpTransport: Transport = (request) =>
     const driver = isHttps ? https : http;
     const maxBytes = request.maxResponseBytes;
 
+    // Wall-clock deadline. `req.setTimeout` below is only an *idle-socket* timer,
+    // so a server that trickles one byte per interval never idles out and could
+    // keep the process alive forever (slow-loris). This overall timer is an
+    // upper bound on the whole request regardless of drip-feeding; it is cleared
+    // on every terminal path so it can never fire against a finished request.
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+    const clearDeadline = (): void => {
+      if (deadline !== undefined) {
+        clearTimeout(deadline);
+        deadline = undefined;
+      }
+    };
+
     const req = driver.request(
       url,
       {
@@ -74,6 +87,7 @@ export const nodeHttpTransport: Transport = (request) =>
           received += chunk.length;
           if (maxBytes !== undefined && received > maxBytes) {
             aborted = true;
+            clearDeadline();
             res.destroy();
             reject(new FimNetworkError(`Response exceeded maxResponseBytes (${maxBytes})`));
             return;
@@ -82,6 +96,7 @@ export const nodeHttpTransport: Transport = (request) =>
         });
         res.on("end", () => {
           if (aborted) return;
+          clearDeadline();
           resolve({
             status: res.statusCode ?? 0,
             headers: res.headers,
@@ -90,18 +105,27 @@ export const nodeHttpTransport: Transport = (request) =>
         });
         res.on("error", (err) => {
           if (aborted) return; // we already rejected with the size-cap error
+          clearDeadline();
           reject(new FimNetworkError(`Response stream error: ${err.message}`, { cause: err }));
         });
       },
     );
 
     if (request.timeoutMs && request.timeoutMs > 0) {
+      // Idle-socket timeout (fires when no bytes move for timeoutMs).
       req.setTimeout(request.timeoutMs, () => {
         req.destroy(new FimNetworkError(`Request timed out after ${request.timeoutMs}ms`));
       });
+      // Overall wall-clock deadline (fires even if bytes keep trickling).
+      deadline = setTimeout(() => {
+        req.destroy(new FimNetworkError(`Request exceeded deadline of ${request.timeoutMs}ms`));
+      }, request.timeoutMs);
+      // Don't let a pending deadline timer keep the event loop alive on its own.
+      deadline.unref?.();
     }
 
     req.on("error", (err) => {
+      clearDeadline();
       // A timeout destroy already passes a FimNetworkError; don't double-wrap.
       reject(err instanceof FimNetworkError ? err : new FimNetworkError(err.message, { cause: err }));
     });

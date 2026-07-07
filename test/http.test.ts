@@ -30,6 +30,13 @@ before(async () => {
         res.end(JSON.stringify({ ok: true }));
       } else if (req.url === "/slow") {
         setTimeout(() => res.end("late"), 100);
+      } else if (req.url === "/trickle") {
+        // Drip one byte every 15ms and never finish: the socket never idles for
+        // long, so an idle-only timeout would not fire — only a wall-clock
+        // deadline can bound this. Cleaned up when the client destroys the socket.
+        res.writeHead(200, { "content-type": "application/octet-stream" });
+        const timer = setInterval(() => res.write("a"), 15);
+        res.on("close", () => clearInterval(timer));
       } else if (req.url === "/boom") {
         res.writeHead(500, { "content-type": "application/json" });
         res.end(JSON.stringify({ detail: "kaboom" }));
@@ -80,6 +87,15 @@ test("nodeHttpTransport resolves (does not reject) on non-2xx", async () => {
 test("nodeHttpTransport rejects with FimNetworkError on timeout", async () => {
   await assert.rejects(
     () => nodeHttpTransport({ method: "GET", url: `${base}/slow`, timeoutMs: 20 }),
+    (err: unknown) => err instanceof FimNetworkError,
+  );
+});
+
+test("nodeHttpTransport enforces a wall-clock deadline against a trickling server", async () => {
+  // The server drips a byte every 15ms and never ends. The overall deadline must
+  // still fire and reject, even though the socket is never idle for long.
+  await assert.rejects(
+    () => nodeHttpTransport({ method: "GET", url: `${base}/trickle`, timeoutMs: 60 }),
     (err: unknown) => err instanceof FimNetworkError,
   );
 });
