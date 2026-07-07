@@ -260,7 +260,7 @@ These go **before** the command, e.g. `fim-portal --compact schemas get S0700000
 | `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB) |
 | `--user-agent <ua>` | `User-Agent` header value |
 | `--compact` | Print JSON on a single line instead of pretty-printed |
-| `-o, --output <file>` | For downloads: write bytes to this file instead of stdout |
+| `-o, --output <file>` | For downloads: write bytes to this file instead of stdout (an existing file is overwritten without a prompt) |
 | `-V, --version` / `-h, --help` | Version / help |
 
 Examples:

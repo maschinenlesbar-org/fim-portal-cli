@@ -244,6 +244,11 @@ Every JSON command prints **pretty JSON to stdout**. Download commands (`xdf`,
 `search-csv`) stream raw bytes to stdout or to a file with `-o/--output`. Errors
 and diagnostics go to stderr, so piping stdout into `jq` stays clean.
 
+> **`-o` overwrites without asking.** If the target file already exists it is
+> replaced (the bytes are fully buffered first, so a failed download never leaves
+> a half-written file). Pick a fresh path, or check for the file yourself, if you
+> need to avoid clobbering existing data.
+
 ```bash
 # How many schemas match a query?
 fim-portal schemas search --fts-query "Meldung" | jq '.total_count'
