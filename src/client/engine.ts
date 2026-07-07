@@ -39,6 +39,30 @@ export interface EngineOptions {
 
 const DEFAULT_MAX_RESPONSE_BYTES = 100 * 1024 * 1024;
 
+/**
+ * Strip control characters (all C0/C1 controls except tab and newline, plus DEL)
+ * out of a string that originates in an attacker-controlled response — here the
+ * error `detail` field and the echoed Content-Type. A JSON error body can encode
+ * an escape (U+001B) that JSON.parse turns into a real control byte, so without
+ * this a hostile or MITM'd endpoint could drive ANSI/OSC escape sequences into the
+ * user's terminal when the message is printed to stderr (display spoofing, title
+ * changes). The stdout JSON path is already safe because `JSON.stringify` escapes
+ * these, so this only needs to cover text that flows into an error message.
+ */
+export function sanitizeServerText(text: string): string {
+  let out = "";
+  for (const ch of text) {
+    const n = ch.codePointAt(0) ?? 0;
+    if (n === 0x09 || n === 0x0a) {
+      out += ch;
+      continue;
+    }
+    if (n <= 8 || (n >= 0x0b && n <= 0x1f) || (n >= 0x7f && n <= 0x9f)) continue;
+    out += ch;
+  }
+  return out;
+}
+
 const realSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -135,6 +159,9 @@ export class RequestEngine {
     } catch {
       // Non-JSON error body; leave detail undefined.
     }
+    // `detail` came from the response body; strip control characters so a hostile
+    // endpoint cannot inject terminal escape sequences via the stderr error message.
+    if (detail !== undefined) detail = sanitizeServerText(detail);
     return new FimApiError({ status, url, method, body: text, detail });
   }
 }

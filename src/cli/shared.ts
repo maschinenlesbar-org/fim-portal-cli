@@ -4,7 +4,7 @@
 import { Command, InvalidArgumentError, Option } from "commander";
 import type { CliDeps } from "./io.js";
 import { FimError } from "../client/errors.js";
-import type { EngineOptions, RawResponse } from "../client/engine.js";
+import { sanitizeServerText, type EngineOptions, type RawResponse } from "../client/engine.js";
 import type { QueryParams } from "../client/query.js";
 import {
   FreigabeStatusValues,
@@ -161,7 +161,11 @@ export function renderRaw(
   global: GlobalOptions,
   response: RawResponse,
 ): void {
-  const typeNote = response.contentType ? ` (Content-Type: ${response.contentType})` : "";
+  // The Content-Type is server-derived and printed to stderr; strip control
+  // characters so a hostile endpoint cannot inject terminal escape sequences.
+  const typeNote = response.contentType
+    ? ` (Content-Type: ${sanitizeServerText(response.contentType)})`
+    : "";
   if (global.output) {
     try {
       deps.io.writeFile(global.output, response.data);

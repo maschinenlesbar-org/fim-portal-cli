@@ -6,6 +6,19 @@ import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
 const noSleep = async (): Promise<void> => {};
 
+// Built via char codes so no raw control bytes ever appear in this source file.
+const ESC = String.fromCharCode(0x1b);
+const BEL = String.fromCharCode(0x07);
+const CSI = String.fromCharCode(0x9b); // a C1 control
+
+/** True if the string contains any C0/C1 control char except tab/newline. */
+function hasControlChars(s: string): boolean {
+  return [...s].some((c) => {
+    const n = c.charCodeAt(0);
+    return n <= 8 || (n >= 0x0b && n <= 0x1f) || (n >= 0x7f && n <= 0x9f);
+  });
+}
+
 test("getJson builds the URL with base + path + query and parses the body", async () => {
   const mt = makeMockTransport(() => jsonResponse({ items: [1, 2, 3] }));
   const engine = new RequestEngine({ transport: mt.transport, baseUrl: "https://example.test" });
@@ -47,6 +60,27 @@ test("non-2xx throws FimApiError carrying the parsed detail", async () => {
       assert.ok(err instanceof FimApiError);
       assert.equal(err.status, 404);
       assert.equal(err.detail, "Schema not found");
+      return true;
+    },
+  );
+});
+
+test("error detail is stripped of terminal control characters", async () => {
+  // ESC + CSI + BEL interleaved with printable text in the API `detail` field.
+  const evil = `boom${ESC}[31mred${BEL}${CSI}2J`;
+  const mt = makeMockTransport(() => jsonResponse({ detail: evil }, 500));
+  const engine = new RequestEngine({ transport: mt.transport, sleep: noSleep, maxRetries: 0 });
+
+  await assert.rejects(
+    () => engine.getJson("/x"),
+    (err: unknown) => {
+      assert.ok(err instanceof FimApiError);
+      // The control bytes are gone from both the structured detail and the
+      // human-readable message that run.ts prints to stderr...
+      assert.ok(!hasControlChars(err.detail ?? ""));
+      assert.ok(!hasControlChars(err.message));
+      // ...while the printable characters are preserved.
+      assert.equal(err.detail, "boom[31mred2J");
       return true;
     },
   );
