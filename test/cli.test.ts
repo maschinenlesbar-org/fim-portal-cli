@@ -89,6 +89,22 @@ test("--base-url is forwarded to the client", async () => {
   assert.equal(new URL(cli.mt.last().url).host, "schema.fim.fitko.net");
 });
 
+test("a non-http(s) --base-url is rejected at parse time (usage error, no HTTP call)", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["--base-url", "file:///etc/passwd", "schemas", "search"], cli.deps);
+  // Rejected by the value-parser before any request is built: commander's usage
+  // exit code (1 in this version), and crucially the transport is never reached.
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+test("a malformed --base-url is rejected at parse time", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["--base-url", "not a url", "schemas", "search"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
 test("--max-response-bytes is forwarded to the transport", async () => {
   const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
   await run(["--max-response-bytes", "2048", "schemas", "search"], cli.deps);

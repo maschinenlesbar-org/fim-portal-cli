@@ -61,6 +61,30 @@ export function parseNonEmpty(value: string): string {
 }
 
 /**
+ * commander value-parser for `--base-url`: accept only a well-formed http(s) URL.
+ *
+ * The default transport already refuses non-http(s) schemes, but that check runs
+ * at dial time and surfaces as a network error. Rejecting here at parse time gives
+ * a clear usage error before any request is built, and — since this is the
+ * reference implementation — makes the "http(s)-only" control real at the CLI
+ * boundary rather than only inside one transport (a library consumer injecting a
+ * custom Transport is still covered by the transport-level check). commander maps
+ * every parse/usage error to exit 1 in this repo, matching the documented contract.
+ */
+export function parseBaseUrl(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new InvalidArgumentError("Expected a valid absolute URL (e.g. https://fimportal.de).");
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new InvalidArgumentError('Only "http:" and "https:" base URLs are supported.');
+  }
+  return value;
+}
+
+/**
  * Validate a positional argument against an allowed set (commander does not
  * support .choices() on positional args). Throws a FimError so run() prints a
  * clear message and exits 1.
