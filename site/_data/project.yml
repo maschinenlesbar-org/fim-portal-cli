@@ -1,0 +1,17 @@
+# The only repo-specific texts of the website. Everything else comes from the
+# repository: the English intro from README.md, the commands from the built CLI.
+
+# How the API is accessed: open | key (env: VAR) | account (token, user, password: VARs)
+access:
+  type: open
+
+de:
+  # German version of the README's intro paragraph. Keep it in step with README.md.
+  intro: >-
+    Das deutsche **FIM-Portal** – den maßgeblichen Katalog für XDatenfelder-Schemata,
+    XZuFi-Leistungen und XProzess-Prozesse – direkt im Terminal durchsuchen. `fim-portal` ist
+    ein Kommandozeilen-Tool für die [REST-API des FIM-Portals](https://fimportal.de/docs)
+    (`fimportal.de`): Datenschemata, Datenfelder, Dokumentsteckbriefe, Leistungssteckbriefe,
+    Leistungsstammtexte und Prozessmodelle suchen und herunterladen – als sauberes JSON oder
+    als natives XML/PDF, das Sie direkt an [`jq`](https://jqlang.github.io/jq/) weitergeben
+    oder als Datei speichern können.

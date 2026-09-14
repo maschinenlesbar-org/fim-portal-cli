@@ -4,6 +4,8 @@
 [![Release](https://github.com/maschinenlesbar-org/fim-portal-cli/actions/workflows/release.yml/badge.svg)](https://github.com/maschinenlesbar-org/fim-portal-cli/actions/workflows/release.yml)
 [![npm](https://img.shields.io/npm/v/@maschinenlesbar.org/fim-portal-cli)](https://www.npmjs.com/package/@maschinenlesbar.org/fim-portal-cli)
 
+**Website:** [English](https://maschinenlesbar-org.github.io/fim-portal-cli/) · [Deutsch](https://maschinenlesbar-org.github.io/fim-portal-cli/de/) — command reference, guides and API docs
+
 Browse Germany's **FIM Portal** — the authoritative catalogue of XDatenfelder schemas,
 XZuFi services and XProzess processes — from your terminal. `fim-portal` is a
 command-line tool over the [FIM Portal REST API](https://fimportal.de/docs) (`fimportal.de`):
