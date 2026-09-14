@@ -38,16 +38,19 @@ reports, resolving id-only cross-references) so Claude doesn't rediscover them e
 
 ### Plugin marketplace (recommended)
 
-This repo is a Claude Code **plugin marketplace**, so installation is two commands inside
-Claude Code:
+The skills are published as the `fim-portal` plugin in the
+[maschinenlesbar.org plugin marketplace](https://github.com/maschinenlesbar-org/plugins),
+which lists the plugins for all maschinenlesbar.org CLIs. Installation is two commands
+inside Claude Code:
 
 ```
-/plugin marketplace add maschinenlesbar-org/fim-portal-cli
-/plugin install fim-portal@fim-portal-skills
+/plugin marketplace add maschinenlesbar-org/plugins
+/plugin install fim-portal@maschinenlesbar
 ```
 
-The first command registers the marketplace; the second installs the `fim-portal` plugin,
-which bundles all four skills. Update later with `/plugin marketplace update`.
+The first command registers the marketplace (once, for all maschinenlesbar.org plugins);
+the second installs the `fim-portal` plugin, which bundles all four skills. Update later
+with `/plugin marketplace update maschinenlesbar`.
 
 ### Manual (copy the skill folders)
 
