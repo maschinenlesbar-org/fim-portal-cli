@@ -14,8 +14,9 @@ userInvocable: true
 
 # FIM Schema Blueprint
 
-Turn a `schemas get` response — a deep tree of nested groups and fields plus two
-flat catalogues — into a **readable form blueprint**: the groups, the fields, their
+Turn a `schemas get` response — a top-level element list plus two flat catalogues
+that together encode the nested group/field tree — into a **readable form
+blueprint**: the groups, the fields, their
 types, cardinalities and code lists, in the order a form would present them.
 
 ## Tooling
@@ -36,8 +37,16 @@ fim-portal --compact schemas search --fts-query "Wohngeld" --is-latest --limit 1
 
 `items[]` carry `fim_id`, `fim_version`, `name`, `bezeichnung` (often the better,
 human title), `freigabe_status_label`, `xdf_version` (`2.0` = XDF2, `3.0.0` = XDF3),
-and `steckbrief_id` (the linked document profile). Pick the id; if several match,
-show id + name + status and let the user choose.
+and `steckbrief_id` (the linked document profile, can be `null`). Pick the id; if
+several match, show id + name + status and let the user choose.
+
+> **Full-text trap.** `--fts-query` matches text anywhere in the schema, including
+> its elements' descriptions, so the top hits can be unrelated. `--fts-query
+> "Elterngeld"` returns Wohngeld and Lebensunterhalt schemas that only mention
+> Elterngeld as an income type, and no Elterngeld schema. Each hit's `fts_match`
+> shows the matched snippet with the term in `[[[…]]]`. Check `name`/`bezeichnung`
+> before calling a hit "the" schema, use `--name` (substring of the name) to pin a
+> title, and tell the user when no hit is actually about their topic.
 
 > **Version trap.** `get` defaults to `latest`. If the user names a version, pass it
 > as a second arg (`schemas get S00000000159 1.0`). To enumerate published versions:
@@ -49,31 +58,53 @@ show id + name + status and let the user choose.
 fim-portal --compact schemas get S00000000159
 ```
 
-The response has three views of the same content — know which to use:
+The structure is split across these arrays — know which to use:
 
 | Field | What it is | Use it for |
 |---|---|---|
-| `children[]` | the **hierarchical tree**: ordered top-level elements, each `{ fim_id, fim_version, type, anzahl, children? }`. `type` is `"Gruppe"` or `"Feld"`; `anzahl` is the **cardinality** (`"1:1"`, `"0:n"`, …). | the form's *structure & order* |
+| `children[]` | the schema's **top level only**: ordered elements, each `{ namespace, fim_id, fim_version, type, anzahl, bezug }`. `type` is `"Gruppe"` or `"Feld"`; `anzahl` is the **cardinality** (`"1:1"`, `"0:n"`, …). These nodes have **no** `children` of their own. | the form's top-level *order* |
 | `datenfelder[]` | a **flat catalogue** of every field used anywhere, with full detail (`name`, `feldart`, `datentyp`, `code_list_id`, `definition`, `freigabe_status_label`) | looking up a field's type by `fim_id` |
-| `datenfeldgruppen[]` | flat catalogue of every group, with its own `children` | looking up a group's name/contents |
+| `datenfeldgruppen[]` | flat catalogue of every group, each with its own ordered `children[]` (same node shape, with `anzahl`) | a group's name, and **the nesting below the top level** |
 | `regeln[]` | validation rules `{ fim_id, fim_version }` (ids only — fetch detail separately if asked) | noting that constraints exist |
 
 Top-level metadata to lead with: `name`/`bezeichnung`, `xdf_version`,
-`freigabe_status_label`, `steckbrief_name`, `bezug` (legal bases), `definition`.
+`freigabe_status_label`, `steckbrief_name` (can be `null`), `bezug` (legal bases),
+`definition`.
 
-> **The join you must do:** `children[]` gives *structure + cardinality* but only
-> `fim_id`s; `datenfelder[]`/`datenfeldgruppen[]` give the *names and types*. Build a
-> lookup map from the two flat lists keyed by `fim_id`, then walk `children[]`
-> recursively, resolving each node's name/type from the map. The tree alone has no
-> names; the flat lists alone have no order or cardinality. **Schemas are large** —
-> 100–200 fields and 100+ groups is normal — so summarise, don't dump every leaf.
+> **The join you must do:** the tree isn't in one place. `children[]` holds only the
+> top-level elements; the order, nesting and `anzahl` of everything below live in
+> each group's `children[]` inside `datenfeldgruppen[]`. Build lookup maps from
+> `datenfelder[]` and `datenfeldgruppen[]` keyed by `fim_id`, start at the top-level
+> `children[]`, and for every `Gruppe` node recurse into **that group's catalogue
+> entry's** `children[]`. Walking `children[]` alone gives only the few top-level
+> lines. **Schemas are large** — 100–200 fields and 100+ groups is normal — so
+> summarise, don't dump every leaf.
 
 ## Step 3 — Build the blueprint
 
-Walk `children[]` depth-first, indenting by nesting. For each node resolve from the
-flat catalogues:
+Walk the tree depth-first as described above, indenting by nesting. This `jq`
+program prints the whole outline (name, id, `feldart` · `datentyp`, `anzahl`):
 
-- **Group** (`type: "Gruppe"`): show `name`, `anzahl`, and recurse into its fields.
+```bash
+fim-portal --compact schemas get S00000000159 | jq -r '
+  (INDEX(.datenfelder[]; .fim_id)) as $f
+  | (INDEX(.datenfeldgruppen[]; .fim_id)) as $g
+  | def node($d):
+      if .type == "Gruppe" then
+        "\("   " * $d // "")▸ \($g[.fim_id].name) (\(.fim_id))  \(.anzahl)",
+        ($g[.fim_id].children[] | node($d + 1))
+      else
+        "\("   " * $d // "")• \($f[.fim_id].name) (\(.fim_id))  \($f[.fim_id].feldart) · \($f[.fim_id].datentyp)  \(.anzahl)"
+      end;
+    .children[] | node(0)'
+```
+
+A group reused in several places is printed each time, so the outline is longer
+than the field count (about 700 lines for S00000000159). Use it as working data and
+present a trimmed version. For each node:
+
+- **Group** (`type: "Gruppe"`): show `name`, `anzahl`, and recurse into its entry in
+  `datenfeldgruppen[]`.
 - **Field** (`type: "Feld"`): show `name`, `anzahl`, **`feldart`** (`input`,
   `select`, `label`, `hidden`, `locked`), **`datentyp`** (`text`, `date`, `bool`,
   `num`, `num_currency`, `file`, `obj`, …), and `code_list_id` if present (a
@@ -81,8 +112,12 @@ flat catalogues:
   with `fim-portal code-lists` only if the user wants the allowed values).
 
 Annotate cardinality plainly: `1:1` required-single, `0:1` optional, `0:n`/`1:n`
-repeatable. Flag fields whose `freigabe_status_label` is not released (e.g.
-`Entwurf`) — they're drafts inside the schema.
+repeatable. Element statuses are separate from the schema's own status, so count
+them rather than flagging every element (`jq '[.datenfelder[].freigabe_status_label]
+| group_by(.) | map({(.[0]): length}) | add'`). A released schema can be built from
+unreleased elements: on 2026-09-15 the gold XDF2 schema S05000039 had 28 fields
+`in Bearbeitung` and one `inaktiv` (F60000240 Telefon). Name `inaktiv` elements
+explicitly.
 
 ## Step 4 — Present
 
