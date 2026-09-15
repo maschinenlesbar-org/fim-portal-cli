@@ -10,7 +10,7 @@ Each skill teaches Claude how to drive the `fim-portal` CLI to answer a specific
 question — "tell me everything about the Personalausweis service", "what fields are in the
 Wohngeld schema?", "is this schema clean?", "is there a reusable field for a surname?" — and
 to report the answer with evidence rather than guesswork. They encode the parts that are easy
-to get wrong (the namespace argument on fields/groups, error-vs-warning severity in quality
+to get wrong (the namespace argument on fields/groups, critical-vs-warning severity in quality
 reports, resolving id-only cross-references) so Claude doesn't rediscover them each time.
 
 ## Skills
@@ -95,16 +95,22 @@ encode the non-obvious parts of this API, for example:
   as the namespace and the command errors — carry the `namespace` from the search result
   (see **fim-field-finder**);
 - a **quality report buries severity**: `total_checks` counts *all* findings but most are
-  `warning`s, not `error`s — split by `error_type` before judging a schema "broken", and
-  treat an all-clean report (`total_checks: 0`) as a valid pass (see **fim-quality-audit**);
-- a **schema `get` returns three views** of the same content — a hierarchical `children[]`
-  tree (with `type` and `anzahl` cardinality but only ids), and flat `datenfelder[]` /
-  `datenfeldgruppen[]` catalogues (with names and types but no order); you must join them by
-  `fim_id` to build a readable blueprint (see **fim-schema-blueprint**);
+  `warning`s — split by `error_type` (`critical`, `warning`, `method`, `info`; there is no
+  `error`) before judging a schema "broken", and treat an all-clean report
+  (`total_checks: 0`) as a valid pass (see **fim-quality-audit**);
+- a **schema `get` spreads its tree over three arrays** — `children[]` holds only the
+  top-level elements (with `type` and `anzahl` cardinality but only ids), the flat
+  `datenfeldgruppen[]` catalogue holds each group's name and its own ordered `children[]`,
+  and `datenfelder[]` holds the fields' names and types; you must walk from the top level
+  through the group catalogue to build a readable blueprint (see **fim-schema-blueprint**);
 - a service profile's cross-references (`leistung_stammtexte`, `prozessklasse`) come back as
   **id-only lists**, and `prozessklasse` is usually `null`; the dossier resolves the texts on
-  demand, picking the right `source` (`leika` / `landesredaktion` / `pvog`) from the
-  `redaktion_id` prefix (see **fim-service-dossier**);
+  demand, looking up each text's `source` (`leika` / `landesredaktion` / `pvog`) with
+  `service-texts search --leistungsschluessel`, because the `redaktion_id` prefix doesn't
+  determine it (see **fim-service-dossier**);
+- `freigabe_status` runs from `1` in Planung to `8` vorgesehen zum Löschen; `5` and `6` are
+  the released states (fachlich freigegeben, silber and gold), and `7` is inactive, not
+  usable (see **fim-field-finder**);
 - searches without **`--is-latest`** return every historical version of each record — dedupe
   to latest unless version history is wanted; an empty match returns
   `{"items":[],"total_count":0}` and exits `0` (not an error), while a missing id exits `4`;
