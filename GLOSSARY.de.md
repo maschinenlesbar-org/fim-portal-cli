@@ -191,10 +191,14 @@ verantwortliche Organisation bzw. der Fachbereich. Gefiltert wird per **Präfixv
 `01` erfasst den gesamten Bereich `01000`. Wiederholbar (`--nummernkreis`).
 
 **Freigabestatus (`freigabe_status`).** Der Freigabestatus als Ganzzahl
-`1`–`8` (z. B. `3` = Entwurf, `6` = technisch freigegeben). Siehe die
+`1`–`8`: `1` in Planung, `2` in Bearbeitung, `3` Entwurf, `4` methodisch freigegeben,
+`5` fachlich freigegeben (silber), `6` fachlich freigegeben (gold), `7` inaktiv,
+`8` vorgesehen zum Löschen. `5` und `6` sind die freigegebenen Status. Siehe die
 [Status-Codeliste](https://www.xrepository.de/details/urn:xoev-de:xprozess:codeliste:status).
 Wiederholbarer Filter (`--freigabe-status`). `freigabe_status_label` enthält die
-lesbare Bezeichnung.
+lesbare Bezeichnung und steht bei Datenschemata, Datenfeldgruppen, Datenfeldern und
+Dokumentsteckbriefen; Leistungsteckbriefe, Leistungsstammtexte und Prozesse liefern nur
+die Zahl.
 
 **status_gesetzt_durch / _am / _seit / _bis.** Wer den aktuellen Status gesetzt hat und
 wann; die Varianten `seit`/`bis` sind Filter für einen Datumsbereich.
@@ -265,8 +269,9 @@ XZuFi-Entität.
 Prozessklasse liefert ihre XProzess-Darstellung als JSON.
 
 **PDF-Export (`pdf`).** Ein erzeugtes PDF eines Leistungsteckbriefs oder
-Leistungsstammtexts für einen angegebenen **Sprachcode** (siehe `Sprache`, z. B.
-`Deutsch`, `Englisch`).
+Leistungsstammtexts für einen angegebenen **Sprachcode** (z. B. `de-DE`). Das ist nicht
+der Wert des Suchfilters `--sprache`: `Deutsch` als Sprachcode endet mit Exit-Code `4`
+(„Could not find language“).
 
 **search-csv.** Ein Tools-Endpoint, der ein Suchergebnis als CSV streamt.
 

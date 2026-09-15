@@ -190,10 +190,15 @@ roughly an owning organisation/domain. Filtering is a **prefix match**: `01`
 matches all of `01000`. Repeatable (`--nummernkreis`).
 
 **Freigabestatus (`freigabe_status`).** The release/approval status, an integer
-`1`–`8` (e.g. `3` = draft/Entwurf, `6` = technically released). See the
+`1`–`8`: `1` in Planung (planned), `2` in Bearbeitung (in progress), `3` Entwurf
+(draft), `4` methodisch freigegeben (methodically approved), `5` fachlich
+freigegeben (silber), `6` fachlich freigegeben (gold), `7` inaktiv (inactive),
+`8` vorgesehen zum Löschen (marked for deletion). `5` and `6` are the released
+states. See the
 [status code list](https://www.xrepository.de/details/urn:xoev-de:xprozess:codeliste:status).
 Repeatable filter (`--freigabe-status`). `freigabe_status_label` is the
-human-readable form.
+human-readable form, present on schemas, groups, fields and document profiles;
+service profiles, service texts and processes carry only the number.
 
 **status_gesetzt_durch / _am / _seit / _bis.** Who set the current status and
 when; the `seit`/`bis` variants are date-range filters.
@@ -262,7 +267,8 @@ entity.
 process class serves its XProzess representation as JSON.
 
 **PDF export (`pdf`).** A rendered PDF of a service profile/text in a given
-**language code** (see `Sprache`, e.g. `Deutsch`, `Englisch`).
+**language code** (e.g. `de-DE`). This is not the `--sprache` search filter's
+value: `Deutsch` as the language code exits `4` ("Could not find language").
 
 **search-csv.** A tools endpoint that streams a search result as CSV.
 
