@@ -46,8 +46,9 @@ const DEFAULT_MAX_RESPONSE_BYTES = 100 * 1024 * 1024;
  * an escape (U+001B) that JSON.parse turns into a real control byte, so without
  * this a hostile or MITM'd endpoint could drive ANSI/OSC escape sequences into the
  * user's terminal when the message is printed to stderr (display spoofing, title
- * changes). The stdout JSON path is already safe because `JSON.stringify` escapes
- * these, so this only needs to cover text that flows into an error message.
+ * changes). The CLI's JSON output is escaped separately (`escapeControlChars` in
+ * cli/shared.ts): `JSON.stringify` alone leaves DEL and the C1 range raw. So this
+ * only needs to cover text that flows into an error message.
  */
 export function sanitizeServerText(text: string): string {
   let out = "";
