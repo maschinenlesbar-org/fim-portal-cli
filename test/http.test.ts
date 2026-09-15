@@ -100,6 +100,21 @@ test("nodeHttpTransport enforces a wall-clock deadline against a trickling serve
   );
 });
 
+test("nodeHttpTransport caps a timeoutMs beyond Node's timer range instead of firing after 1 ms", async () => {
+  const warnings: string[] = [];
+  const onWarning = (warning: Error) => void warnings.push(warning.name);
+  process.on("warning", onWarning);
+  try {
+    // /slow answers after 100 ms; an overflowing timer would fire after 1 ms.
+    const res = await nodeHttpTransport({ method: "GET", url: `${base}/slow`, timeoutMs: 3_000_000_000 });
+    assert.equal(res.body.toString("utf8"), "late");
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(warnings.filter((name) => name === "TimeoutOverflowWarning"), []);
+  } finally {
+    process.off("warning", onWarning);
+  }
+});
+
 test("nodeHttpTransport rejects with FimNetworkError on an invalid URL", async () => {
   await assert.rejects(
     () => nodeHttpTransport({ method: "GET", url: "not-a-url" }),

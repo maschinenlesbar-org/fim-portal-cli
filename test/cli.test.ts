@@ -119,6 +119,17 @@ test("a malformed --base-url is rejected at parse time", async () => {
   assert.equal(cli.mt.calls.length, 0);
 });
 
+test("--timeout accepts up to the largest timer Node supports", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  assert.equal(await run(["--timeout", "2147483647", "schemas", "search"], cli.deps), 0);
+  assert.equal(cli.mt.last().timeoutMs, 2_147_483_647);
+
+  const over = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  assert.equal(await run(["--timeout", "2147483648", "schemas", "search"], over.deps), 1);
+  assert.equal(over.mt.calls.length, 0);
+  assert.match(over.err.join("\n"), /Must be <= 2147483647/);
+});
+
 test("--max-response-bytes is forwarded to the transport", async () => {
   const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
   await run(["--max-response-bytes", "2048", "schemas", "search"], cli.deps);
