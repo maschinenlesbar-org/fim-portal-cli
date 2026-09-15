@@ -78,17 +78,25 @@ Don't fetch all of them — there can be 10–20+. Instead:
 
 - **Summarise**: report how many Redaktionen have a text and list them (id +
   `title`), grouping by `redaktion_id` prefix (federal `B…` vs state `L…`).
+- **Look up each text's source**: `service-texts get` needs a third argument, the
+  **source** (`leika`, `landesredaktion` or `pvog`), and `leistung_stammtexte` doesn't
+  carry it. Don't guess it from the `redaktion_id` prefix: the federal `B100019` text
+  sits under `leika` for one service and under `pvog` for another, and state `L…` texts
+  can be `pvog` too. Guessing wrong exits `4` ("Could not find Leistungstammtext").
+  One search returns every text for the key with its `source`:
+
+  ```bash
+  fim-portal --compact service-texts search --leistungsschluessel 99008001012012 \
+    | jq -r '.items[] | [.redaktion_id, .leistung_id, .source, .title] | @tsv'
+  ```
+
 - **Resolve on demand**: fetch the full text only for the one(s) the user wants
-  (default to the federal `B100019`/`leika` entry, which is the canonical one):
+  (default to the federal `B100019` entry, which is the canonical one), passing the
+  `redaktion_id`, `leistung_id` and `source` from that search:
 
   ```bash
   fim-portal --compact service-texts get B100019 110885418 leika
   ```
-
-  The third arg is the **source** — `leika`, `landesredaktion`, or `pvog`. Pick it
-  from the `redaktion_id`: `B…` → `leika`; state `L…` editorial offices are
-  `landesredaktion`; portal entries are `pvog`. If a `get` 404s with one source,
-  the entry belongs to a different source — try `landesredaktion`.
 
   A master text carries `kurztext` and `volltext` (HTML — strip tags for a plain
   summary), `rechtsgrundlagen`, `leistungsbezeichnung_2`, and its own `ozg` block.
@@ -116,7 +124,7 @@ regional-coverage summary. Example shape:
 ```
 Personalausweis — neu wegen falscher Eintragungen   (key 99008001012012)
   Citizen name: „Personalausweis aufgrund veralteter Eintragungen neu beantragen"
-  For:          citizens (001)        Status: 6 (technically released)
+  For:          citizens (001)        Status: 6 (fachlich freigegeben, gold)
   OZG:          Querschnittsleistungen (#10119)   SDG: none
   Legal basis:  § 27 Abs. 1 Nr. 1 PAuswG; Personalausweis-Gebührenverordnung
   Process:      none linked
@@ -124,14 +132,17 @@ Personalausweis — neu wegen falscher Eintragungen   (key 99008001012012)
     • federal  B100019 (leika)  — canonical
     • states   L100002, L100008, L100039, L100041, L100042
   → fetch any with: service-texts get <redaktion_id> <leistung_id> <source>
+    (source from service-texts search --leistungsschluessel)
 ```
 
 Rules:
 - **Resolve, don't dump.** Translate id-only cross-references into names/counts; a
   raw `leistung_stammtexte` array is unreadable.
-- Map `freigabe_status` to its label (`3` Entwurf, `6` technisch freigegeben — the
-  profile `get` omits the label; use the value, or the `freigabe_status_label`
-  present on master-text records). `freigabe_status: null` means unset.
+- Map `freigabe_status` to its label yourself: neither the profile nor the master
+  texts carry one (`service-texts search` returns `freigabe_status_label: null`). The
+  codes are `1` in Planung, `2` in Bearbeitung, `3` Entwurf, `4` methodisch
+  freigegeben, `5` fachlich freigegeben (silber), `6` fachlich freigegeben (gold),
+  `7` inaktiv, `8` vorgesehen zum Löschen. `freigabe_status: null` means unset.
 - Note when `prozessklasse` / `replacements` / `sdg_informationsbereiche` are
   empty rather than silently omitting them.
 - Strip HTML from `kurztext`/`volltext` before quoting; never paste raw `<p>` markup.
