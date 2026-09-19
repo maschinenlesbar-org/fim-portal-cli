@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { RequestEngine } from "../src/client/engine.js";
-import { FimApiError, FimParseError } from "../src/client/errors.js";
+import { FimApiError, FimNetworkError, FimParseError } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
 const noSleep = async (): Promise<void> => {};
@@ -150,4 +150,25 @@ test("FimApiError.isRetryable reflects 429/503", () => {
   const e2 = new FimApiError({ status: 404, url: "u", method: "GET", body: "" });
   assert.equal(e1.isRetryable, true);
   assert.equal(e2.isRetryable, false);
+});
+
+test("a non-http(s) base URL is rejected at construction, before any request", () => {
+  for (const baseUrl of ["file:///etc/passwd", "ftp://example.org"]) {
+    const mt = makeMockTransport(() => jsonResponse({}));
+    assert.throws(
+      () => new RequestEngine({ transport: mt.transport, baseUrl }),
+      (err: unknown) => err instanceof FimNetworkError && /Unsupported protocol/.test(err.message),
+      baseUrl,
+    );
+    assert.equal(mt.calls.length, 0);
+  }
+});
+
+test("an unparseable base URL is rejected at construction", () => {
+  const mt = makeMockTransport(() => jsonResponse({}));
+  assert.throws(
+    () => new RequestEngine({ transport: mt.transport, baseUrl: "not a url" }),
+    (err: unknown) => err instanceof FimNetworkError && /Invalid base URL/.test(err.message),
+  );
+  assert.equal(mt.calls.length, 0);
 });

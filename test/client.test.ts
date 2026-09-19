@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FimPortalClient } from "../src/client/client.js";
+import { FimNetworkError } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse, queryOf } from "./helpers.js";
 import * as fx from "./fixtures.js";
 
@@ -176,4 +177,16 @@ test("tools.searchCsvDownload hits /tools/search-csv-download and forwards param
   assert.equal(url.searchParams.get("feldart"), "input");
   // Requests a CSV Accept header.
   assert.equal(mt.last().headers?.["accept"] ?? mt.last().headers?.["Accept"], "text/csv");
+});
+
+test("the client rejects a non-http(s) base URL even with a custom transport", () => {
+  for (const baseUrl of ["file:///etc/passwd", "ftp://example.org"]) {
+    const mt = makeMockTransport(() => jsonResponse({}));
+    assert.throws(
+      () => new FimPortalClient({ transport: mt.transport, baseUrl }),
+      (err: unknown) => err instanceof FimNetworkError && /Unsupported protocol/.test(err.message),
+      baseUrl,
+    );
+    assert.equal(mt.calls.length, 0);
+  }
 });

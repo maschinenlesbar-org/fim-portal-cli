@@ -4,7 +4,7 @@
 
 import { nodeHttpTransport, type Transport } from "./http.js";
 import { buildQueryString, type QueryParams } from "./query.js";
-import { FimApiError, FimParseError } from "./errors.js";
+import { FimApiError, FimNetworkError, FimParseError } from "./errors.js";
 
 export const DEFAULT_BASE_URL = "https://fimportal.de";
 const DEFAULT_USER_AGENT = "fim-portal-cli";
@@ -64,6 +64,26 @@ export function sanitizeServerText(text: string): string {
   return out;
 }
 
+/**
+ * Reject a base URL whose scheme is not http(s). The default transport already
+ * gates this per hop, but the engine is exported as a library and may be handed a
+ * custom transport that does no such check, so gate the configured base URL here
+ * too (a `file:`/`ftp:` base URL fails fast with a typed error).
+ */
+function assertHttpScheme(baseUrl: string): void {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    throw new FimNetworkError(`Invalid base URL: ${baseUrl}`);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new FimNetworkError(
+      `Unsupported protocol "${url.protocol}" in base URL: ${baseUrl}`,
+    );
+  }
+}
+
 const realSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -79,6 +99,7 @@ export class RequestEngine {
 
   constructor(options: EngineOptions = {}) {
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+    assertHttpScheme(this.baseUrl);
     this.transport = options.transport ?? nodeHttpTransport;
     this.userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
     this.timeoutMs = options.timeoutMs ?? 30_000;
