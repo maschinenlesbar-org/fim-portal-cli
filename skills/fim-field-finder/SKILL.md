@@ -9,8 +9,10 @@ description: >
   building blocks instead of inventing form fields. Filters by Feldart / Datentyp /
   Freigabestatus, ranks by reusability, and handles the namespace + status traps
   the bare search exposes.
-version: 1.0.0
-userInvocable: true
+compatibility: >
+  Requires the `fim-portal` CLI (npm package
+  @maschinenlesbar.org/fim-portal-cli) on PATH, installed by the user; the skill
+  never installs it. Uses jq for JSON filtering. Network access to fimportal.de.
 ---
 
 # FIM Field & Group Finder
@@ -23,6 +25,8 @@ reusable they are.
 ## Tooling
 
 This skill drives the `fim-portal` command. **Before anything else, validate it is available** — run `command -v fim-portal` (or `fim-portal --version`). If it is not on your PATH, STOP and inform the user that the `fim-portal` CLI (`@maschinenlesbar.org/fim-portal-cli`) is not installed — installing it is their responsibility; never install it yourself, and do not fall back to `npx` or a local `node dist/...` build.
+
+This skill also filters JSON with `jq`. **Validate it too** — run `command -v jq`. If it is missing, inform the user that `jq` is not installed — installing it is their responsibility; never install it yourself — and carry on without it: filter the CLI output with `node -e` instead (Node is already on your PATH, since the CLI runs on it).
 
 The API is read-only and needs **no key/account/config**. Pass `--compact`. A search with no hits returns `{"items":[],"total_count":0}` and exits `0` — that's "no matching field", a valid answer.
 

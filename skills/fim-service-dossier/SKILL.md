@@ -9,8 +9,10 @@ description: >
   Leistung?", or wants the profile + its master texts + linked process pulled
   together. Resolves the service profile's cross-references (leistung_stammtexte,
   prozessklasse, OZG) that the bare CLI returns only as raw id lists.
-version: 1.0.0
-userInvocable: true
+compatibility: >
+  Requires the `fim-portal` CLI (npm package
+  @maschinenlesbar.org/fim-portal-cli) on PATH, installed by the user; the skill
+  never installs it. Uses jq for JSON filtering. Network access to fimportal.de.
 ---
 
 # FIM Service Dossier
@@ -23,6 +25,8 @@ cross-references are just arrays of ids the user can't read.
 ## Tooling
 
 This skill drives the `fim-portal` command. **Before anything else, validate it is available** — run `command -v fim-portal` (or `fim-portal --version`). If it is not on your PATH, STOP and inform the user that the `fim-portal` CLI (`@maschinenlesbar.org/fim-portal-cli`) is not installed — installing it is their responsibility; never install it yourself, and do not fall back to `npx` or a local `node dist/...` build.
+
+This skill also filters JSON with `jq`. **Validate it too** — run `command -v jq`. If it is missing, inform the user that `jq` is not installed — installing it is their responsibility; never install it yourself — and carry on without it: filter the CLI output with `node -e` instead (Node is already on your PATH, since the CLI runs on it).
 
 The API is read-only and needs **no API key, no account, no config**. Pass `--compact` so each result is one line, easy to pipe into `jq`. A search that matches nothing returns a valid envelope `{"items":[],"total_count":0,…}` and exits `0` — that is **not** an error, it means "no such service". A `get` on a missing id exits `4` ("not found") with the message on stderr; re-fetch the id from a fresh `search`, ids/versions drift as the catalogue updates.
 
