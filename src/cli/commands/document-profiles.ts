@@ -6,6 +6,7 @@ import {
   choiceOption,
   collect,
   collectFreigabeStatus,
+  parseNonEmpty,
   pruneUndefined,
   renderJson,
   renderRaw,
@@ -26,20 +27,20 @@ export function registerDocumentProfileCommands(program: Command, deps: CliDeps)
   const search = dp
     .command("search")
     .description("Search/filter document profiles")
-    .option("--name <name>", "filter by name")
+    .option("--name <name>", "filter by name", parseNonEmpty)
     .option("--nummernkreis <nk>", "filter by Nummernkreis (repeatable, prefix match)", collect)
     .option(
       "--freigabe-status <code>",
       "filter by Freigabestatus 1..8 (repeatable)",
       collectFreigabeStatus,
     )
-    .option("--status-gesetzt-durch <who>", "filter by status author")
-    .option("--status-gesetzt-seit <date>", "status set on/after this date")
-    .option("--status-gesetzt-bis <date>", "status set on/before this date")
-    .option("--bezeichnung <text>", "filter by Bezeichnung")
+    .option("--status-gesetzt-durch <who>", "filter by status author", parseNonEmpty)
+    .option("--status-gesetzt-seit <date>", "status set on/after this date", parseNonEmpty)
+    .option("--status-gesetzt-bis <date>", "status set on/before this date", parseNonEmpty)
+    .option("--bezeichnung <text>", "filter by Bezeichnung", parseNonEmpty)
     .addOption(choiceOption("--dokumentart <code>", "filter by Dokumentart", DokumentartValues))
-    .option("--bezug <text>", "filter by Bezug")
-    .option("--fts-query <q>", "full-text search query")
+    .option("--bezug <text>", "filter by Bezug", parseNonEmpty)
+    .option("--fts-query <q>", "full-text search query", parseNonEmpty)
     .addOption(
       choiceOption(
         "--suche-nur-in <module>",
@@ -47,10 +48,10 @@ export function registerDocumentProfileCommands(program: Command, deps: CliDeps)
         SteckbriefSucheInValues,
       ),
     )
-    .option("--versionshinweis <text>", "filter by Versionshinweis")
-    .option("--updated-since <iso>", "filter by last-update timestamp (ISO-8601)")
+    .option("--versionshinweis <text>", "filter by Versionshinweis", parseNonEmpty)
+    .option("--updated-since <iso>", "filter by last-update timestamp (ISO-8601)", parseNonEmpty)
     .addOption(choiceOption("--xdf-version <v>", "filter by XDatenfelder version", XdfVersionValues))
-    .option("--stichwort <text>", "filter by Stichwort (XDF3 only)")
+    .option("--stichwort <text>", "filter by Stichwort (XDF3 only)", parseNonEmpty)
     .option("--is-latest", "only the latest version of each kind")
     .addOption(choiceOption("--order-by <order>", "result order", DatenfelderSearchOrderValues));
   addPagination(search).action(
@@ -80,7 +81,8 @@ export function registerDocumentProfileCommands(program: Command, deps: CliDeps)
     }),
   );
 
-  dp.command("versions <fimId>")
+  dp.command("versions")
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
     .description("List all versions of a document profile")
     .action(
       action(deps, async ({ client, global }, [fimId]) => {
@@ -88,7 +90,9 @@ export function registerDocumentProfileCommands(program: Command, deps: CliDeps)
       }),
     );
 
-  dp.command("get <fimId> [fimVersion]")
+  dp.command("get")
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
+    .argument("[fimVersion]", "FIM version (default: latest)", parseNonEmpty)
     .description("Get a single document profile (version defaults to 'latest')")
     .action(
       action(deps, async ({ client, global }, [fimId, fimVersion]) => {
@@ -96,7 +100,9 @@ export function registerDocumentProfileCommands(program: Command, deps: CliDeps)
       }),
     );
 
-  dp.command("xdf <fimId> [fimVersion]")
+  dp.command("xdf")
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
+    .argument("[fimVersion]", "FIM version (default: latest)", parseNonEmpty)
     .description("Download the XDatenfelder XML for a document profile")
     .action(
       action(deps, async ({ client, global }, [fimId, fimVersion]) => {

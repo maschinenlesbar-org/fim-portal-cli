@@ -406,3 +406,67 @@ test("a failed -o write degrades to exit 1 with a clean Error (not Unexpected er
   assert.match(errText, /^Error: could not write \/nope\/out\.xml/);
   assert.doesNotMatch(errText, /Unexpected error/);
 });
+
+// ---- blank values are a usage error, never an empty parameter ----
+
+// Each free-text, filter or id input once, set to "" (plus one whitespace case).
+// A blank value is never meaningful: it must be rejected at parse time, before
+// any request, instead of being sent as `key=` or an empty path segment.
+const blankCases: Array<[string, string[]]> = [
+  ["--bezug-unterelemente", ["schemas", "search", "--bezug-unterelemente", ""]],
+  ["--bezeichnung", ["schemas", "search", "--bezeichnung", ""]],
+  ["--stichwort", ["schemas", "search", "--stichwort", ""]],
+  ["--name", ["schemas", "search", "--name", ""]],
+  ["--name (whitespace)", ["schemas", "search", "--name", "   "]],
+  ["--nummernkreis", ["schemas", "search", "--nummernkreis", ""]],
+  ["--gueltig-am", ["schemas", "search", "--gueltig-am", ""]],
+  ["--status-gesetzt-durch", ["schemas", "search", "--status-gesetzt-durch", ""]],
+  ["--status-gesetzt-seit", ["schemas", "search", "--status-gesetzt-seit", ""]],
+  ["--status-gesetzt-bis", ["schemas", "search", "--status-gesetzt-bis", ""]],
+  ["--bezug", ["schemas", "search", "--bezug", ""]],
+  ["--versionshinweis", ["schemas", "search", "--versionshinweis", ""]],
+  ["--updated-since", ["schemas", "search", "--updated-since", ""]],
+  ["--fts-query", ["schemas", "search", "--fts-query", ""]],
+  ["--leistungstyp", ["service-profiles", "search", "--leistungstyp", ""]],
+  ["--typisierung", ["service-profiles", "search", "--typisierung", ""]],
+  ["--title", ["service-profiles", "search", "--title", ""]],
+  ["--leistungsbezeichnung", ["service-profiles", "search", "--leistungsbezeichnung", ""]],
+  ["--leistungsbezeichnung2", ["service-profiles", "search", "--leistungsbezeichnung2", ""]],
+  ["--leistungsschluessel", ["service-profiles", "search", "--leistungsschluessel", ""]],
+  ["--rechtsgrundlagen", ["service-profiles", "search", "--rechtsgrundlagen", ""]],
+  ["--sdg", ["service-profiles", "search", "--sdg", ""]],
+  ["--leistungsadressat", ["service-profiles", "search", "--leistungsadressat", ""]],
+  ["--ozg-themenfeld", ["service-profiles", "search", "--ozg-themenfeld", ""]],
+  ["--ozg-id", ["service-profiles", "search", "--ozg-id", ""]],
+  ["--lagen-portalverbund", ["service-profiles", "search", "--lagen-portalverbund", ""]],
+  ["--redaktion-id", ["service-texts", "search", "--redaktion-id", ""]],
+  ["--resource", ["search-csv", "--resource", ""]],
+  ["--term", ["search-csv", "--resource", "fields", "--term", ""]],
+  ["--xdf-version", ["search-csv", "--resource", "fields", "--xdf-version", ""]],
+  ["--order-by", ["search-csv", "--resource", "fields", "--order-by", ""]],
+  ["--feldart", ["search-csv", "--resource", "fields", "--feldart", ""]],
+  ["--datentyp", ["search-csv", "--resource", "fields", "--datentyp", ""]],
+  ["--dokumentart", ["search-csv", "--resource", "fields", "--dokumentart", ""]],
+  ["--sprache", ["search-csv", "--resource", "fields", "--sprache", ""]],
+  ["<fimId>", ["schemas", "versions", ""]],
+  ["[fimVersion]", ["schemas", "get", "S1", ""]],
+  ["<namespace>", ["fields", "versions", "", "F1"]],
+  ["<leistungsschluessel>", ["service-profiles", "get", ""]],
+  ["<languageCode>", ["service-profiles", "pdf", "99123456760000", ""]],
+  ["<redaktionId>", ["organizational-units", "xzufi", "", "1"]],
+  ["<id>", ["process-classes", "get", "", "1.0"]],
+  ["<version>", ["process-classes", "get", "P1", ""]],
+  ["service-texts <redaktionId>", ["service-texts", "get", "", "L1", "leika"]],
+  ["service-texts <leistungId>", ["service-texts", "get", "R1", "", "leika"]],
+  ["service-texts <source>", ["service-texts", "get", "R1", "L1", ""]],
+  ["service-texts <languageCode>", ["service-texts", "pdf", "R1", "L1", "leika", ""]],
+];
+
+for (const [input, argv] of blankCases) {
+  test(`a blank ${input} is a usage error with no request`, async () => {
+    const cli = makeCli(() => jsonResponse({}));
+    const code = await run(argv, cli.deps);
+    assert.notEqual(code, 0);
+    assert.equal(cli.mt.calls.length, 0);
+  });
+}

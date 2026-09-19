@@ -7,6 +7,7 @@ import {
   choiceOption,
   collect,
   collectFreigabeStatus,
+  parseNonEmpty,
   pruneUndefined,
   renderJson,
   renderRaw,
@@ -39,28 +40,28 @@ function registerServiceProfiles(program: Command, deps: CliDeps): void {
     .description("Search/filter Leistungsteckbriefe")
     .option("--leistungstyp <typ>", "filter by Leistungstyp (repeatable)", collect)
     .option("--typisierung <t>", "filter by Typisierung (repeatable)", collect)
-    .option("--fts-query <q>", "full-text search query")
+    .option("--fts-query <q>", "full-text search query", parseNonEmpty)
     .addOption(choiceOption("--suche-nur-in <module>", "restrict full-text search", LeistungSucheInValues))
-    .option("--title <text>", "filter by title")
-    .option("--leistungsbezeichnung <text>", "filter by Leistungsbezeichnung")
-    .option("--leistungsbezeichnung2 <text>", "filter by Leistungsbezeichnung II")
-    .option("--leistungsschluessel <key>", "filter by Leistungsschluessel")
-    .option("--rechtsgrundlagen <text>", "filter by Rechtsgrundlagen")
+    .option("--title <text>", "filter by title", parseNonEmpty)
+    .option("--leistungsbezeichnung <text>", "filter by Leistungsbezeichnung", parseNonEmpty)
+    .option("--leistungsbezeichnung2 <text>", "filter by Leistungsbezeichnung II", parseNonEmpty)
+    .option("--leistungsschluessel <key>", "filter by Leistungsschluessel", parseNonEmpty)
+    .option("--rechtsgrundlagen <text>", "filter by Rechtsgrundlagen", parseNonEmpty)
     .option(
       "--freigabe-status <code>",
       "filter by Freigabestatus 1..8 (repeatable)",
       collectFreigabeStatus,
     )
     .option("--einheitlicher-ansprechpartner", "only services with Einheitlicher Ansprechpartner")
-    .option("--updated-since <iso>", "filter by last-update timestamp (ISO-8601)")
+    .option("--updated-since <iso>", "filter by last-update timestamp (ISO-8601)", parseNonEmpty)
     .option("--sdg <code>", "filter by SDG information area (repeatable)", collect)
     .option("--sdg-relevant", "only SDG-relevant services")
     .addOption(choiceOption("--sprache <lang>", "filter by language", SpracheValues))
     .option("--leistungsadressat <code>", "filter by Leistungsadressat (repeatable)", collect)
     .option("--ozg-themenfeld <field>", "filter by OZG Themenfeld (repeatable)", collect)
-    .option("--ozg-id <id>", "filter by OZG id")
+    .option("--ozg-id <id>", "filter by OZG id", parseNonEmpty)
     .addOption(choiceOption("--vollzugsbehoerde <code>", "filter by Vollzugsbehoerde", BehoerdeValues))
-    .option("--lagen-portalverbund <text>", "filter by Lagen (Portalverbund)")
+    .option("--lagen-portalverbund <text>", "filter by Lagen (Portalverbund)", parseNonEmpty)
     .addOption(
       choiceOption("--order-by <order>", "result order", LeistungSteckbriefSearchOrderValues),
     );
@@ -95,7 +96,8 @@ function registerServiceProfiles(program: Command, deps: CliDeps): void {
     }),
   );
 
-  sp.command("get <leistungsschluessel>")
+  sp.command("get")
+    .argument("<leistungsschluessel>", "Leistungsschluessel (LeiKa key)", parseNonEmpty)
     .description("Get a single Leistungsteckbrief")
     .action(
       action(deps, async ({ client, global }, [key]) => {
@@ -103,7 +105,8 @@ function registerServiceProfiles(program: Command, deps: CliDeps): void {
       }),
     );
 
-  sp.command("xzufi <leistungsschluessel>")
+  sp.command("xzufi")
+    .argument("<leistungsschluessel>", "Leistungsschluessel (LeiKa key)", parseNonEmpty)
     .description("Download the XZuFi XML for a Leistungsteckbrief")
     .action(
       action(deps, async ({ client, global }, [key]) => {
@@ -111,7 +114,9 @@ function registerServiceProfiles(program: Command, deps: CliDeps): void {
       }),
     );
 
-  sp.command("pdf <leistungsschluessel> <languageCode>")
+  sp.command("pdf")
+    .argument("<leistungsschluessel>", "Leistungsschluessel (LeiKa key)", parseNonEmpty)
+    .argument("<languageCode>", "language code of the PDF (e.g. de-DE)", parseNonEmpty)
     .description("Export a Leistungsteckbrief as PDF")
     .action(
       action(deps, async ({ client, global }, [key, lang]) => {
@@ -128,24 +133,24 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
   const search = st
     .command("search")
     .description("Search/filter Leistungsstammtexte")
-    .option("--leistungsschluessel <key>", "filter by Leistungsschluessel")
-    .option("--redaktion-id <id>", "filter by Redaktion id")
-    .option("--title <text>", "filter by title")
-    .option("--leistungsbezeichnung <text>", "filter by Leistungsbezeichnung")
-    .option("--leistungsbezeichnung2 <text>", "filter by Leistungsbezeichnung II")
-    .option("--rechtsgrundlagen <text>", "filter by Rechtsgrundlagen")
+    .option("--leistungsschluessel <key>", "filter by Leistungsschluessel", parseNonEmpty)
+    .option("--redaktion-id <id>", "filter by Redaktion id", parseNonEmpty)
+    .option("--title <text>", "filter by title", parseNonEmpty)
+    .option("--leistungsbezeichnung <text>", "filter by Leistungsbezeichnung", parseNonEmpty)
+    .option("--leistungsbezeichnung2 <text>", "filter by Leistungsbezeichnung II", parseNonEmpty)
+    .option("--rechtsgrundlagen <text>", "filter by Rechtsgrundlagen", parseNonEmpty)
     .option("--leistungstyp <typ>", "filter by Leistungstyp (repeatable)", collect)
     .option("--typisierung <t>", "filter by Typisierung (repeatable)", collect)
-    .option("--updated-since <iso>", "filter by last-update timestamp (ISO-8601)")
+    .option("--updated-since <iso>", "filter by last-update timestamp (ISO-8601)", parseNonEmpty)
     .option("--leistungsadressat <code>", "filter by Leistungsadressat (repeatable)", collect)
     .option("--ozg-themenfeld <field>", "filter by OZG Themenfeld (repeatable)", collect)
-    .option("--ozg-id <id>", "filter by OZG id")
+    .option("--ozg-id <id>", "filter by OZG id", parseNonEmpty)
     .addOption(choiceOption("--vollzugsbehoerde <code>", "filter by Vollzugsbehoerde", BehoerdeValues))
     .option("--einheitlicher-ansprechpartner", "only services with Einheitlicher Ansprechpartner")
     .addOption(choiceOption("--source <src>", "filter by XZuFi source", XzufiSourceValues))
-    .option("--fts-query <q>", "full-text search query")
+    .option("--fts-query <q>", "full-text search query", parseNonEmpty)
     .addOption(choiceOption("--suche-nur-in <module>", "restrict full-text search", LeistungSucheInValues))
-    .option("--lagen-portalverbund <text>", "filter by Lagen (Portalverbund)")
+    .option("--lagen-portalverbund <text>", "filter by Lagen (Portalverbund)", parseNonEmpty)
     .addOption(
       choiceOption("--order-by <order>", "result order", LeistungStammtextSearchOrderValues),
     );
@@ -178,7 +183,10 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     }),
   );
 
-  st.command("get <redaktionId> <leistungId> <source>")
+  st.command("get")
+    .argument("<redaktionId>", "Redaktion id", parseNonEmpty)
+    .argument("<leistungId>", "Leistung id", parseNonEmpty)
+    .argument("<source>", "XZuFi source (leika|landesredaktion|pvog)", parseNonEmpty)
     .description("Get a single Leistungsstammtext (source: leika|landesredaktion|pvog)")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source]) => {
@@ -187,7 +195,10 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
       }),
     );
 
-  st.command("xzufi <redaktionId> <leistungId> <source>")
+  st.command("xzufi")
+    .argument("<redaktionId>", "Redaktion id", parseNonEmpty)
+    .argument("<leistungId>", "Leistung id", parseNonEmpty)
+    .argument("<source>", "XZuFi source (leika|landesredaktion|pvog)", parseNonEmpty)
     .description("Download the XZuFi XML for a Leistungsstammtext")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source]) => {
@@ -196,7 +207,11 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
       }),
     );
 
-  st.command("pdf <redaktionId> <leistungId> <source> <languageCode>")
+  st.command("pdf")
+    .argument("<redaktionId>", "Redaktion id", parseNonEmpty)
+    .argument("<leistungId>", "Leistung id", parseNonEmpty)
+    .argument("<source>", "XZuFi source (leika|landesredaktion|pvog)", parseNonEmpty)
+    .argument("<languageCode>", "language code of the PDF (e.g. de-DE)", parseNonEmpty)
     .description("Export a Leistungsstammtext as PDF")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source, lang]) => {
@@ -209,7 +224,10 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
       }),
     );
 
-  st.command("parsed-xzufi <redaktionId> <leistungId> <source>")
+  st.command("parsed-xzufi")
+    .argument("<redaktionId>", "Redaktion id", parseNonEmpty)
+    .argument("<leistungId>", "Leistung id", parseNonEmpty)
+    .argument("<source>", "XZuFi source (leika|landesredaktion|pvog)", parseNonEmpty)
     .description("Get the parsed XZuFi JSON (INSTABLE per API docs)")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source]) => {

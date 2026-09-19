@@ -5,6 +5,7 @@ import {
   addCommonDatenfelderSearchOptions,
   choiceOption,
   commonDatenfelderParams,
+  parseNonEmpty,
   renderJson,
   renderRaw,
 } from "../shared.js";
@@ -39,7 +40,9 @@ export function registerFieldCommands(program: Command, deps: CliDeps): void {
   );
 
   fields
-    .command("versions <namespace> <fimId>")
+    .command("versions")
+    .argument("<namespace>", "namespace of the element", parseNonEmpty)
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
     .description("List all versions of a data field")
     .action(
       action(deps, async ({ client, global }, [namespace, fimId]) => {
@@ -48,7 +51,10 @@ export function registerFieldCommands(program: Command, deps: CliDeps): void {
     );
 
   fields
-    .command("get <namespace> <fimId> [fimVersion]")
+    .command("get")
+    .argument("<namespace>", "namespace of the element", parseNonEmpty)
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
+    .argument("[fimVersion]", "FIM version (default: latest)", parseNonEmpty)
     .description("Get a single data field (version defaults to 'latest')")
     .action(
       action(deps, async ({ client, global }, [namespace, fimId, fimVersion]) => {
@@ -61,7 +67,10 @@ export function registerFieldCommands(program: Command, deps: CliDeps): void {
     );
 
   fields
-    .command("xdf <namespace> <fimId> [fimVersion]")
+    .command("xdf")
+    .argument("<namespace>", "namespace of the element", parseNonEmpty)
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
+    .argument("[fimVersion]", "FIM version (default: latest)", parseNonEmpty)
     .description("Download the XDatenfelder XML for a data field")
     .action(
       action(deps, async ({ client, global }, [namespace, fimId, fimVersion]) => {

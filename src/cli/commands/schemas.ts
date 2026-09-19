@@ -5,6 +5,7 @@ import {
   addCommonDatenfelderSearchOptions,
   choiceOption,
   commonDatenfelderParams,
+  parseNonEmpty,
   renderJson,
   renderRaw,
 } from "../shared.js";
@@ -17,9 +18,9 @@ export function registerSchemaCommands(program: Command, deps: CliDeps): void {
   const search = schemas
     .command("search")
     .description("Search/filter Datenschemata")
-    .option("--bezug-unterelemente <text>", "filter by Bezug of sub-elements")
-    .option("--bezeichnung <text>", "filter by Bezeichnung")
-    .option("--stichwort <text>", "filter by Stichwort (XDF3 only)")
+    .option("--bezug-unterelemente <text>", "filter by Bezug of sub-elements", parseNonEmpty)
+    .option("--bezeichnung <text>", "filter by Bezeichnung", parseNonEmpty)
+    .option("--stichwort <text>", "filter by Stichwort (XDF3 only)", parseNonEmpty)
     .addOption(
       choiceOption(
         "--suche-nur-in <module>",
@@ -41,7 +42,8 @@ export function registerSchemaCommands(program: Command, deps: CliDeps): void {
   );
 
   schemas
-    .command("versions <fimId>")
+    .command("versions")
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
     .description("List all versions of a schema")
     .action(
       action(deps, async ({ client, global }, [fimId]) => {
@@ -50,7 +52,9 @@ export function registerSchemaCommands(program: Command, deps: CliDeps): void {
     );
 
   schemas
-    .command("get <fimId> [fimVersion]")
+    .command("get")
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
+    .argument("[fimVersion]", "FIM version (default: latest)", parseNonEmpty)
     .description("Get a full schema (version defaults to 'latest')")
     .action(
       action(deps, async ({ client, global }, [fimId, fimVersion]) => {
@@ -59,7 +63,9 @@ export function registerSchemaCommands(program: Command, deps: CliDeps): void {
     );
 
   schemas
-    .command("xdf <fimId> [fimVersion]")
+    .command("xdf")
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
+    .argument("[fimVersion]", "FIM version (default: latest)", parseNonEmpty)
     .description("Download the XDatenfelder XML for a schema")
     .action(
       action(deps, async ({ client, global }, [fimId, fimVersion]) => {
@@ -68,7 +74,9 @@ export function registerSchemaCommands(program: Command, deps: CliDeps): void {
     );
 
   schemas
-    .command("quality-report <fimId> [fimVersion]")
+    .command("quality-report")
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
+    .argument("[fimVersion]", "FIM version (default: latest)", parseNonEmpty)
     .description("Get the quality report for a schema")
     .action(
       action(deps, async ({ client, global }, [fimId, fimVersion]) => {

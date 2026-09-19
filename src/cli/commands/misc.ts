@@ -4,6 +4,7 @@ import {
   action,
   parseIntArg,
   parseBoundedInt,
+  parseNonEmpty,
   pruneUndefined,
   renderJson,
   renderRaw,
@@ -30,21 +31,23 @@ export function registerMiscCommands(program: Command, deps: CliDeps): void {
   // subset of the CSV filters and forwards their values verbatim. The OpenAPI
   // spec types every search-csv-download parameter as a free-form string with no
   // enum, so there are intentionally no choices() guards here (unlike `fields
-  // search`); the server validates the values.
+  // search`); the server validates the values. Only a blank value is rejected
+  // locally (parseNonEmpty): it is never a meaningful filter.
   program
     .command("search-csv")
     .description("Download a search result as CSV (tools/search-csv-download)")
     .requiredOption(
       "--resource <name>",
       "resource to export (e.g. schemas, fields, groups, steckbriefe, leistungen, processes)",
+      parseNonEmpty,
     )
-    .option("--term <text>", "search term")
-    .option("--xdf-version <v>", "XDatenfelder version")
-    .option("--order-by <order>", "result order")
-    .option("--feldart <art>", "filter by Feldart")
-    .option("--datentyp <typ>", "filter by Datentyp")
-    .option("--dokumentart <code>", "filter by Dokumentart")
-    .option("--sprache <lang>", "filter by language")
+    .option("--term <text>", "search term", parseNonEmpty)
+    .option("--xdf-version <v>", "XDatenfelder version", parseNonEmpty)
+    .option("--order-by <order>", "result order", parseNonEmpty)
+    .option("--feldart <art>", "filter by Feldart", parseNonEmpty)
+    .option("--datentyp <typ>", "filter by Datentyp", parseNonEmpty)
+    .option("--dokumentart <code>", "filter by Dokumentart", parseNonEmpty)
+    .option("--sprache <lang>", "filter by language", parseNonEmpty)
     .action(
       action(deps, async ({ client, global, opts }) => {
         const params = pruneUndefined({

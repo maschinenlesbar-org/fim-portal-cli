@@ -4,6 +4,7 @@ import {
   action,
   parseIntArg,
   parseBoundedInt,
+  parseNonEmpty,
   pruneUndefined,
   renderJson,
   renderRaw,
@@ -42,7 +43,9 @@ function registerEntity(
     );
 
   cmd
-    .command("xzufi <redaktionId> <id>")
+    .command("xzufi")
+    .argument("<redaktionId>", "Redaktion id", parseNonEmpty)
+    .argument("<id>", "entity id", parseNonEmpty)
     .description(`Download the XZuFi XML for a ${name} entity`)
     .action(
       action(deps, async ({ client, global }, [redaktionId, id]) => {

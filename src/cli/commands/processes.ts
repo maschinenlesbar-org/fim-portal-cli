@@ -6,6 +6,7 @@ import {
   assertEnum,
   choiceOption,
   collectFreigabeStatus,
+  parseNonEmpty,
   pruneUndefined,
   renderJson,
   renderRaw,
@@ -30,7 +31,7 @@ function registerProcessClasses(program: Command, deps: CliDeps): void {
   const search = pc
     .command("search")
     .description("Search/filter process classes")
-    .option("--fts-query <q>", "full-text search query")
+    .option("--fts-query <q>", "full-text search query", parseNonEmpty)
     .option(
       "--freigabe-status <code>",
       "filter by Freigabestatus 1..8 (repeatable)",
@@ -54,7 +55,9 @@ function registerProcessClasses(program: Command, deps: CliDeps): void {
     }),
   );
 
-  pc.command("get <id> <version>")
+  pc.command("get")
+    .argument("<id>", "process class id", parseNonEmpty)
+    .argument("<version>", "process class version", parseNonEmpty)
     .description("Get a specific process class")
     .action(
       action(deps, async ({ client, global }, [id, version]) => {
@@ -62,7 +65,9 @@ function registerProcessClasses(program: Command, deps: CliDeps): void {
       }),
     );
 
-  pc.command("xprozess <id> <version>")
+  pc.command("xprozess")
+    .argument("<id>", "process class id", parseNonEmpty)
+    .argument("<version>", "process class version", parseNonEmpty)
     .description("Get the XProzess representation of a process class (JSON)")
     .action(
       action(deps, async ({ client, global }, [id, version]) => {
@@ -89,7 +94,7 @@ function registerProcesses(program: Command, deps: CliDeps): void {
       choiceOption("--anwendungsgebiet <code>", "filter by Anwendungsgebiet", AnwendungsgebietValues),
     )
     .option("--is-musterprozess", "only Musterprozesse")
-    .option("--fts-query <q>", "full-text search query");
+    .option("--fts-query <q>", "full-text search query", parseNonEmpty);
   addPagination(search).action(
     action(deps, async ({ client, global, opts }) => {
       const params = pruneUndefined({
@@ -105,7 +110,10 @@ function registerProcesses(program: Command, deps: CliDeps): void {
     }),
   );
 
-  p.command("get <id> <version> <stufe>")
+  p.command("get")
+    .argument("<id>", "process id", parseNonEmpty)
+    .argument("<version>", "process version", parseNonEmpty)
+    .argument("<stufe>", "Detaillierungsstufe (101..105)", parseNonEmpty)
     .description("Get a specific process (stufe: 101..105)")
     .action(
       action(deps, async ({ client, global }, [id, version, stufe]) => {
@@ -121,14 +129,17 @@ function registerProcesses(program: Command, deps: CliDeps): void {
     downloadVisualizationDisplay: "Download the display visualization PDF for a process",
   } as const;
   const downloads: Array<[string, keyof typeof downloadMap]> = [
-    ["xprozess <id> <version> <stufe>", "downloadXprozess"],
-    ["report <id> <version> <stufe>", "downloadReport"],
-    ["visualization <id> <version> <stufe>", "downloadVisualization"],
-    ["visualization-display <id> <version> <stufe>", "downloadVisualizationDisplay"],
+    ["xprozess", "downloadXprozess"],
+    ["report", "downloadReport"],
+    ["visualization", "downloadVisualization"],
+    ["visualization-display", "downloadVisualizationDisplay"],
   ];
 
-  for (const [signature, method] of downloads) {
-    p.command(signature)
+  for (const [name, method] of downloads) {
+    p.command(name)
+      .argument("<id>", "process id", parseNonEmpty)
+      .argument("<version>", "process version", parseNonEmpty)
+      .argument("<stufe>", "Detaillierungsstufe (101..105)", parseNonEmpty)
       .description(downloadMap[method])
       .action(
         action(deps, async ({ client, global }, [id, version, stufe]) => {

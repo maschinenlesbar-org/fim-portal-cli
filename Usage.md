@@ -235,7 +235,8 @@ fim-portal -o fields.csv search-csv --resource fields --term Name
 `--resource` (required) accepts e.g. `schemas`, `fields`, `groups`, `steckbriefe`,
 `leistungen`, `processes`. Additional pass-through filters: `--xdf-version`,
 `--order-by`, `--feldart`, `--datentyp`, `--dokumentart`, `--sprache`. These are
-forwarded verbatim and validated by the server.
+forwarded verbatim and validated by the server; only a blank value is rejected
+locally, as a usage error.
 
 #### 12. List the referenced code lists
 

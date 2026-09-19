@@ -100,9 +100,12 @@ export function assertEnum<T extends string>(
   return value as T;
 }
 
-/** commander value-parser/accumulator for repeatable string options. */
+/**
+ * commander value-parser/accumulator for repeatable string options. Each value
+ * must be non-empty: a blank one would otherwise be sent as an empty parameter.
+ */
 export function collect(value: string, previous: string[] = []): string[] {
-  return previous.concat([value]);
+  return previous.concat([parseNonEmpty(value)]);
 }
 
 /** commander value-parser/accumulator for repeatable Freigabe-Status codes (1..8). */
@@ -294,24 +297,24 @@ export function commonDatenfelderParams(opts: Record<string, unknown>): QueryPar
 export function addCommonDatenfelderSearchOptions(cmd: Command): Command {
   return addPagination(
     cmd
-      .option("--name <name>", "filter by name")
+      .option("--name <name>", "filter by name", parseNonEmpty)
       .option("--nummernkreis <nk>", "filter by Nummernkreis (repeatable, prefix match)", collect)
       .option(
         "--freigabe-status <code>",
         "filter by Freigabestatus 1..8 (repeatable)",
         collectFreigabeStatus,
       )
-      .option("--gueltig-am <date>", "only entries valid on this date (YYYY-MM-DD)")
-      .option("--status-gesetzt-durch <who>", "filter by status author")
-      .option("--status-gesetzt-seit <date>", "status set on/after this date")
-      .option("--status-gesetzt-bis <date>", "status set on/before this date")
-      .option("--bezug <text>", "filter by Bezug")
-      .option("--versionshinweis <text>", "filter by Versionshinweis")
-      .option("--updated-since <iso>", "filter by last-update timestamp (ISO-8601)")
+      .option("--gueltig-am <date>", "only entries valid on this date (YYYY-MM-DD)", parseNonEmpty)
+      .option("--status-gesetzt-durch <who>", "filter by status author", parseNonEmpty)
+      .option("--status-gesetzt-seit <date>", "status set on/after this date", parseNonEmpty)
+      .option("--status-gesetzt-bis <date>", "status set on/before this date", parseNonEmpty)
+      .option("--bezug <text>", "filter by Bezug", parseNonEmpty)
+      .option("--versionshinweis <text>", "filter by Versionshinweis", parseNonEmpty)
+      .option("--updated-since <iso>", "filter by last-update timestamp (ISO-8601)", parseNonEmpty)
       .addOption(
         choiceOption("--xdf-version <v>", "filter by XDatenfelder version", XdfVersionValues),
       )
-      .option("--fts-query <q>", "full-text search query")
+      .option("--fts-query <q>", "full-text search query", parseNonEmpty)
       .option("--is-latest", "only results that are the latest version of their kind")
       .addOption(choiceOption("--order-by <order>", "result order", DatenfelderSearchOrderValues)),
   );

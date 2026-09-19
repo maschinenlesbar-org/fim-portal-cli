@@ -192,7 +192,8 @@ across `document-profiles search`, `fields search` and `groups search`.
 | `--order-by <field>` | sort field |
 
 `search-csv` is a pass-through to `tools/search-csv-download` — values are
-forwarded verbatim and validated by the server.
+forwarded verbatim and validated by the server (only a blank value is rejected
+locally).
 
 ## Common tasks
 

@@ -5,6 +5,7 @@ import {
   addCommonDatenfelderSearchOptions,
   choiceOption,
   commonDatenfelderParams,
+  parseNonEmpty,
   renderJson,
   renderRaw,
 } from "../shared.js";
@@ -35,7 +36,9 @@ export function registerGroupCommands(program: Command, deps: CliDeps): void {
   );
 
   groups
-    .command("versions <namespace> <fimId>")
+    .command("versions")
+    .argument("<namespace>", "namespace of the element", parseNonEmpty)
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
     .description("List all versions of a data group")
     .action(
       action(deps, async ({ client, global }, [namespace, fimId]) => {
@@ -44,7 +47,10 @@ export function registerGroupCommands(program: Command, deps: CliDeps): void {
     );
 
   groups
-    .command("get <namespace> <fimId> [fimVersion]")
+    .command("get")
+    .argument("<namespace>", "namespace of the element", parseNonEmpty)
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
+    .argument("[fimVersion]", "FIM version (default: latest)", parseNonEmpty)
     .description("Get a single data group (version defaults to 'latest')")
     .action(
       action(deps, async ({ client, global }, [namespace, fimId, fimVersion]) => {
@@ -57,7 +63,10 @@ export function registerGroupCommands(program: Command, deps: CliDeps): void {
     );
 
   groups
-    .command("xdf <namespace> <fimId> [fimVersion]")
+    .command("xdf")
+    .argument("<namespace>", "namespace of the element", parseNonEmpty)
+    .argument("<fimId>", "FIM id (e.g. S07000009)", parseNonEmpty)
+    .argument("[fimVersion]", "FIM version (default: latest)", parseNonEmpty)
     .description("Download the XDatenfelder XML for a data group")
     .action(
       action(deps, async ({ client, global }, [namespace, fimId, fimVersion]) => {
