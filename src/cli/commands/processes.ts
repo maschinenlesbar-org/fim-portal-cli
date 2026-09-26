@@ -43,7 +43,8 @@ function registerProcessClasses(program: Command, deps: CliDeps): void {
     )
     .addOption(choiceOption("--operatives-ziel <code>", "filter by Operatives Ziel", OperativesZielValues))
     .addOption(choiceOption("--verfahrensart <code>", "filter by Verfahrensart", VerfahrensartValues))
-    .addOption(choiceOption("--handlungsform <code>", "filter by Handlungsform", HandlungsformValues));
+    .addOption(choiceOption("--handlungsform <code>", "filter by Handlungsform", HandlungsformValues))
+    .option("--is-latest", "only the latest version of each process class");
   addPagination(search).action(
     action(deps, async ({ client, global, opts }) => {
       const params = pruneUndefined({
@@ -52,6 +53,7 @@ function registerProcessClasses(program: Command, deps: CliDeps): void {
         operatives_ziel: opts["operativesZiel"],
         verfahrensart: opts["verfahrensart"],
         handlungsform: opts["handlungsform"],
+        is_latest: opts["isLatest"],
         offset: opts["offset"],
         limit: opts["limit"],
       }) as ProcessClassSearchParams;

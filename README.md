@@ -17,7 +17,7 @@ straight into [`jq`](https://jqlang.github.io/jq/) or save to a file.
 - **Clean JSON output** — pretty-printed by default, `--compact` for one-line/scripting.
 - **Download native artefacts** — XDatenfelder XML, XZuFi XML, XProzess XML and PDF
   exports with a single flag.
-- **Covers the whole catalogue** — XDatenfelder (`schemas`, `fields`, `groups`,
+- **Covers the catalogue** — XDatenfelder (`schemas`, `fields`, `groups`,
   `document-profiles`), XZuFi (`service-profiles`, `service-texts`,
   `organizational-units`, `specializations`, `online-services`) and XProzess
   (`processes`, `process-classes`).
@@ -168,6 +168,7 @@ across `document-profiles search`, `fields search` and `groups search`.
 
 | Flag | Meaning |
 | --- | --- |
+| `--fts-query <text>` | free-text search (`organizational-units`, `online-services` only) |
 | `--limit <n>` | page size |
 | `--cursor <n>` | cursor from previous response's `next_cursor` |
 

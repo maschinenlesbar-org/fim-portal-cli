@@ -40,7 +40,7 @@ import type {
   LeistungStammtextSearchParams,
   ProcessClassSearchParams,
   ProcessSearchParams,
-  CursorPagination,
+  XzufiEntityListParams,
   Pagination,
 } from "./params.js";
 import type { XzufiSource, Detaillierungsstufe } from "./enums.js";
@@ -226,7 +226,7 @@ class XzufiEntityResource<T> {
     private readonly itemPath: (redaktionId: string, id: string) => string,
   ) {}
 
-  list(params: CursorPagination = {}): Promise<CursorPaginationResult<T>> {
+  list(params: XzufiEntityListParams = {}): Promise<CursorPaginationResult<T>> {
     return this.e.getJson(this.listPath, params as QueryParams);
   }
 

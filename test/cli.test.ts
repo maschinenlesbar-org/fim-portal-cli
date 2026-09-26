@@ -250,6 +250,34 @@ test("--max-retries is bounded to 0..10", async () => {
   }
 });
 
+test("organizational-units and online-services list forward --fts-query", async () => {
+  for (const [group, path] of [
+    ["organizational-units", "/api/v0/organizational-unit"],
+    ["online-services", "/api/v0/online-service"],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse({ items: [], limit: 5, count: 0, next_cursor: null }));
+    const code = await run([group, "list", "--fts-query", "Standesamt", "--limit", "5"], cli.deps);
+    assert.equal(code, 0);
+    const url = new URL(cli.mt.last().url);
+    assert.equal(url.pathname, path);
+    assert.equal(url.searchParams.get("fts_query"), "Standesamt");
+  }
+});
+
+test("specializations list has no --fts-query (the endpoint does not support it)", async () => {
+  const cli = makeCli(() => jsonResponse({ items: [] }));
+  const code = await run(["specializations", "list", "--fts-query", "x"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+test("process-classes search forwards --is-latest", async () => {
+  const cli = makeCli(() => jsonResponse({ items: [] }));
+  const code = await run(["process-classes", "search", "--is-latest"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("is_latest"), "true");
+});
+
 test("processes get without the Kodierung is a usage error, before any request", async () => {
   const cli = makeCli(() => jsonResponse({ ok: true }));
   const code = await run(["processes", "get", "P1", "1.0", "101"], cli.deps);

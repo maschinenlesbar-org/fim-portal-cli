@@ -44,6 +44,14 @@ export interface CursorPagination {
   limit?: number;
 }
 
+/**
+ * Query of an XZuFi entity listing. `fts_query` is accepted by the
+ * organizational-unit and online-service listings only; specializations ignore it.
+ */
+export interface XzufiEntityListParams extends CursorPagination {
+  fts_query?: string;
+}
+
 /** Fields common to the four XDatenfelder v1 search endpoints. */
 interface DatenfelderCommonSearch extends Pagination {
   name?: string;
@@ -153,6 +161,7 @@ export interface ProcessClassSearchParams extends Pagination {
   operatives_ziel?: OperativesZiel;
   verfahrensart?: Verfahrensart;
   handlungsform?: Handlungsform;
+  is_latest?: boolean;
 }
 
 /**

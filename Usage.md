@@ -228,7 +228,7 @@ argument, `<kodierung>`, is the process's verwaltungspolitische Kodierung: copy 
 `verwaltungspolitische_kodierung` field of the search result (`17` above). Process
 downloads: `xprozess` (XML), `report`, `visualization`, `visualization-display`
 (all PDFs except `xprozess`). For higher-level classes use `process-classes search`
-(filters: `--operatives-ziel`, `--verfahrensart`, `--handlungsform`) and
+(filters: `--operatives-ziel`, `--verfahrensart`, `--handlungsform`, `--is-latest`) and
 `process-classes get <id> <version>`; `process-classes xprozess <id> <version>`
 downloads a class's XProzess XML (use `-o`).
 
