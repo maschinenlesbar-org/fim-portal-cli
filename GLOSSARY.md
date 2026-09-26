@@ -276,7 +276,10 @@ process class serves its XProzess representation as JSON.
 **language code** (e.g. `de-DE`). This is not the `--sprache` search filter's
 value: `Deutsch` as the language code exits `4` ("Could not find language").
 
-**search-csv.** A tools endpoint that streams a search result as CSV.
+**search-csv.** A tools endpoint that streams a search result as CSV. Its
+`--resource` takes the portal's singular resource names (`schema`, `field`,
+`processclass`, …); the server answers any name it does not know with a CSV of
+Leistungen, so the CLI rejects those.
 
 ---
 

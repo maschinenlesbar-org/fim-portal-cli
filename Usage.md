@@ -231,14 +231,16 @@ downloads: `xprozess` (XML), `report`, `visualization`, `visualization-display`
 For a spreadsheet of search hits, use the CSV tool endpoint instead of paging JSON.
 
 ```bash
-fim-portal -o fields.csv search-csv --resource fields --term Name
+fim-portal -o fields.csv search-csv --resource field --term Name
 ```
 
-`--resource` (required) accepts e.g. `schemas`, `fields`, `groups`, `steckbriefe`,
-`leistungen`, `processes`. Additional pass-through filters: `--xdf-version`,
-`--order-by`, `--feldart`, `--datentyp`, `--dokumentart`, `--sprache`. These are
-forwarded verbatim and validated by the server; only a blank value is rejected
-locally, as a usage error.
+`--resource` (required) is one of `schema`, `document-profile`, `field`, `group`,
+`leistung-steckbriefe`, `processclass`, `process` — the names the portal's own search
+page uses. The CLI checks it, because the server does not: any other value (the
+plural `schemas`, say) silently exports Leistungen. Additional pass-through filters:
+`--xdf-version`, `--order-by`, `--feldart`, `--datentyp`, `--dokumentart`,
+`--sprache`. These are forwarded verbatim; only a blank value is rejected locally,
+as a usage error.
 
 #### 12. List the referenced code lists
 

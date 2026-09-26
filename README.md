@@ -182,7 +182,7 @@ across `document-profiles search`, `fields search` and `groups search`.
 
 | Flag | Meaning |
 | --- | --- |
-| `--resource <name>` | required — e.g. `schemas`, `fields`, `groups`, `leistungen`, `processes` |
+| `--resource <name>` | required — `schema`, `document-profile`, `field`, `group`, `leistung-steckbriefe`, `processclass` or `process` |
 | `--term <text>` | search term |
 | `--xdf-version <v>` | XDF version |
 | `--feldart <kind>` | field kind |
@@ -191,9 +191,10 @@ across `document-profiles search`, `fields search` and `groups search`.
 | `--sprache <lang>` | language |
 | `--order-by <field>` | sort field |
 
-`search-csv` is a pass-through to `tools/search-csv-download` — values are
-forwarded verbatim and validated by the server (only a blank value is rejected
-locally).
+`search-csv` wraps `tools/search-csv-download`. `--resource` is checked locally,
+because the server never rejects one: an unknown value (such as the plural `schemas`)
+silently exports Leistungen instead. The other filters are forwarded verbatim (only a
+blank value is rejected locally).
 
 ## Common tasks
 
@@ -230,7 +231,7 @@ fim-portal processes search --detaillierungsstufe 105 --is-musterprozess --limit
 fim-portal -o vis.pdf processes visualization 99146014080000 01.00.00 105 17
 
 # Bulk CSV export of field search results
-fim-portal -o fields.csv search-csv --resource fields --term Name
+fim-portal -o fields.csv search-csv --resource field --term Name
 
 # Page through organizational units (cursor pagination)
 fim-portal organizational-units list --limit 50

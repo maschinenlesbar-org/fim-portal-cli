@@ -155,6 +155,24 @@ export interface ProcessClassSearchParams extends Pagination {
   handlungsform?: Handlungsform;
 }
 
+/**
+ * The `resource` values `tools/search-csv-download` recognises — the resource names
+ * of the portal's own search page (fimportal.de/search?resource=...). The OpenAPI
+ * spec types the parameter as a free string, and the server never rejects a value:
+ * anything it does not recognise (e.g. the plural `schemas`) silently exports
+ * Leistungen instead. So the CLI validates against this list.
+ */
+export const SearchCsvResourceValues = [
+  "schema",
+  "document-profile",
+  "field",
+  "group",
+  "leistung-steckbriefe",
+  "processclass",
+  "process",
+] as const;
+export type SearchCsvResource = (typeof SearchCsvResourceValues)[number];
+
 export interface ProcessSearchParams extends Pagination {
   freigabe_status?: FreigabeStatus[];
   detaillierungsstufe?: Detaillierungsstufe;

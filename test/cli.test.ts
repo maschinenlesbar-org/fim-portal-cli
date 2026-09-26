@@ -323,7 +323,7 @@ test("code-lists --limit is bounded to 1..200", async () => {
   assert.equal(cli.mt.calls.length, 0);
 });
 
-// ---- search-csv (unvalidated pass-through) ----
+// ---- search-csv ----
 
 test("search-csv maps options to query params and streams CSV to stdout", async () => {
   const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
@@ -331,7 +331,7 @@ test("search-csv maps options to query params and streams CSV to stdout", async 
     [
       "search-csv",
       "--resource",
-      "fields",
+      "field",
       "--term",
       "Name",
       "--xdf-version",
@@ -353,7 +353,7 @@ test("search-csv maps options to query params and streams CSV to stdout", async 
   assert.equal(cli.out.join(""), fx.csvBody);
   const q = new URL(cli.mt.last().url).searchParams;
   assert.equal(new URL(cli.mt.last().url).pathname, "/tools/search-csv-download");
-  assert.equal(q.get("resource"), "fields");
+  assert.equal(q.get("resource"), "field");
   assert.equal(q.get("term"), "Name");
   assert.equal(q.get("xdf_version"), "2.0");
   assert.equal(q.get("order_by"), "name_asc");
@@ -370,11 +370,30 @@ test("search-csv requires --resource", async () => {
   assert.equal(cli.mt.calls.length, 0);
 });
 
-test("search-csv forwards unvalidated values verbatim (no enum guard)", async () => {
-  // The CSV command is a documented pass-through: bogus values are forwarded, not rejected.
+for (const resource of ["schema", "document-profile", "field", "group", "leistung-steckbriefe", "processclass", "process"]) {
+  test(`search-csv accepts --resource ${resource}`, async () => {
+    const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+    const code = await run(["search-csv", "--resource", resource], cli.deps);
+    assert.equal(code, 0);
+    assert.equal(new URL(cli.mt.last().url).searchParams.get("resource"), resource);
+  });
+}
+
+test("search-csv rejects a --resource the server would silently replace with Leistungen", async () => {
+  for (const resource of ["schemas", "fields", "leistungen", "steckbriefe", "bogus"]) {
+    const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+    const code = await run(["search-csv", "--resource", resource], cli.deps);
+    assert.equal(code, 1, resource);
+    assert.equal(cli.mt.calls.length, 0);
+    assert.match(cli.err.join("\n"), /Allowed choices are schema, document-profile, field/);
+  }
+});
+
+test("search-csv forwards the other filters verbatim (no enum guard)", async () => {
+  // Only --resource is checked; the other CSV filters are forwarded unvalidated.
   const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
   const code = await run(
-    ["search-csv", "--resource", "fields", "--feldart", "bogus"],
+    ["search-csv", "--resource", "field", "--feldart", "bogus"],
     cli.deps,
   );
   assert.equal(code, 0);
@@ -384,7 +403,7 @@ test("search-csv forwards unvalidated values verbatim (no enum guard)", async ()
 test("search-csv writes the CSV to --output and reports bytes on stderr", async () => {
   const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
   const code = await run(
-    ["--output", "/tmp/fields.csv", "search-csv", "--resource", "fields"],
+    ["--output", "/tmp/fields.csv", "search-csv", "--resource", "field"],
     cli.deps,
   );
   assert.equal(code, 0);
@@ -474,13 +493,13 @@ const blankCases: Array<[string, string[]]> = [
   ["--lagen-portalverbund", ["service-profiles", "search", "--lagen-portalverbund", ""]],
   ["--redaktion-id", ["service-texts", "search", "--redaktion-id", ""]],
   ["--resource", ["search-csv", "--resource", ""]],
-  ["--term", ["search-csv", "--resource", "fields", "--term", ""]],
-  ["--xdf-version", ["search-csv", "--resource", "fields", "--xdf-version", ""]],
-  ["--order-by", ["search-csv", "--resource", "fields", "--order-by", ""]],
-  ["--feldart", ["search-csv", "--resource", "fields", "--feldart", ""]],
-  ["--datentyp", ["search-csv", "--resource", "fields", "--datentyp", ""]],
-  ["--dokumentart", ["search-csv", "--resource", "fields", "--dokumentart", ""]],
-  ["--sprache", ["search-csv", "--resource", "fields", "--sprache", ""]],
+  ["--term", ["search-csv", "--resource", "field", "--term", ""]],
+  ["--xdf-version", ["search-csv", "--resource", "field", "--xdf-version", ""]],
+  ["--order-by", ["search-csv", "--resource", "field", "--order-by", ""]],
+  ["--feldart", ["search-csv", "--resource", "field", "--feldart", ""]],
+  ["--datentyp", ["search-csv", "--resource", "field", "--datentyp", ""]],
+  ["--dokumentart", ["search-csv", "--resource", "field", "--dokumentart", ""]],
+  ["--sprache", ["search-csv", "--resource", "field", "--sprache", ""]],
   ["<fimId>", ["schemas", "versions", ""]],
   ["[fimVersion]", ["schemas", "get", "S1", ""]],
   ["<namespace>", ["fields", "versions", "", "F1"]],

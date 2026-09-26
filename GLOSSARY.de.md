@@ -279,7 +279,10 @@ Leistungsstammtexts für einen angegebenen **Sprachcode** (z. B. `de-DE`). Das i
 der Wert des Suchfilters `--sprache`: `Deutsch` als Sprachcode endet mit Exit-Code `4`
 („Could not find language“).
 
-**search-csv.** Ein Tools-Endpoint, der ein Suchergebnis als CSV streamt.
+**search-csv.** Ein Tools-Endpoint, der ein Suchergebnis als CSV streamt. Sein
+`--resource` erwartet die Ressourcennamen des Portals im Singular (`schema`, `field`,
+`processclass`, …); auf jeden unbekannten Namen antwortet der Server mit einer CSV der
+Leistungen, deshalb weist die CLI solche Namen zurück.
 
 ---
 

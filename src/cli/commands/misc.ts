@@ -2,6 +2,7 @@ import { Command } from "commander";
 import type { CliDeps } from "../io.js";
 import {
   action,
+  choiceOption,
   parseIntArg,
   parseBoundedInt,
   parseNonEmpty,
@@ -9,7 +10,7 @@ import {
   renderJson,
   renderRaw,
 } from "../shared.js";
-import type { Pagination } from "../../client/params.js";
+import { SearchCsvResourceValues, type Pagination } from "../../client/params.js";
 
 export function registerMiscCommands(program: Command, deps: CliDeps): void {
   program
@@ -27,19 +28,18 @@ export function registerMiscCommands(program: Command, deps: CliDeps): void {
       }),
     );
 
-  // search-csv is a deliberate unvalidated pass-through: it exposes a convenient
-  // subset of the CSV filters and forwards their values verbatim. The OpenAPI
-  // spec types every search-csv-download parameter as a free-form string with no
-  // enum, so there are intentionally no choices() guards here (unlike `fields
-  // search`); the server validates the values. Only a blank value is rejected
-  // locally (parseNonEmpty): it is never a meaningful filter.
+  // search-csv exposes a convenient subset of the CSV filters. The OpenAPI spec
+  // types every search-csv-download parameter as a free-form string, and the server
+  // does not reject unknown values: an unrecognised --resource silently exports
+  // Leistungen instead. So --resource is checked against the values the portal's
+  // own search page uses (SearchCsvResourceValues); the other filters are
+  // forwarded verbatim. A blank value is rejected locally (parseNonEmpty): it is
+  // never a meaningful filter.
   program
     .command("search-csv")
     .description("Download a search result as CSV (tools/search-csv-download)")
-    .requiredOption(
-      "--resource <name>",
-      "resource to export (e.g. schemas, fields, groups, steckbriefe, leistungen, processes)",
-      parseNonEmpty,
+    .addOption(
+      choiceOption("--resource <name>", "resource to export", SearchCsvResourceValues).makeOptionMandatory(),
     )
     .option("--term <text>", "search term", parseNonEmpty)
     .option("--xdf-version <v>", "XDatenfelder version", parseNonEmpty)
