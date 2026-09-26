@@ -118,10 +118,14 @@ export function collect(value: string, previous: string[] = []): string[] {
   return previous.concat([parseNonEmpty(value)]);
 }
 
-/** commander value-parser/accumulator for repeatable Freigabe-Status codes (1..8). */
+/**
+ * commander value-parser/accumulator for repeatable Freigabe-Status codes (1..8).
+ * Only a plain decimal is accepted (see parseDecimalInt): `Number()` would also turn
+ * `0x5`, `0b101`, `5.0`, `1e0` and `" 5"` into a valid code.
+ */
 export function collectFreigabeStatus(value: string, previous: number[] = []): number[] {
-  const n = Number(value);
-  if (!(FreigabeStatusValues as readonly number[]).includes(n)) {
+  const n = parseDecimalInt(value);
+  if (n === undefined || !(FreigabeStatusValues as readonly number[]).includes(n)) {
     throw new InvalidArgumentError(`Must be one of ${FreigabeStatusValues.join(", ")}.`);
   }
   return previous.concat([n]);

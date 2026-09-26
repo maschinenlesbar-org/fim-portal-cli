@@ -74,6 +74,18 @@ test("schemas search rejects an out-of-range freigabe-status", async () => {
   assert.equal(cli.mt.calls.length, 0); // never reached the client
 });
 
+test("--freigabe-status accepts only a plain decimal code", async () => {
+  for (const value of [" 5", "0x5", "5.0", "1e0", "0b101", "+5", ""]) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["schemas", "search", "--freigabe-status", value], cli.deps);
+    assert.equal(code, 1, JSON.stringify(value));
+    assert.equal(cli.mt.calls.length, 0, JSON.stringify(value));
+  }
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  assert.equal(await run(["schemas", "search", "--freigabe-status", "5"], cli.deps), 0);
+  assert.deepEqual(new URL(cli.mt.last().url).searchParams.getAll("freigabe_status"), ["5"]);
+});
+
 test("schemas get with explicit version", async () => {
   const cli = makeCli(() => jsonResponse(fx.fullSchema));
   const code = await run(["schemas", "get", "S07000009", "1.0"], cli.deps);
