@@ -49,6 +49,15 @@ for (const group of ["schemas", "document-profiles", "fields", "groups"]) {
   });
 }
 
+test("--xdf-version offers only the values the API accepts (2.0, 3.0.0)", async () => {
+  for (const [value, ok] of [["2.0", true], ["3.0.0", true], ["2.0.0", false]] as const) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["schemas", "search", "--xdf-version", value], cli.deps);
+    assert.equal(code, ok ? 0 : 1, value);
+    assert.equal(cli.mt.calls.length, ok ? 1 : 0, value);
+  }
+});
+
 test("schemas search rejects an out-of-range freigabe-status", async () => {
   const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
   const code = await run(["schemas", "search", "--freigabe-status", "99"], cli.deps);

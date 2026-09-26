@@ -93,7 +93,7 @@ FIM id.
 | `--suche-nur-in <module>` | restrict FTS to one module (e.g. `Rechtsgrundlagen`) |
 | `--name <text>` | name contains |
 | `--nummernkreis <prefix>` | owning number range, repeatable, prefix match |
-| `--xdf-version <v>` | XDF version: `2.0`, `2.0.0`, or `3.0.0` |
+| `--xdf-version <v>` | XDF version: `2.0` or `3.0.0` |
 | `--freigabe-status <n>` | approval status `1`–`8`, repeatable |
 | `--is-latest` | newest version per id only |
 | `--order-by <field>` | sort field (`id_asc`, `name_asc`, `geaendert_datum_zeit_desc`, …) |
