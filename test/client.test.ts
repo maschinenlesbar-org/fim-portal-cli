@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FimPortalClient } from "../src/client/client.js";
-import { FimNetworkError } from "../src/client/errors.js";
+import { FimError, FimNetworkError } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse, queryOf } from "./helpers.js";
 import * as fx from "./fixtures.js";
 
@@ -189,4 +189,31 @@ test("the client rejects a non-http(s) base URL even with a custom transport", (
     );
     assert.equal(mt.calls.length, 0);
   }
+});
+
+// ---- Dot segments ----
+
+test("an id of . or .. is rejected before any request instead of re-targeting the URL", async () => {
+  for (const [name, call] of [
+    ["schemas.get", (c: FimPortalClient) => c.schemas.get("S1", "..")],
+    ["fields.versions", (c: FimPortalClient) => c.fields.versions("..", "schemas")],
+    ["fields.get", (c: FimPortalClient) => c.fields.get(".", "..")],
+    ["processes.get", (c: FimPortalClient) => c.processes.get("P1", "1.0", "101", ".")],
+  ] as const) {
+    const { client, mt } = clientReturning({});
+    await assert.rejects(() => call(client), (err: unknown) => {
+      assert.ok(err instanceof FimError, name);
+      assert.match((err as Error).message, /Invalid path segment "\.\.?" in \/api\/\S+: "\." and "\.\." cannot be used as an id\./);
+      return true;
+    });
+    assert.equal(mt.calls.length, 0, name);
+  }
+});
+
+test("ids that merely contain dots are still encoded and sent", async () => {
+  const { client, mt } = clientReturning({});
+  await client.schemas.get("S1", "1.0.0");
+  await client.schemas.get("...", "%2e%2e");
+  assert.equal(mt.calls[0]?.url, `${BASE}/api/v1/schemas/S1/1.0.0`);
+  assert.equal(mt.calls[1]?.url, `${BASE}/api/v1/schemas/.../%252e%252e`);
 });

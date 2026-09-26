@@ -48,6 +48,8 @@ import type { XzufiSource, Detaillierungsstufe } from "./enums.js";
 const ACCEPT_XML = "application/xml";
 const ACCEPT_PDF = "application/pdf";
 
+// Percent-encodes one path segment. It leaves "." and ".." unchanged; the engine
+// rejects those (see RequestEngine.buildUrl), so they cannot re-target a request.
 const enc = encodeURIComponent;
 
 /** Search/filter and retrieve XDatenfelder Datenschemata. */

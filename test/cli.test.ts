@@ -209,6 +209,15 @@ test("process-classes xprozess downloads the XML instead of parsing it as JSON",
   assert.match(cli.err.join("\n"), /Wrote \d+ bytes to pc\.xml \(Content-Type: application\/xml\)/);
 });
 
+test("an id of .. exits 1 without a request instead of printing another endpoint's data", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["--compact", "fields", "versions", "..", "schemas"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+  assert.deepEqual(cli.out, []);
+  assert.match(cli.err.join("\n"), /^Error: Invalid path segment "\.\."/);
+});
+
 test("processes get without the Kodierung is a usage error, before any request", async () => {
   const cli = makeCli(() => jsonResponse({ ok: true }));
   const code = await run(["processes", "get", "P1", "1.0", "101"], cli.deps);
