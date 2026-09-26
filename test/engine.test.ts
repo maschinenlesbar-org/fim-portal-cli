@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MAX_RETRY_AFTER_MS, RequestEngine, parseRetryAfter } from "../src/client/engine.js";
+import { MAX_RETRY_AFTER_MS, RequestEngine, parseRetryAfter, sanitizeServerText } from "../src/client/engine.js";
 import { FimApiError, FimNetworkError, FimParseError } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
@@ -84,6 +84,27 @@ test("error detail is stripped of terminal control characters", async () => {
       return true;
     },
   );
+});
+
+test("error detail loses bidi controls and line breaks, so it cannot reorder or forge lines", async () => {
+  const RLO = String.fromCharCode(0x202e);
+  const LRI = String.fromCharCode(0x2066);
+  const detail = `bad ${ESC}]0;PWNED${BEL} line1\r\nError: forged\u2028x\t ${RLO}gnirts${LRI}`;
+  const mt = makeMockTransport(() => jsonResponse({ detail }, 404));
+  const engine = new RequestEngine({ transport: mt.transport, maxRetries: 0 });
+  await assert.rejects(
+    () => engine.getJson("/x"),
+    (err: unknown) => {
+      assert.ok(err instanceof FimApiError);
+      assert.equal(err.detail, "bad ]0;PWNED line1 Error: forged x gnirts");
+      assert.ok(!/[\n\r\u2028\u202e\u2066]/.test(err.message));
+      return true;
+    },
+  );
+});
+
+test("sanitizeServerText keeps ordinary text, umlauts and single spaces", () => {
+  assert.equal(sanitizeServerText("  Could not find  language 'de-DE'. Größe  "), "Could not find language 'de-DE'. Größe");
 });
 
 test("retries transient 429 then succeeds", async () => {

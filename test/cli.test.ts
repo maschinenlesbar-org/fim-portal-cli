@@ -120,6 +120,19 @@ test("DEL and C1 control characters in server data are escaped in the JSON outpu
   }
 });
 
+test("bidi formatting characters in server data are escaped in the JSON output", async () => {
+  const bidi = String.fromCharCode(0x202e, 0x2066, 0x200f, 0x061c);
+  const served = { ...fx.fullSchema, name: `Geburt${bidi}gnirts` };
+  for (const format of [[], ["--compact"]]) {
+    const cli = makeCli(() => jsonResponse(served));
+    assert.equal(await run([...format, "schemas", "get", "S1", "1.0"], cli.deps), 0);
+    const text = cli.out.join("\n");
+    assert.ok(!/[\u202e\u2066\u200f\u061c]/.test(text), format.join(" "));
+    assert.match(text, /Geburt\\u202e\\u2066\\u200f\\u061cgnirts/);
+    assert.deepEqual(JSON.parse(text), served);
+  }
+});
+
 test("xdf download writes to --output file and reports bytes on stderr", async () => {
   const cli = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
   const code = await run(
