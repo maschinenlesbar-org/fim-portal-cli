@@ -234,8 +234,9 @@ fim-portal -o vis.pdf processes visualization 99146014080000 01.00.00 105 17
 fim-portal -o fields.csv search-csv --resource field --term Name
 
 # Page through organizational units (cursor pagination)
-fim-portal organizational-units list --limit 50
-fim-portal organizational-units list --cursor 50 --limit 50
+# next_cursor is opaque (not an offset): pass back exactly what the API returned
+cursor=$(fim-portal --compact organizational-units list --limit 50 | jq .next_cursor)
+fim-portal organizational-units list --cursor "$cursor" --limit 50
 ```
 
 > The identifiers above (`S07000009`, `99008001012012`, `99146014080000`, etc.) are

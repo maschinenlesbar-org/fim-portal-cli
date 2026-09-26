@@ -194,8 +194,10 @@ rather than offset.
 # First page
 fim-portal organizational-units list --limit 50
 
-# Next page: pass the cursor returned by the previous response
-fim-portal organizational-units list --cursor 50 --limit 50
+# Next page: pass the next_cursor returned by the previous response. It is opaque,
+# not an offset (a --limit 2 page can return next_cursor 5), so never compute it.
+cursor=$(fim-portal --compact organizational-units list --limit 50 | jq .next_cursor)
+fim-portal organizational-units list --cursor "$cursor" --limit 50
 
 # Download the XZuFi XML for one unit (by redaktionId + id)
 fim-portal -o ou.xml organizational-units xzufi L100038 368512
