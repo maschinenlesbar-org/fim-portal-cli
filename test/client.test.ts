@@ -51,7 +51,7 @@ const cases: Array<{ name: string; run: (c: FimPortalClient) => Promise<unknown>
   { name: "onlineServices.downloadXzufi", run: (c) => c.onlineServices.downloadXzufi("R1", "N1"), url: `${BASE}/api/v0/online-service/R1/N1/xzufi` },
 
   { name: "processClasses.get", run: (c) => c.processClasses.get("P1", "1.0"), url: `${BASE}/api/v0/processclasses/P1/1.0` },
-  { name: "processClasses.getXprozess", run: (c) => c.processClasses.getXprozess("P1", "1.0"), url: `${BASE}/api/v0/processclasses/P1/1.0/xprozess` },
+  { name: "processClasses.downloadXprozess", run: (c) => c.processClasses.downloadXprozess("P1", "1.0"), url: `${BASE}/api/v0/processclasses/P1/1.0/xprozess` },
 
   { name: "processes.get", run: (c) => c.processes.get("P1", "1.0", "101", "17"), url: `${BASE}/api/v0/processes/P1/1.0/101/17` },
   { name: "processes.downloadXprozess", run: (c) => c.processes.downloadXprozess("P1", "1.0", "101", "17"), url: `${BASE}/api/v0/processes/P1/1.0/101/17/xprozess` },

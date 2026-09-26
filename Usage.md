@@ -6,7 +6,7 @@ data fields, document/service profiles and process models of the German federal
 "Föderales Informationsmanagement" (FIM).
 
 JSON commands print to stdout (pretty by default); download commands (`xdf`,
-`xzufi`, `pdf`, `report`, `visualization*`, `search-csv`) stream raw bytes to
+`xzufi`, `xprozess`, `pdf`, `report`, `visualization*`, `search-csv`) stream raw bytes to
 stdout or to a file via `-o/--output`.
 
 > The identifiers in the examples (e.g. `S07000009`, `L100001`, `99050048262000`)
@@ -222,7 +222,8 @@ argument, `<kodierung>`, is the process's verwaltungspolitische Kodierung: copy 
 downloads: `xprozess` (XML), `report`, `visualization`, `visualization-display`
 (all PDFs except `xprozess`). For higher-level classes use `process-classes search`
 (filters: `--operatives-ziel`, `--verfahrensart`, `--handlungsform`) and
-`process-classes get <id> <version>` / `xprozess`.
+`process-classes get <id> <version>`; `process-classes xprozess <id> <version>`
+downloads a class's XProzess XML (use `-o`).
 
 ### Cross-cutting tools
 

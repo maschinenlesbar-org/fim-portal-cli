@@ -72,10 +72,10 @@ function registerProcessClasses(program: Command, deps: CliDeps): void {
   pc.command("xprozess")
     .argument("<id>", "process class id", parseNonEmpty)
     .argument("<version>", "process class version", parseNonEmpty)
-    .description("Get the XProzess representation of a process class (JSON)")
+    .description("Download the XProzess XML for a process class")
     .action(
       action(deps, async ({ client, global }, [id, version]) => {
-        renderJson(deps, global, await client.processClasses.getXprozess(id!, version!));
+        renderRaw(deps, global, await client.processClasses.downloadXprozess(id!, version!));
       }),
     );
 }

@@ -245,9 +245,12 @@ class ProcessClassesResource {
     return this.e.getJson(`/api/v0/processclasses/${enc(id)}/${enc(version)}`);
   }
 
-  /** The XProzess representation (served as JSON by this endpoint). */
-  getXprozess(id: string, version: string): Promise<JsonObject> {
-    return this.e.getJson(`/api/v0/processclasses/${enc(id)}/${enc(version)}/xprozess`);
+  /**
+   * The XProzess XML of a process class. The OpenAPI spec says JSON, but the server
+   * sends `application/xml` (an XProzess export) whatever the Accept header says.
+   */
+  downloadXprozess(id: string, version: string): Promise<RawResponse> {
+    return this.e.getRaw(`/api/v0/processclasses/${enc(id)}/${enc(version)}/xprozess`, ACCEPT_XML);
   }
 }
 

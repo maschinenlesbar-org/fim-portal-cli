@@ -271,8 +271,9 @@ Datenfeldgruppe, eines Datenfelds oder eines Dokumentsteckbriefs.
 **XZuFi-Download (`xzufi`).** Das native XZuFi-XML eines Leistungsstammtexts oder einer
 XZuFi-Entität.
 
-**XProzess-Download (`xprozess`).** Das native XProzess-XML eines Prozesses; eine
-Prozessklasse liefert ihre XProzess-Darstellung als JSON.
+**XProzess-Download (`xprozess`).** Das native XProzess-XML eines Prozesses oder einer
+Prozessklasse. Laut OpenAPI-Dokument der API antwortet eine Prozessklasse mit JSON, der
+Server liefert aber XML; `process-classes xprozess` ist deshalb ein Download wie die anderen.
 
 **PDF-Export (`pdf`).** Ein erzeugtes PDF eines Leistungsteckbriefs oder
 Leistungsstammtexts für einen angegebenen **Sprachcode** (z. B. `de-DE`). Das ist nicht

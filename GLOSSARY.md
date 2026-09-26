@@ -269,8 +269,9 @@ field or document profile.
 **XZuFi download (`xzufi`).** The native XZuFi XML for a service text or XZuFi
 entity.
 
-**XProzess download (`xprozess`).** The native XProzess XML for a process; a
-process class serves its XProzess representation as JSON.
+**XProzess download (`xprozess`).** The native XProzess XML for a process or a
+process class. The API's OpenAPI document says a process class answers with JSON, but
+the server sends XML, so `process-classes xprozess` is a download like the others.
 
 **PDF export (`pdf`).** A rendered PDF of a service profile/text in a given
 **language code** (e.g. `de-DE`). This is not the `--sprache` search filter's

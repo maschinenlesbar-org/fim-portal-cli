@@ -180,6 +180,17 @@ for (const [name, suffix] of [
   });
 }
 
+test("process-classes xprozess downloads the XML instead of parsing it as JSON", async () => {
+  const xml = "<?xml version='1.0' encoding='utf-8'?><xprozess:alleInhalte.export.0303/>";
+  const cli = makeCli(() => rawResponse(xml, "application/xml"));
+  const code = await run(["-o", "pc.xml", "process-classes", "xprozess", "P1", "1.0"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/processclasses/P1/1.0/xprozess");
+  assert.equal(cli.mt.last().headers?.["Accept"], "application/xml");
+  assert.equal(cli.files.get("pc.xml")?.toString("utf8"), xml);
+  assert.match(cli.err.join("\n"), /Wrote \d+ bytes to pc\.xml \(Content-Type: application\/xml\)/);
+});
+
 test("processes get without the Kodierung is a usage error, before any request", async () => {
   const cli = makeCli(() => jsonResponse({ ok: true }));
   const code = await run(["processes", "get", "P1", "1.0", "101"], cli.deps);
