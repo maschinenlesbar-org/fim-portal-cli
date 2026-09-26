@@ -38,6 +38,17 @@ test("schemas search prints JSON and sends the right query", async () => {
   assert.equal(url.searchParams.get("limit"), "5");
 });
 
+for (const group of ["schemas", "document-profiles", "fields", "groups"]) {
+  test(`${group} search sends --versionshinweis as the capitalised Versionshinweis parameter`, async () => {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run([group, "search", "--versionshinweis", "neu"], cli.deps);
+    assert.equal(code, 0);
+    const params = new URL(cli.mt.last().url).searchParams;
+    assert.equal(params.get("Versionshinweis"), "neu");
+    assert.equal(params.has("versionshinweis"), false);
+  });
+}
+
 test("schemas search rejects an out-of-range freigabe-status", async () => {
   const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
   const code = await run(["schemas", "search", "--freigabe-status", "99"], cli.deps);

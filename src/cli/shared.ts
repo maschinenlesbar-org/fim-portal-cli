@@ -282,7 +282,8 @@ export function commonDatenfelderParams(opts: Record<string, unknown>): QueryPar
     status_gesetzt_seit: opts["statusGesetztSeit"],
     status_gesetzt_bis: opts["statusGesetztBis"],
     bezug: opts["bezug"],
-    versionshinweis: opts["versionshinweis"],
+    // The API spells this one parameter with a capital V; a lowercase name is ignored.
+    Versionshinweis: opts["versionshinweis"],
     updated_since: opts["updatedSince"],
     xdf_version: opts["xdfVersion"],
     fts_query: opts["ftsQuery"],

@@ -54,7 +54,8 @@ interface DatenfelderCommonSearch extends Pagination {
   status_gesetzt_seit?: string;
   status_gesetzt_bis?: string;
   bezug?: string;
-  versionshinweis?: string;
+  /** Capitalised as in the API; a lowercase `versionshinweis` would be ignored upstream. */
+  Versionshinweis?: string;
   updated_since?: string;
   xdf_version?: XdfVersion;
   fts_query?: string;
@@ -81,7 +82,8 @@ export interface DocumentProfileSearchParams extends Pagination {
   bezug?: string;
   fts_query?: string;
   suche_nur_in?: SteckbriefSucheIn;
-  versionshinweis?: string;
+  /** Capitalised as in the API; a lowercase `versionshinweis` would be ignored upstream. */
+  Versionshinweis?: string;
   updated_since?: string;
   xdf_version?: XdfVersion;
   stichwort?: string;

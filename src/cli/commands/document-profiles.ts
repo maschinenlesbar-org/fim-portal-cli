@@ -68,7 +68,8 @@ export function registerDocumentProfileCommands(program: Command, deps: CliDeps)
         bezug: opts["bezug"],
         fts_query: opts["ftsQuery"],
         suche_nur_in: opts["sucheNurIn"],
-        versionshinweis: opts["versionshinweis"],
+        // The API spells this one parameter with a capital V; a lowercase name is ignored.
+        Versionshinweis: opts["versionshinweis"],
         updated_since: opts["updatedSince"],
         xdf_version: opts["xdfVersion"],
         stichwort: opts["stichwort"],
