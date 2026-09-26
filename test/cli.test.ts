@@ -148,6 +148,29 @@ test("a malformed --base-url is rejected at parse time", async () => {
   assert.equal(cli.mt.calls.length, 0);
 });
 
+test("a --base-url with a query, a fragment or surrounding whitespace is a usage error", async () => {
+  for (const [baseUrl, message] of [
+    ["http://127.0.0.1:18113/?x=1", /cannot have a query \(\?\) or fragment \(#\)/],
+    ["http://127.0.0.1:18113/#frag", /cannot have a query \(\?\) or fragment \(#\)/],
+    ["http://127.0.0.1:18113?", /cannot have a query \(\?\) or fragment \(#\)/],
+    [" https://fimportal.de", /cannot have surrounding whitespace/],
+    ["https://fimportal.de\t", /cannot have surrounding whitespace/],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["--base-url", baseUrl, "schemas", "search"], cli.deps);
+    assert.equal(code, 1, baseUrl);
+    assert.equal(cli.mt.calls.length, 0, baseUrl);
+    assert.match(cli.err.join("\n"), message, baseUrl);
+  }
+});
+
+test("a --base-url with a path prefix still works", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["--base-url", "https://mirror.example/fim/", "schemas", "get", "S1"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(cli.mt.last().url, "https://mirror.example/fim/api/v1/schemas/S1/latest");
+});
+
 test("--timeout accepts up to the largest timer Node supports", async () => {
   const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
   assert.equal(await run(["--timeout", "2147483647", "schemas", "search"], cli.deps), 0);

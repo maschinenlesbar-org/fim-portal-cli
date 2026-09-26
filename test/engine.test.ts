@@ -231,3 +231,15 @@ test("an unparseable base URL is rejected at construction", () => {
   );
   assert.equal(mt.calls.length, 0);
 });
+
+test("a base URL with a query or fragment is rejected at construction", () => {
+  for (const baseUrl of ["https://example.test/?x=1", "https://example.test/#frag", "https://example.test?"]) {
+    const mt = makeMockTransport(() => jsonResponse({}));
+    assert.throws(
+      () => new RequestEngine({ transport: mt.transport, baseUrl }),
+      (err: unknown) =>
+        err instanceof FimNetworkError && /Base URL must not contain a query or fragment/.test(err.message),
+      baseUrl,
+    );
+  }
+});
