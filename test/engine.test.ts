@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MAX_RETRY_AFTER_MS, RequestEngine, parseRetryAfter, sanitizeServerText } from "../src/client/engine.js";
-import { FimApiError, FimNetworkError, FimParseError } from "../src/client/errors.js";
+import { FimApiError, FimNetworkError, FimParseError, redactUrl } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
 const noSleep = async (): Promise<void> => {};
@@ -263,4 +263,14 @@ test("a base URL with a query or fragment is rejected at construction", () => {
       baseUrl,
     );
   }
+});
+
+test("redactUrl hides userinfo and leaves other URLs alone", () => {
+  assert.equal(redactUrl("https://u:p@example.test/a?b=1"), "https://***@example.test/a?b=1");
+  assert.equal(redactUrl("https://token@example.test/"), "https://***@example.test/");
+  assert.equal(redactUrl("https://example.test/a b"), "https://example.test/a b");
+  assert.equal(redactUrl("not a url"), "not a url");
+  const err = new FimApiError({ status: 500, url: "https://u:p@example.test/x", method: "GET", body: "" });
+  assert.equal(err.url, "https://***@example.test/x");
+  assert.ok(!err.message.includes("u:p"));
 });

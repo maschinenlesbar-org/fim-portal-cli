@@ -243,6 +243,18 @@ test("a deeply nested response fails pretty-printing cleanly and still prints wi
   else assert.equal(compact.err.join("\n"), "Error: The response is nested too deeply to print.");
 });
 
+test("credentials in --base-url are redacted from error messages", async () => {
+  const cli = makeCli(() => jsonResponse({ detail: "not here" }, 404));
+  const code = await run(["--base-url", "http://user:secret@127.0.0.1:18113", "schemas", "get", "Y"], cli.deps);
+  assert.equal(code, 4);
+  // ...but still sent: the request URL keeps the userinfo (Node turns it into Basic auth).
+  assert.equal(cli.mt.last().url, "http://user:secret@127.0.0.1:18113/api/v1/schemas/Y/latest");
+  assert.equal(
+    cli.err.join("\n"),
+    "Error: HTTP 404 for GET http://***@127.0.0.1:18113/api/v1/schemas/Y/latest: not here",
+  );
+});
+
 test("--timeout accepts up to the largest timer Node supports", async () => {
   const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
   assert.equal(await run(["--timeout", "2147483647", "schemas", "search"], cli.deps), 0);

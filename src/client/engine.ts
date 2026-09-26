@@ -4,7 +4,7 @@
 
 import { nodeHttpTransport, type Transport } from "./http.js";
 import { buildQueryString, type QueryParams } from "./query.js";
-import { FimApiError, FimError, FimNetworkError, FimParseError } from "./errors.js";
+import { FimApiError, FimError, FimNetworkError, FimParseError, redactUrl } from "./errors.js";
 
 export const DEFAULT_BASE_URL = "https://fimportal.de";
 const DEFAULT_USER_AGENT = "fim-portal-cli";
@@ -141,11 +141,11 @@ function assertHttpScheme(baseUrl: string): void {
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new FimNetworkError(
-      `Unsupported protocol "${url.protocol}" in base URL: ${baseUrl}`,
+      `Unsupported protocol "${url.protocol}" in base URL: ${redactUrl(baseUrl)}`,
     );
   }
   if (/[?#]/.test(baseUrl)) {
-    throw new FimNetworkError(`Base URL must not contain a query or fragment: ${baseUrl}`);
+    throw new FimNetworkError(`Base URL must not contain a query or fragment: ${redactUrl(baseUrl)}`);
   }
 }
 

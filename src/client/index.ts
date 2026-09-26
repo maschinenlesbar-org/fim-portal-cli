@@ -7,7 +7,7 @@ export { MAX_TIMEOUT_MS, nodeHttpTransport } from "./http.js";
 export type { Transport, HttpRequest, HttpResponse } from "./http.js";
 export { buildQueryString } from "./query.js";
 export type { QueryParams, QueryValue } from "./query.js";
-export { FimError, FimApiError, FimNetworkError, FimParseError } from "./errors.js";
+export { FimError, FimApiError, FimNetworkError, FimParseError, redactUrl } from "./errors.js";
 
 export * from "./enums.js";
 export * from "./types.js";
