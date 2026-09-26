@@ -214,6 +214,22 @@ test("--user-agent with control or non-Latin-1 characters is a usage error, not 
   assert.equal(cli.mt.last().headers?.["User-Agent"], "müller-bot/1.0\t(test)");
 });
 
+test("a deeply nested response fails pretty-printing cleanly and still prints with --compact", async () => {
+  const depth = 200_000;
+  const deep = () => rawResponse("[".repeat(depth) + "]".repeat(depth), "application/json");
+  const pretty = makeCli(deep);
+  assert.equal(await run(["schemas", "get", "X"], pretty.deps), 1);
+  assert.deepEqual(pretty.out, []);
+  assert.equal(pretty.err.join("\n"), "Error: The response is nested too deeply to pretty-print; try --compact.");
+
+  // Compact serialisation goes much deeper (it prints this one on current Node);
+  // should a runtime's stack still be too small, it must fail just as cleanly.
+  const compact = makeCli(deep);
+  const code = await run(["--compact", "schemas", "get", "X"], compact.deps);
+  if (code === 0) assert.equal(compact.out.join("").length, 2 * depth);
+  else assert.equal(compact.err.join("\n"), "Error: The response is nested too deeply to print.");
+});
+
 test("--timeout accepts up to the largest timer Node supports", async () => {
   const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
   assert.equal(await run(["--timeout", "2147483647", "schemas", "search"], cli.deps), 0);
