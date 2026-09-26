@@ -69,6 +69,7 @@ export function buildProgram(deps: CliDeps = defaultDeps): Command {
     .option(
       "-o, --output <file>",
       "for downloads: write bytes to this file instead of stdout",
+      parseNonEmpty,
     )
     .showHelpAfterError();
 

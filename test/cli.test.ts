@@ -183,6 +183,17 @@ test("a --base-url with a path prefix still works", async () => {
   assert.equal(cli.mt.last().url, "https://mirror.example/fim/api/v1/schemas/S1/latest");
 });
 
+test("a blank -o/--output is a usage error instead of silently writing to stdout", async () => {
+  for (const value of ["", " "]) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["-o", value, "--compact", "schemas", "get", "X"], cli.deps);
+    assert.equal(code, 1, JSON.stringify(value));
+    assert.equal(cli.mt.calls.length, 0);
+    assert.deepEqual(cli.out, []);
+    assert.match(cli.err.join("\n"), /Expected a non-empty value/);
+  }
+});
+
 test("--timeout accepts up to the largest timer Node supports", async () => {
   const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
   assert.equal(await run(["--timeout", "2147483647", "schemas", "search"], cli.deps), 0);
