@@ -211,7 +211,11 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .argument("<redaktionId>", "Redaktion id", parseNonEmpty)
     .argument("<leistungId>", "Leistung id", parseNonEmpty)
     .argument("<source>", "XZuFi source (leika|landesredaktion|pvog)", parseNonEmpty)
-    .argument("<languageCode>", "language code of the PDF (e.g. de-DE)", parseNonEmpty)
+    .argument(
+      "<languageCode>",
+      "language code of the PDF (depends on the source: de-DE for leika, de or en for pvog)",
+      parseNonEmpty,
+    )
     .description("Export a Leistungsstammtext as PDF")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source, lang]) => {

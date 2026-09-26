@@ -276,8 +276,11 @@ process class. The API's OpenAPI document says a process class answers with JSON
 the server sends XML, so `process-classes xprozess` is a download like the others.
 
 **PDF export (`pdf`).** A rendered PDF of a service profile/text in a given
-**language code** (e.g. `de-DE`). This is not the `--sprache` search filter's
-value: `Deutsch` as the language code exits `4` ("Could not find language").
+**language code**. The code depends on where the text comes from: service profiles
+and `leika` service texts use `de-DE`, `pvog` service texts use bare `de`/`en`. The
+`languageCode` attributes in the `xzufi` download show the codes a text has. A code
+the text doesn't have exits `4` ("Could not find language"), and so does the
+`--sprache` search filter's value (`Deutsch`).
 
 **search-csv.** A tools endpoint that streams a search result as CSV. Its
 `--resource` takes the portal's singular resource names (`schema`, `field`,

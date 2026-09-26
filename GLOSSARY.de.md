@@ -278,9 +278,12 @@ Prozessklasse. Laut OpenAPI-Dokument der API antwortet eine Prozessklasse mit JS
 Server liefert aber XML; `process-classes xprozess` ist deshalb ein Download wie die anderen.
 
 **PDF-Export (`pdf`).** Ein erzeugtes PDF eines Leistungsteckbriefs oder
-Leistungsstammtexts für einen angegebenen **Sprachcode** (z. B. `de-DE`). Das ist nicht
-der Wert des Suchfilters `--sprache`: `Deutsch` als Sprachcode endet mit Exit-Code `4`
-(„Could not find language“).
+Leistungsstammtexts für einen angegebenen **Sprachcode**. Der Code hängt von der Herkunft
+des Textes ab: Leistungsteckbriefe und `leika`-Stammtexte verwenden `de-DE`,
+`pvog`-Stammtexte ein bloßes `de`/`en`. Welche Codes ein Text hat, zeigen die
+`languageCode`-Attribute im `xzufi`-Download. Ein Code, den der Text nicht hat, endet mit
+Exit-Code `4` („Could not find language“), ebenso der Wert des Suchfilters `--sprache`
+(`Deutsch`).
 
 **search-csv.** Ein Tools-Endpoint, der ein Suchergebnis als CSV streamt. Sein
 `--resource` erwartet die Ressourcennamen des Portals im Singular (`schema`, `field`,

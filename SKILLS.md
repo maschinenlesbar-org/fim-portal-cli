@@ -116,7 +116,8 @@ encode the non-obvious parts of this API, for example:
   `{"items":[],"total_count":0}` and exits `0` (not an error), while a missing id exits `4`;
 - download commands (`xdf`, `xzufi`, `xprozess`, `pdf`, `report`, `visualization*`,
   `search-csv`) stream raw bytes — always use `-o <file>`, and note the PDF **language code**
-  (`de-DE`) differs from the `--sprache` *search* filter (`Deutsch`).
+  (`de-DE` for service profiles and `leika` texts, `de`/`en` for `pvog` texts) differs from
+  the `--sprache` *search* filter (`Deutsch`).
 
 ## Contributing
 

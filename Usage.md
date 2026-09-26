@@ -176,9 +176,14 @@ fim-portal service-texts get B100019 574621 leika
 # Download its XZuFi XML
 fim-portal -o stammtext.xml service-texts xzufi B100019 574621 leika
 
-# Export as PDF (last arg is the language code, e.g. de-DE)
+# Export as PDF (last arg is the language code: de-DE for leika texts, de/en for pvog)
 fim-portal -o stammtext.pdf service-texts pdf B100019 574621 leika de-DE
 ```
+
+The PDF language code depends on the source: `leika` texts (and service profiles) use
+`de-DE`, `pvog` texts use bare `de`/`en`. A code the text doesn't have exits `4`
+("Could not find language"); the `languageCode` attributes in the `xzufi` download list
+the codes it does have.
 
 #### 9. Page through XZuFi organisational units (cursor pagination)
 
