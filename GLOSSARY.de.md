@@ -235,8 +235,9 @@ getroffen wurde.
 erlauben zusätzlich `Stichwort`).
 
 **order_by.** Sortierung der Ergebnisse. Die zulässigen Werte hängen von der Ressource ab –
-die Datenfelder-Ressourcen teilen sich einen Satz (`id_asc`, `name_asc`, …); Leistungen
-haben eigene Sätze (u. a. `relevance`, `titel_asc`).
+die Datenfelder-Ressourcen teilen sich einen Satz (`relevance`, `id_asc`, `name_asc`, …);
+Leistungen haben eigene Sätze (u. a. `relevance`, `titel_asc`). `relevance` ordnet die
+Treffer einer Suche mit `--fts-query`.
 
 **Offset-Paginierung.** Die v1-/XDatenfelder-Endpoints und die meisten v0-Such-Endpoints
 blättern mit `offset` + `limit` (limit `1`–`200`, Standard `200`) und liefern eine

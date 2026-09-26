@@ -58,6 +58,15 @@ test("--xdf-version offers only the values the API accepts (2.0, 3.0.0)", async 
   }
 });
 
+for (const group of ["schemas", "document-profiles", "fields", "groups"]) {
+  test(`${group} search accepts --order-by relevance`, async () => {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run([group, "search", "--fts-query", "Geburt", "--order-by", "relevance"], cli.deps);
+    assert.equal(code, 0);
+    assert.equal(new URL(cli.mt.last().url).searchParams.get("order_by"), "relevance");
+  });
+}
+
 test("schemas search rejects an out-of-range freigabe-status", async () => {
   const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
   const code = await run(["schemas", "search", "--freigabe-status", "99"], cli.deps);

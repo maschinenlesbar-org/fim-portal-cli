@@ -234,8 +234,9 @@ when; the `seit`/`bis` variants are date-range filters.
 allow `Stichwort`).
 
 **order_by.** Result ordering. The allowed values differ by resource —
-Datenfelder resources share one set (`id_asc`, `name_asc`, …); services have
-their own sets (including `relevance`, `titel_asc`).
+Datenfelder resources share one set (`relevance`, `id_asc`, `name_asc`, …); services
+have their own sets (including `relevance`, `titel_asc`). `relevance` ranks the hits of
+an `--fts-query` search.
 
 **Offset pagination.** The v1/XDatenfelder and most v0 search endpoints page with
 `offset` + `limit` (limit `1`–`200`, default `200`) and return a

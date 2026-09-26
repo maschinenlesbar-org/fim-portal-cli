@@ -17,7 +17,7 @@ export type Bundesland = (typeof BundeslandValues)[number];
 export const ChildTypeValues = ["Feld", "Gruppe"] as const;
 export type ChildType = (typeof ChildTypeValues)[number];
 
-export const DatenfelderSearchOrderValues = ["geaendert_datum_zeit_desc", "geaendert_datum_zeit_asc", "name_asc", "name_desc", "id_asc", "id_desc"] as const;
+export const DatenfelderSearchOrderValues = ["relevance", "geaendert_datum_zeit_desc", "geaendert_datum_zeit_asc", "name_asc", "name_desc", "id_asc", "id_desc"] as const;
 export type DatenfelderSearchOrder = (typeof DatenfelderSearchOrderValues)[number];
 
 export const DatentypValues = ["text", "text_latin", "date", "time", "datetime", "bool", "num", "num_int", "num_currency", "file", "obj"] as const;
