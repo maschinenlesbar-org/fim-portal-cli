@@ -209,14 +209,16 @@ one as a visualization PDF.
 # Search processes
 fim-portal processes search --detaillierungsstufe 105 --is-musterprozess --limit 20
 
-# Get one process (id, version, stufe 101..105)
-fim-portal processes get 99146014080000 01.00.00 105
+# Get one process (id, version, stufe 101..105, verwaltungspolitische Kodierung)
+fim-portal processes get 99146014080000 01.00.00 105 17
 
 # Download the visualization PDF
-fim-portal -o vis.pdf processes visualization 99146014080000 01.00.00 105
+fim-portal -o vis.pdf processes visualization 99146014080000 01.00.00 105 17
 ```
 
-`--detaillierungsstufe` and the `<stufe>` argument are `101`..`105`. Process
+`--detaillierungsstufe` and the `<stufe>` argument are `101`..`105`. The fourth
+argument, `<kodierung>`, is the process's verwaltungspolitische Kodierung: copy the
+`verwaltungspolitische_kodierung` field of the search result (`17` above). Process
 downloads: `xprozess` (XML), `report`, `visualization`, `visualization-display`
 (all PDFs except `xprozess`). For higher-level classes use `process-classes search`
 (filters: `--operatives-ziel`, `--verfahrensart`, `--handlungsform`) and

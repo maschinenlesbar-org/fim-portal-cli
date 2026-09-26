@@ -20,6 +20,10 @@ import {
   AnwendungsgebietValues,
 } from "../../client/enums.js";
 
+/** Help text for the fourth positional of every process detail/download command. */
+const KODIERUNG_HELP =
+  "verwaltungspolitische Kodierung (the verwaltungspolitische_kodierung of a search result, e.g. 17)";
+
 export function registerProcessCommands(program: Command, deps: CliDeps): void {
   registerProcessClasses(program, deps);
   registerProcesses(program, deps);
@@ -114,11 +118,12 @@ function registerProcesses(program: Command, deps: CliDeps): void {
     .argument("<id>", "process id", parseNonEmpty)
     .argument("<version>", "process version", parseNonEmpty)
     .argument("<stufe>", "Detaillierungsstufe (101..105)", parseNonEmpty)
+    .argument("<kodierung>", KODIERUNG_HELP, parseNonEmpty)
     .description("Get a specific process (stufe: 101..105)")
     .action(
-      action(deps, async ({ client, global }, [id, version, stufe]) => {
+      action(deps, async ({ client, global }, [id, version, stufe, kodierung]) => {
         const s = assertEnum(stufe!, DetaillierungsstufeValues, "Detaillierungsstufe");
-        renderJson(deps, global, await client.processes.get(id!, version!, s));
+        renderJson(deps, global, await client.processes.get(id!, version!, s, kodierung!));
       }),
     );
 
@@ -140,11 +145,12 @@ function registerProcesses(program: Command, deps: CliDeps): void {
       .argument("<id>", "process id", parseNonEmpty)
       .argument("<version>", "process version", parseNonEmpty)
       .argument("<stufe>", "Detaillierungsstufe (101..105)", parseNonEmpty)
+      .argument("<kodierung>", KODIERUNG_HELP, parseNonEmpty)
       .description(downloadMap[method])
       .action(
-        action(deps, async ({ client, global }, [id, version, stufe]) => {
+        action(deps, async ({ client, global }, [id, version, stufe, kodierung]) => {
           const s = assertEnum(stufe!, DetaillierungsstufeValues, "Detaillierungsstufe");
-          const res = await client.processes[method](id!, version!, s);
+          const res = await client.processes[method](id!, version!, s, kodierung!);
           renderRaw(deps, global, res);
         }),
       );

@@ -53,11 +53,11 @@ const cases: Array<{ name: string; run: (c: FimPortalClient) => Promise<unknown>
   { name: "processClasses.get", run: (c) => c.processClasses.get("P1", "1.0"), url: `${BASE}/api/v0/processclasses/P1/1.0` },
   { name: "processClasses.getXprozess", run: (c) => c.processClasses.getXprozess("P1", "1.0"), url: `${BASE}/api/v0/processclasses/P1/1.0/xprozess` },
 
-  { name: "processes.get", run: (c) => c.processes.get("P1", "1.0", "101"), url: `${BASE}/api/v0/processes/P1/1.0/101` },
-  { name: "processes.downloadXprozess", run: (c) => c.processes.downloadXprozess("P1", "1.0", "101"), url: `${BASE}/api/v0/processes/P1/1.0/101/xprozess` },
-  { name: "processes.downloadReport", run: (c) => c.processes.downloadReport("P1", "1.0", "101"), url: `${BASE}/api/v0/processes/P1/1.0/101/report` },
-  { name: "processes.downloadVisualization", run: (c) => c.processes.downloadVisualization("P1", "1.0", "101"), url: `${BASE}/api/v0/processes/P1/1.0/101/visualization` },
-  { name: "processes.downloadVisualizationDisplay", run: (c) => c.processes.downloadVisualizationDisplay("P1", "1.0", "101"), url: `${BASE}/api/v0/processes/P1/1.0/101/visualization_display` },
+  { name: "processes.get", run: (c) => c.processes.get("P1", "1.0", "101", "17"), url: `${BASE}/api/v0/processes/P1/1.0/101/17` },
+  { name: "processes.downloadXprozess", run: (c) => c.processes.downloadXprozess("P1", "1.0", "101", "17"), url: `${BASE}/api/v0/processes/P1/1.0/101/17/xprozess` },
+  { name: "processes.downloadReport", run: (c) => c.processes.downloadReport("P1", "1.0", "101", "17"), url: `${BASE}/api/v0/processes/P1/1.0/101/17/report` },
+  { name: "processes.downloadVisualization", run: (c) => c.processes.downloadVisualization("P1", "1.0", "101", "17"), url: `${BASE}/api/v0/processes/P1/1.0/101/17/visualization` },
+  { name: "processes.downloadVisualizationDisplay", run: (c) => c.processes.downloadVisualizationDisplay("P1", "1.0", "101", "17"), url: `${BASE}/api/v0/processes/P1/1.0/101/17/visualization_display` },
 ];
 
 for (const tc of cases) {

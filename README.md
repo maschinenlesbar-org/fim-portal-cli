@@ -227,7 +227,7 @@ fim-portal -o leistung.pdf service-profiles pdf 99008001012012 de-DE
 fim-portal processes search --detaillierungsstufe 105 --is-musterprozess --limit 20
 
 # Download a process visualization PDF
-fim-portal -o vis.pdf processes visualization 99146014080000 01.00.00 105
+fim-portal -o vis.pdf processes visualization 99146014080000 01.00.00 105 17
 
 # Bulk CSV export of field search results
 fim-portal -o fields.csv search-csv --resource fields --term Name

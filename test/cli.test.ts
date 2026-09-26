@@ -149,10 +149,32 @@ test("service-texts get passes the source path segment", async () => {
   assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/leistung-stammtexte/R1/L1/leika");
 });
 
-test("processes get passes the Detaillierungsstufe", async () => {
+test("processes get passes the Detaillierungsstufe and the verwaltungspolitische Kodierung", async () => {
   const cli = makeCli(() => jsonResponse({ ok: true }));
-  await run(["processes", "get", "P1", "1.0", "101"], cli.deps);
-  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/processes/P1/1.0/101");
+  await run(["processes", "get", "P1", "1.0", "101", "17"], cli.deps);
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/processes/P1/1.0/101/17");
+});
+
+for (const [name, suffix] of [
+  ["xprozess", "xprozess"],
+  ["report", "report"],
+  ["visualization", "visualization"],
+  ["visualization-display", "visualization_display"],
+] as const) {
+  test(`processes ${name} addresses the process by all four path segments`, async () => {
+    const cli = makeCli(() => rawResponse("%PDF-1.4", "application/pdf"));
+    const code = await run(["-o", "out.bin", "processes", name, "P1", "1.0", "105", "17"], cli.deps);
+    assert.equal(code, 0);
+    assert.equal(new URL(cli.mt.last().url).pathname, `/api/v0/processes/P1/1.0/105/17/${suffix}`);
+  });
+}
+
+test("processes get without the Kodierung is a usage error, before any request", async () => {
+  const cli = makeCli(() => jsonResponse({ ok: true }));
+  const code = await run(["processes", "get", "P1", "1.0", "101"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+  assert.match(cli.err.join("\n"), /missing required argument 'kodierung'/);
 });
 
 test("--version prints the version and exits 0", async () => {
@@ -233,7 +255,7 @@ test("organizational-units --limit is also bounded", async () => {
 
 test("processes get rejects an invalid Detaillierungsstufe without an HTTP call", async () => {
   const cli = makeCli(() => jsonResponse({}));
-  const code = await run(["processes", "get", "P1", "1.0", "999"], cli.deps);
+  const code = await run(["processes", "get", "P1", "1.0", "999", "17"], cli.deps);
   assert.equal(code, 1);
   assert.equal(cli.mt.calls.length, 0);
   assert.match(cli.err.join("\n"), /Invalid Detaillierungsstufe "999"/);
@@ -241,9 +263,9 @@ test("processes get rejects an invalid Detaillierungsstufe without an HTTP call"
 
 test("processes get accepts a valid Detaillierungsstufe", async () => {
   const cli = makeCli(() => jsonResponse({ ok: true }));
-  const code = await run(["processes", "get", "P1", "1.0", "101"], cli.deps);
+  const code = await run(["processes", "get", "P1", "1.0", "101", "17"], cli.deps);
   assert.equal(code, 0);
-  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/processes/P1/1.0/101");
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/processes/P1/1.0/101/17");
 });
 
 test("service-texts get rejects an invalid source without an HTTP call", async () => {

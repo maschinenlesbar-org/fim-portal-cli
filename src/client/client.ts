@@ -4,7 +4,7 @@
 //
 // The surface is grouped by resource so usage reads naturally, e.g.
 //   client.schemas.search({ name: "Geburt" })
-//   client.processes.downloadVisualization(id, version, stufe)
+//   client.processes.downloadVisualization(id, version, stufe, kodierung)
 
 import { RequestEngine, type EngineOptions, type RawResponse } from "./engine.js";
 import type { QueryParams } from "./query.js";
@@ -251,7 +251,11 @@ class ProcessClassesResource {
   }
 }
 
-/** XProzess processes. */
+/**
+ * XProzess processes. A process is addressed by id, version, Detaillierungsstufe
+ * and its verwaltungspolitische Kodierung — the `verwaltungspolitische_kodierung`
+ * value every `search` result item carries (e.g. `"17"`).
+ */
 class ProcessesResource {
   constructor(private readonly e: RequestEngine) {}
 
@@ -259,37 +263,60 @@ class ProcessesResource {
     return this.e.getJson("/api/v0/processes", params as QueryParams);
   }
 
-  get(id: string, version: string, stufe: Detaillierungsstufe): Promise<Process> {
-    return this.e.getJson(`/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}`);
+  get(id: string, version: string, stufe: Detaillierungsstufe, kodierung: string): Promise<Process> {
+    return this.e.getJson(processPath(id, version, stufe, kodierung));
   }
 
-  downloadXprozess(id: string, version: string, stufe: Detaillierungsstufe): Promise<RawResponse> {
-    return this.e.getRaw(`/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/xprozess`, ACCEPT_XML);
+  downloadXprozess(
+    id: string,
+    version: string,
+    stufe: Detaillierungsstufe,
+    kodierung: string,
+  ): Promise<RawResponse> {
+    return this.e.getRaw(`${processPath(id, version, stufe, kodierung)}/xprozess`, ACCEPT_XML);
   }
 
   // The report and visualization endpoints serve PDF, not XML, so we negotiate
   // application/pdf to match what the server actually returns.
-  downloadReport(id: string, version: string, stufe: Detaillierungsstufe): Promise<RawResponse> {
-    return this.e.getRaw(`/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/report`, ACCEPT_PDF);
+  downloadReport(
+    id: string,
+    version: string,
+    stufe: Detaillierungsstufe,
+    kodierung: string,
+  ): Promise<RawResponse> {
+    return this.e.getRaw(`${processPath(id, version, stufe, kodierung)}/report`, ACCEPT_PDF);
   }
 
-  downloadVisualization(id: string, version: string, stufe: Detaillierungsstufe): Promise<RawResponse> {
-    return this.e.getRaw(
-      `/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/visualization`,
-      ACCEPT_PDF,
-    );
+  downloadVisualization(
+    id: string,
+    version: string,
+    stufe: Detaillierungsstufe,
+    kodierung: string,
+  ): Promise<RawResponse> {
+    return this.e.getRaw(`${processPath(id, version, stufe, kodierung)}/visualization`, ACCEPT_PDF);
   }
 
   downloadVisualizationDisplay(
     id: string,
     version: string,
     stufe: Detaillierungsstufe,
+    kodierung: string,
   ): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/visualization_display`,
+      `${processPath(id, version, stufe, kodierung)}/visualization_display`,
       ACCEPT_PDF,
     );
   }
+}
+
+/** Path of one process: `/api/v0/processes/{id}/{version}/{stufe}/{kodierung}`. */
+function processPath(
+  id: string,
+  version: string,
+  stufe: Detaillierungsstufe,
+  kodierung: string,
+): string {
+  return `/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/${enc(kodierung)}`;
 }
 
 /** Code lists referenced by data fields. */

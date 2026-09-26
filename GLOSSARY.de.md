@@ -151,13 +151,19 @@ Portalverbund gegliedert sind (`--lagen-portalverbund`).
 ## Elemente von XProzess
 
 **Prozess (process).** Ein modelliertes Verwaltungsverfahren. Wird über
-`process_id` + `process_version` + **Detaillierungsstufe** identifiziert. CLI: `processes`.
+`process_id` + `process_version` + **Detaillierungsstufe** + **verwaltungspolitische
+Kodierung** identifiziert. CLI: `processes`.
 
 **Prozessklasse (process class).** Eine übergeordnete, wiederverwendbare Prozessvorlage,
 identifiziert über ID + Version. CLI: `process-classes`.
 
 **Detaillierungsstufe.** Der Detaillierungsgrad eines Prozessmodells: `101`–`105`
 (grob → fein). Erforderlich, um einen bestimmten Prozess abzurufen.
+
+**Verwaltungspolitische Kodierung.** Der vierte Teil einer Prozessadresse, neben ID,
+Version und Detaillierungsstufe (z. B. `17`). Jeder Treffer von `processes search`
+enthält sie als `verwaltungspolitische_kodierung`; diesen Wert übergeben Sie als
+Argument `<kodierung>` an `processes get` und die Prozess-Downloads.
 
 **Anwendungsgebiet.** Der fachliche Bereich, in dem ein Prozess angewendet wird (`01`–`17`).
 

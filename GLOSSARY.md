@@ -150,13 +150,19 @@ in the federal portal network (`--lagen-portalverbund`).
 ## XProzess building blocks
 
 **Prozess (process).** A modelled administrative procedure. Identified by
-`process_id` + `process_version` + **Detaillierungsstufe**. CLI: `processes`.
+`process_id` + `process_version` + **Detaillierungsstufe** + **verwaltungspolitische
+Kodierung**. CLI: `processes`.
 
 **Prozessklasse (process class).** A higher-level, reusable process template,
 identified by id + version. CLI: `process-classes`.
 
 **Detaillierungsstufe.** The level of detail of a process model: `101`–`105`
 (coarse → fine). Required to address a specific process.
+
+**Verwaltungspolitische Kodierung.** The fourth part of a process address, next to
+id, version and Detaillierungsstufe (e.g. `17`). Every `processes search` result
+item carries it as `verwaltungspolitische_kodierung`; pass that value as the
+`<kodierung>` argument of `processes get` and the process downloads.
 
 **Anwendungsgebiet.** The application domain of a process (`01`–`17`).
 
