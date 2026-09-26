@@ -218,6 +218,15 @@ test("an id of .. exits 1 without a request instead of printing another endpoint
   assert.match(cli.err.join("\n"), /^Error: Invalid path segment "\.\."/);
 });
 
+test("--max-retries is bounded to 0..10", async () => {
+  for (const [value, ok] of [["0", true], ["10", true], ["11", false], ["1000000", false]] as const) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["--max-retries", value, "schemas", "search"], cli.deps);
+    assert.equal(code, ok ? 0 : 1, value);
+    if (!ok) assert.match(cli.err.join("\n"), /Must be <= 10\./);
+  }
+});
+
 test("processes get without the Kodierung is a usage error, before any request", async () => {
   const cli = makeCli(() => jsonResponse({ ok: true }));
   const code = await run(["processes", "get", "P1", "1.0", "101"], cli.deps);

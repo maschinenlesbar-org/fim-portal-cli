@@ -69,7 +69,7 @@ try {
 new FimPortalClient({
   baseUrl: "https://schema.fim.fitko.net",
   timeoutMs: 15_000,
-  maxRetries: 3,               // 429 / 503 are retried with linear backoff
+  maxRetries: 3,               // 429 / 503 are retried (Retry-After, else linear backoff)
   maxResponseBytes: 50 << 20,  // abort responses larger than 50 MiB (0 = unlimited)
   userAgent: "my-app/1.0",
   transport: customTransport,  // inject your own HTTP transport (see below)
@@ -153,8 +153,11 @@ built-in `http`/`https`; tests inject a mock. This is the only HTTP seam.
 status }` — raw bytes, never lossily decoded.
 
 **Retry / backoff.** Transient `429` (rate limit) and `503` responses are retried
-automatically with linear backoff, up to `--max-retries`. `FimApiError` is raised
-after all retries are exhausted.
+automatically, up to `--max-retries` (`0`–`10` in the CLI). Each retry waits the
+response's `Retry-After` — delay-seconds or an IMF-fixdate HTTP-date, parsed by
+`parseRetryAfter` — or, without a usable one, `retryDelayMs * attempt`. A `Retry-After`
+longer than `MAX_RETRY_AFTER_MS` (30 s) is not retried: the `FimApiError` surfaces at
+once. `FimApiError` is raised after all retries are exhausted.
 
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
 default 100 MiB), guarding against unbounded responses.

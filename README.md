@@ -294,8 +294,8 @@ do the same thing.
 - **Exit `1` / network error** — connectivity, DNS, or a timeout. Try again, or raise
   the limit with `--timeout 60000`.
 - **`429` / too many requests** — the portal rate-limits by IP. The CLI retries
-  automatically (up to `--max-retries`, default `2`); if it still fails, wait a
-  moment and retry.
+  automatically (up to `--max-retries`, default `2`), honouring the server's
+  `Retry-After` up to 30 s; if it still fails, wait a moment and retry.
 - **Empty `items` / `total_count: 0`** — the search matched nothing; broaden
   `--fts-query`, drop a filter, or try a different keyword.
 - **`-o` write error** — the parent directory must exist and be writable; the path
@@ -316,7 +316,7 @@ These apply to every command and may be given **before or after** it:
 | `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works). Must be an `http:`/`https:` URL — any other scheme is rejected at parse time (exit `1`) before any request is made |
 | `--timeout <ms>` | Per-request timeout (default `30000`; at most `2147483647`) |
 | `--user-agent <ua>` | `User-Agent` header value |
-| `--max-retries <n>` | Retries for transient `429`/`503` responses (default `2`) |
+| `--max-retries <n>` | Retries for transient `429`/`503` responses (`0`–`10`, default `2`). Each retry waits the server's `Retry-After` (up to 30 s; a longer one is not retried) or else backs off linearly |
 | `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB) |
 
 ## Learn more

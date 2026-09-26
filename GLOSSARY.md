@@ -253,7 +253,8 @@ behind constant URLs intended for stable production use; the full URLs are
 included in API responses.
 
 **Rate limiting.** The API rate-limits by IP and returns **429** when exceeded;
-the client retries 429/503 automatically with linear backoff (`--max-retries`).
+the client retries 429/503 automatically (`--max-retries`), waiting the response's
+`Retry-After` (up to 30 s; a longer one is not retried) or else backing off linearly.
 
 **Authenticated endpoints (out of scope).** Uploads, the `/tools/*` converters
 and quality-checks, and token introspection require an `Access-Token`. This tool

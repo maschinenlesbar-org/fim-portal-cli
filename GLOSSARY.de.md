@@ -254,8 +254,9 @@ festen URLs bereit, die für den stabilen Produktivbetrieb gedacht sind; die vol
 URLs sind in den API-Antworten enthalten.
 
 **Rate-Limiting.** Die API begrenzt Anfragen pro IP-Adresse und antwortet bei
-Überschreitung mit **429**; der Client wiederholt 429/503 automatisch mit linearem Backoff
-(`--max-retries`).
+Überschreitung mit **429**; der Client wiederholt 429/503 automatisch
+(`--max-retries`) und wartet dabei das `Retry-After` der Antwort ab (bis 30 s; ein längeres
+wird nicht wiederholt), sonst mit linearem Backoff.
 
 **Authentifizierte Endpoints (nicht abgedeckt).** Uploads, die Konverter und
 Qualitätsprüfungen unter `/tools/*` sowie die Token-Introspection erfordern ein
