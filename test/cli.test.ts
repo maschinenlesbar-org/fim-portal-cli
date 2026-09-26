@@ -194,6 +194,26 @@ test("a blank -o/--output is a usage error instead of silently writing to stdout
   }
 });
 
+test("--user-agent with control or non-Latin-1 characters is a usage error, not an 'Unexpected error'", async () => {
+  const CR = String.fromCharCode(0x0d);
+  const LF = String.fromCharCode(0x0a);
+  for (const [ua, message] of [
+    [`a${CR}${LF}X-Evil: 1`, /Value contains control characters\./],
+    [`a${String.fromCharCode(0x7f)}`, /Value contains control characters\./],
+    ["agent \u20ac", /Value contains characters outside Latin-1/],
+    [" ", /Expected a non-empty value/],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["--user-agent", ua, "schemas", "search"], cli.deps);
+    assert.equal(code, 1, JSON.stringify(ua));
+    assert.equal(cli.mt.calls.length, 0);
+    assert.match(cli.err.join("\n"), message);
+  }
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  assert.equal(await run(["--user-agent", "müller-bot/1.0\t(test)", "schemas", "search"], cli.deps), 0);
+  assert.equal(cli.mt.last().headers?.["User-Agent"], "müller-bot/1.0\t(test)");
+});
+
 test("--timeout accepts up to the largest timer Node supports", async () => {
   const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
   assert.equal(await run(["--timeout", "2147483647", "schemas", "search"], cli.deps), 0);
