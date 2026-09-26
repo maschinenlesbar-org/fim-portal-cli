@@ -274,3 +274,30 @@ test("redactUrl hides userinfo and leaves other URLs alone", () => {
   assert.equal(err.url, "https://***@example.test/x");
   assert.ok(!err.message.includes("u:p"));
 });
+
+test("a 3xx names the redirect target instead of a bare status", async () => {
+  const cases: Array<[string | undefined, string]> = [
+    ["https://fimportal.de/api/v0/code-lists?limit=1", ": redirect to https://fimportal.de/api/v0/code-lists?limit=1 not followed"],
+    ["/elsewhere", ": redirect to http://fimportal.de/elsewhere not followed"],
+    ["https://u:p@evil.test/\u202ex", ": redirect to https://***@evil.test/%E2%80%AEx not followed"],
+    [undefined, ": redirect not followed (no Location header)"],
+  ];
+  for (const [location, suffix] of cases) {
+    const mt = makeMockTransport(() => ({
+      status: 301,
+      headers: location === undefined ? {} : { location },
+      body: Buffer.alloc(0),
+    }));
+    const engine = new RequestEngine({ transport: mt.transport, baseUrl: "http://fimportal.de" });
+    await assert.rejects(
+      () => engine.getJson("/api/v0/code-lists", { limit: 1 }),
+      (err: unknown) => {
+        assert.ok(err instanceof FimApiError);
+        assert.equal(err.message, `HTTP 301 for GET http://fimportal.de/api/v0/code-lists?limit=1${suffix}`);
+        return true;
+      },
+      String(location),
+    );
+    assert.equal(mt.calls.length, 1); // still not followed
+  }
+});

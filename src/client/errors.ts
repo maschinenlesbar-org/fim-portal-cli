@@ -29,7 +29,9 @@ export class FimError extends Error {
 
 /**
  * The API responded with a non-2xx status code. `detail` holds the parsed
- * `detail` field of the API's `ErrorMessage` body when present.
+ * `detail` field of the API's `ErrorMessage` body when present. For a 3xx — the
+ * client does not follow redirects — `location` holds the redirect target
+ * (absolute, sanitised, userinfo redacted) and the message names it.
  */
 export class FimApiError extends FimError {
   readonly status: number;
@@ -37,6 +39,7 @@ export class FimApiError extends FimError {
   readonly url: string;
   readonly method: string;
   readonly body: string;
+  readonly location: string | undefined;
 
   constructor(args: {
     status: number;
@@ -44,16 +47,27 @@ export class FimApiError extends FimError {
     method: string;
     body: string;
     detail?: string;
+    location?: string;
   }) {
     // The URL is shown without userinfo: a credential in --base-url must not leak.
     const url = redactUrl(args.url);
-    const detailPart = args.detail ? `: ${args.detail}` : "";
+    const parts: string[] = [];
+    if (args.detail) parts.push(args.detail);
+    if (args.status >= 300 && args.status < 400) {
+      parts.push(
+        args.location
+          ? `redirect to ${args.location} not followed`
+          : "redirect not followed (no Location header)",
+      );
+    }
+    const detailPart = parts.length > 0 ? `: ${parts.join("; ")}` : "";
     super(`HTTP ${args.status} for ${args.method} ${url}${detailPart}`);
     this.status = args.status;
     this.url = url;
     this.method = args.method;
     this.body = args.body;
     this.detail = args.detail;
+    this.location = args.location;
   }
 
   /** True for statuses the API documents as transient and retry-able. */

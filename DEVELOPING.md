@@ -159,6 +159,11 @@ response's `Retry-After` — delay-seconds or an IMF-fixdate HTTP-date, parsed b
 longer than `MAX_RETRY_AFTER_MS` (30 s) is not retried: the `FimApiError` surfaces at
 once. `FimApiError` is raised after all retries are exhausted.
 
+**Redirects.** Not followed, by design. A 3xx surfaces as a `FimApiError` (exit `1`)
+whose message and `location` field name the redirect target (resolved, userinfo
+redacted, sanitised), e.g. `HTTP 301 for GET http://fimportal.de/...: redirect to
+https://fimportal.de/... not followed`.
+
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
 default 100 MiB), guarding against unbounded responses.
 
