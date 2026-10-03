@@ -7,6 +7,7 @@
 import { FimValidationError } from "./errors.js";
 import type { QueryParams } from "./query.js";
 import { SearchCsvResourceValues } from "./params.js";
+import { DetaillierungsstufeValues, XzufiSourceValues } from "./enums.js";
 
 /** A rule: the reason `value` is invalid, or `undefined` when it is valid. */
 export type Problem<T = unknown> = (value: T) => string | undefined;
@@ -93,3 +94,31 @@ export function oneOfProblem<T>(allowed: readonly T[]): Problem<unknown> {
  * Leistungen.
  */
 export const searchCsvResourceProblem: Problem<unknown> = oneOfProblem(SearchCsvResourceValues);
+
+/** Which query parameters of an endpoint are enumerated, and their allowed values. */
+export type EnumSpec = Readonly<Record<string, readonly unknown[]>>;
+
+/**
+ * Check every parameter `spec` lists against its allowed values (oneOfProblem); an
+ * array parameter is checked element by element. `undefined`/`null` mean omitted;
+ * parameters `spec` does not list are left alone. Throws `FimValidationError`
+ * (`Invalid feldart: Expected one of: input, select, …`). The TypeScript unions
+ * already say this, but plain-JS callers, casts and values taken from data bypass
+ * them, and the API would answer with a 422 or, worse, an unfiltered result.
+ */
+export function assertEnumParams(params: object, spec: EnumSpec): void {
+  const values = params as Record<string, unknown>;
+  for (const [key, allowed] of Object.entries(spec)) {
+    const value = values[key];
+    if (value === undefined || value === null) continue;
+    const problem = oneOfProblem(allowed);
+    if (Array.isArray(value)) for (const v of value) assertValid(key, v, problem);
+    else assertValid(key, value, problem);
+  }
+}
+
+/** The `stufe` path segment of a process: one of DetaillierungsstufeValues (101..105). */
+export const detaillierungsstufeProblem: Problem<unknown> = oneOfProblem(DetaillierungsstufeValues);
+
+/** The `source` path segment of a service text: one of XzufiSourceValues. */
+export const xzufiSourceProblem: Problem<unknown> = oneOfProblem(XzufiSourceValues);

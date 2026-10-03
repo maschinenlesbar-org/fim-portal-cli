@@ -3,7 +3,6 @@ import type { CliDeps } from "../io.js";
 import {
   action,
   addPagination,
-  assertEnum,
   choiceOption,
   collectFreigabeStatus,
   parseNonEmpty,
@@ -18,6 +17,7 @@ import {
   HandlungsformValues,
   DetaillierungsstufeValues,
   AnwendungsgebietValues,
+  type Detaillierungsstufe,
 } from "../../client/enums.js";
 
 /** Help text for the fourth positional of every process detail/download command. */
@@ -124,7 +124,8 @@ function registerProcesses(program: Command, deps: CliDeps): void {
     .description("Get a specific process (stufe: 101..105)")
     .action(
       action(deps, async ({ client, global }, [id, version, stufe, kodierung]) => {
-        const s = assertEnum(stufe!, DetaillierungsstufeValues, "Detaillierungsstufe");
+        // The library checks stufe against DetaillierungsstufeValues before any request.
+        const s = stufe as Detaillierungsstufe;
         renderJson(deps, global, await client.processes.get(id!, version!, s, kodierung!));
       }),
     );
@@ -151,7 +152,7 @@ function registerProcesses(program: Command, deps: CliDeps): void {
       .description(downloadMap[method])
       .action(
         action(deps, async ({ client, global }, [id, version, stufe, kodierung]) => {
-          const s = assertEnum(stufe!, DetaillierungsstufeValues, "Detaillierungsstufe");
+          const s = stufe as Detaillierungsstufe;
           const res = await client.processes[method](id!, version!, s, kodierung!);
           renderRaw(deps, global, res);
         }),

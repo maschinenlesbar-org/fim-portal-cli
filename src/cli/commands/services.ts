@@ -3,7 +3,6 @@ import type { CliDeps } from "../io.js";
 import {
   action,
   addPagination,
-  assertEnum,
   choiceOption,
   collect,
   collectFreigabeStatus,
@@ -23,6 +22,7 @@ import {
   SpracheValues,
   BehoerdeValues,
   XzufiSourceValues,
+  type XzufiSource,
 } from "../../client/enums.js";
 
 export function registerServiceCommands(program: Command, deps: CliDeps): void {
@@ -190,7 +190,7 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .description("Get a single Leistungsstammtext (source: leika|landesredaktion|pvog)")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source]) => {
-        const src = assertEnum(source!, XzufiSourceValues, "source");
+        const src = source as XzufiSource; // checked by the library before any request
         renderJson(deps, global, await client.serviceTexts.get(redaktionId!, leistungId!, src));
       }),
     );
@@ -202,7 +202,7 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .description("Download the XZuFi XML for a Leistungsstammtext")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source]) => {
-        const src = assertEnum(source!, XzufiSourceValues, "source");
+        const src = source as XzufiSource; // checked by the library before any request
         renderRaw(deps, global, await client.serviceTexts.downloadXzufi(redaktionId!, leistungId!, src));
       }),
     );
@@ -219,7 +219,7 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .description("Export a Leistungsstammtext as PDF")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source, lang]) => {
-        const src = assertEnum(source!, XzufiSourceValues, "source");
+        const src = source as XzufiSource; // checked by the library before any request
         renderRaw(
           deps,
           global,
@@ -235,7 +235,7 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .description("Get the parsed XZuFi JSON (INSTABLE per API docs)")
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source]) => {
-        const src = assertEnum(source!, XzufiSourceValues, "source");
+        const src = source as XzufiSource; // checked by the library before any request
         renderJson(deps, global, await client.serviceTexts.parsedXzufi(redaktionId!, leistungId!, src));
       }),
     );

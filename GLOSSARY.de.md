@@ -158,7 +158,8 @@ Kodierung** identifiziert. CLI: `processes`.
 identifiziert über ID + Version. CLI: `process-classes`.
 
 **Detaillierungsstufe.** Der Detaillierungsgrad eines Prozessmodells: `101`–`105`
-(grob → fein). Erforderlich, um einen bestimmten Prozess abzurufen.
+(grob → fein). Erforderlich, um einen bestimmten Prozess abzurufen. Jeder andere Wert wird
+vor einer Anfrage zurückgewiesen, von der CLI wie von der Bibliothek.
 
 **Verwaltungspolitische Kodierung.** Der vierte Teil einer Prozessadresse, neben ID,
 Version und Detaillierungsstufe (z. B. `17`). Jeder Treffer von `processes search`

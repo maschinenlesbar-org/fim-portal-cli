@@ -444,14 +444,14 @@ test("organizational-units --limit is also bounded", async () => {
   assert.equal(cli.mt.calls.length, 0);
 });
 
-// ---- L3: positional enum args are validated client-side ----
+// ---- L3: positional enum args are validated by the library, before any request ----
 
 test("processes get rejects an invalid Detaillierungsstufe without an HTTP call", async () => {
   const cli = makeCli(() => jsonResponse({}));
   const code = await run(["processes", "get", "P1", "1.0", "999", "17"], cli.deps);
   assert.equal(code, 1);
   assert.equal(cli.mt.calls.length, 0);
-  assert.match(cli.err.join("\n"), /Invalid Detaillierungsstufe "999"/);
+  assert.equal(cli.err.join("\n"), "Error: Invalid stufe: Expected one of: 101, 102, 103, 104, 105.");
 });
 
 test("processes get accepts a valid Detaillierungsstufe", async () => {
@@ -466,7 +466,7 @@ test("service-texts get rejects an invalid source without an HTTP call", async (
   const code = await run(["service-texts", "get", "R1", "L1", "bogus"], cli.deps);
   assert.equal(code, 1);
   assert.equal(cli.mt.calls.length, 0);
-  assert.match(cli.err.join("\n"), /Invalid source "bogus"/);
+  assert.equal(cli.err.join("\n"), "Error: Invalid source: Expected one of: leika, landesredaktion, pvog.");
 });
 
 // ---- M3: choice options reuse the spec enums (incl. schema-only "Stichwort") ----

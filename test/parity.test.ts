@@ -148,3 +148,65 @@ test("parity: search-csv with a known resource sends the identical request", asy
   assert.ok(lib.ok);
   assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
 });
+
+// ---- Finding #8 (PAT-12): enum-typed query and path values ----
+
+// Plain-JS callers, casts and values taken from data bypass the TypeScript unions.
+const anyClient = (t: Transport) => client(t) as unknown as {
+  [group: string]: { [method: string]: (...args: unknown[]) => Promise<unknown> };
+};
+
+const enumCases: Array<[string[], (t: Transport) => unknown, RegExp]> = [
+  [["processes", "get", "P1", "1.0", "999", "17"], (t) => anyClient(t)["processes"]!["get"]!("P1", "1.0", "999", "17"), /^Invalid stufe: Expected one of: 101, 102, 103, 104, 105\.$/],
+  [["processes", "report", "P1", "1.0", " 101", "17"], (t) => anyClient(t)["processes"]!["downloadReport"]!("P1", "1.0", " 101", "17"), /^Invalid stufe: /],
+  [["processes", "xprozess", "P1", "1.0", "999", "17"], (t) => anyClient(t)["processes"]!["downloadXprozess"]!("P1", "1.0", "999", "17"), /^Invalid stufe: /],
+  [["service-texts", "get", "R1", "L1", "bogus"], (t) => anyClient(t)["serviceTexts"]!["get"]!("R1", "L1", "bogus"), /^Invalid source: Expected one of: leika, landesredaktion, pvog\.$/],
+  [["service-texts", "pdf", "R1", "L1", "LEIKA", "de"], (t) => anyClient(t)["serviceTexts"]!["exportPdf"]!("R1", "L1", "LEIKA", "de"), /^Invalid source: /],
+  [["processes", "search", "--anwendungsgebiet", "1"], (t) => anyClient(t)["processes"]!["search"]!({ anwendungsgebiet: "1" }), /^Invalid anwendungsgebiet: /],
+  [["processes", "search", "--detaillierungsstufe", "999"], (t) => anyClient(t)["processes"]!["search"]!({ detaillierungsstufe: "999" }), /^Invalid detaillierungsstufe: /],
+  [["fields", "search", "--feldart", "INPUT"], (t) => anyClient(t)["fields"]!["search"]!({ feldart: "INPUT" }), /^Invalid feldart: /],
+  [["fields", "search", "--datentyp", "TEXT"], (t) => anyClient(t)["fields"]!["search"]!({ datentyp: "TEXT" }), /^Invalid datentyp: /],
+  [["fields", "search", "--suche-nur-in", "Stichwort"], (t) => anyClient(t)["fields"]!["search"]!({ suche_nur_in: "Stichwort" }), /^Invalid suche_nur_in: /],
+  [["schemas", "search", "--xdf-version", " 2.0"], (t) => anyClient(t)["schemas"]!["search"]!({ xdf_version: " 2.0" }), /^Invalid xdf_version: /],
+  [["schemas", "search", "--order-by", "NAME_ASC"], (t) => anyClient(t)["schemas"]!["search"]!({ order_by: "NAME_ASC" }), /^Invalid order_by: /],
+  [["schemas", "search", "--freigabe-status", "NaN"], (t) => anyClient(t)["schemas"]!["search"]!({ freigabe_status: [NaN] }), /^Invalid freigabe_status: Expected one of: 1, 2, 3, 4, 5, 6, 7, 8\.$/],
+  [["schemas", "search", "--freigabe-status", "9"], (t) => anyClient(t)["schemas"]!["search"]!({ freigabe_status: [5, 9] }), /^Invalid freigabe_status: /],
+  [["groups", "search", "--suche-nur-in", "Foo"], (t) => anyClient(t)["groups"]!["search"]!({ suche_nur_in: "Foo" }), /^Invalid suche_nur_in: /],
+  [["document-profiles", "search", "--dokumentart", " 001"], (t) => anyClient(t)["documentProfiles"]!["search"]!({ dokumentart: " 001" }), /^Invalid dokumentart: /],
+  [["process-classes", "search", "--operatives-ziel", "000"], (t) => anyClient(t)["processClasses"]!["search"]!({ operatives_ziel: "000" }), /^Invalid operatives_ziel: /],
+  [["process-classes", "search", "--verfahrensart", "000"], (t) => anyClient(t)["processClasses"]!["search"]!({ verfahrensart: "000" }), /^Invalid verfahrensart: /],
+  [["process-classes", "search", "--handlungsform", "000"], (t) => anyClient(t)["processClasses"]!["search"]!({ handlungsform: "000" }), /^Invalid handlungsform: /],
+  [["process-classes", "search", "--freigabe-status", "0"], (t) => anyClient(t)["processClasses"]!["search"]!({ freigabe_status: [0] }), /^Invalid freigabe_status: /],
+  [["service-profiles", "search", "--sprache", "Klingonisch"], (t) => anyClient(t)["serviceProfiles"]!["search"]!({ sprache: "Klingonisch" }), /^Invalid sprache: /],
+  [["service-profiles", "search", "--vollzugsbehoerde", "XYZ"], (t) => anyClient(t)["serviceProfiles"]!["search"]!({ vollzugsbehoerde: "XYZ" }), /^Invalid vollzugsbehoerde: /],
+  [["service-profiles", "search", "--order-by", "name_asc"], (t) => anyClient(t)["serviceProfiles"]!["search"]!({ order_by: "name_asc" }), /^Invalid order_by: /],
+  [["service-profiles", "search", "--suche-nur-in", "titel"], (t) => anyClient(t)["serviceProfiles"]!["search"]!({ suche_nur_in: "titel" }), /^Invalid suche_nur_in: /],
+  [["service-texts", "search", "--source", "primary"], (t) => anyClient(t)["serviceTexts"]!["search"]!({ source: "primary" }), /^Invalid source: /],
+  [["service-texts", "search", "--order-by", "id_asc"], (t) => anyClient(t)["serviceTexts"]!["search"]!({ order_by: "id_asc" }), /^Invalid order_by: /],
+];
+
+for (const [argv, call, message] of enumCases) {
+  test(`parity: an out-of-domain enum value is rejected by CLI and library alike (${argv.join(" ")})`, async () => {
+    await assertBothReject(argv, call, message);
+  });
+}
+
+test("parity: valid enum values send the identical request from CLI and library", async () => {
+  for (const [argv, call] of [
+    [["processes", "get", "P1", "1.0", "101", "17"], (t: Transport) => client(t).processes.get("P1", "1.0", "101", "17")],
+    [["service-texts", "get", "R1", "L1", "pvog"], (t: Transport) => client(t).serviceTexts.get("R1", "L1", "pvog")],
+    [
+      ["fields", "search", "--feldart", "input", "--freigabe-status", "5", "--xdf-version", "3.0.0"],
+      (t: Transport) => client(t).fields.search({ freigabe_status: [5], xdf_version: "3.0.0", feldart: "input" }),
+    ],
+    [
+      ["service-profiles", "search", "--leistungstyp", "lo", "--sprache", "Deutsch"],
+      (t: Transport) => client(t).serviceProfiles.search({ leistungstyp: ["lo"], sprache: "Deutsch" }),
+    ],
+  ] as const) {
+    const { cli, lib } = await parity([...argv], call, () => jsonResponse({ items: [] }));
+    assert.equal(cli.code, 0, argv.join(" "));
+    assert.ok(lib.ok, argv.join(" "));
+    assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests), argv.join(" "));
+  }
+});

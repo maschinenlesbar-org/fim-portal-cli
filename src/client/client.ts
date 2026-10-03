@@ -8,7 +8,15 @@
 
 import { RequestEngine, type EngineOptions, type RawResponse } from "./engine.js";
 import type { QueryParams } from "./query.js";
-import { assertValid, pathSegment, searchCsvResourceProblem } from "./validate.js";
+import {
+  assertEnumParams,
+  assertValid,
+  detaillierungsstufeProblem,
+  pathSegment,
+  searchCsvResourceProblem,
+  xzufiSourceProblem,
+  type EnumSpec,
+} from "./validate.js";
 import type {
   PaginatedResult,
   CursorPaginationResult,
@@ -45,10 +53,93 @@ import type {
   Pagination,
   SearchCsvParams,
 } from "./params.js";
-import type { XzufiSource, Detaillierungsstufe } from "./enums.js";
+import {
+  AnwendungsgebietValues,
+  BehoerdeValues,
+  DatenfelderSearchOrderValues,
+  DatentypValues,
+  DetaillierungsstufeValues,
+  DokumentartValues,
+  FeldartValues,
+  FeldSucheInValues,
+  FreigabeStatusValues,
+  GruppeSucheInValues,
+  HandlungsformValues,
+  LeistungStammtextSearchOrderValues,
+  LeistungSteckbriefSearchOrderValues,
+  LeistungSucheInValues,
+  OperativesZielValues,
+  SchemaSucheInValues,
+  SpracheValues,
+  SteckbriefSucheInValues,
+  VerfahrensartValues,
+  XdfVersionValues,
+  XzufiSourceValues,
+  type Detaillierungsstufe,
+  type XzufiSource,
+} from "./enums.js";
 
 const ACCEPT_XML = "application/xml";
 const ACCEPT_PDF = "application/pdf";
+
+// The enumerated query parameters of each search endpoint, checked with
+// assertEnumParams before the request. These are the parameters the CLI offers as
+// fixed choices; the remaining TypeScript-typed lists (leistungstyp, typisierung,
+// sdg, leistungsadressat, ozg_themenfeld) are forwarded as given, as in the CLI.
+const DATENFELDER_ENUMS = {
+  freigabe_status: FreigabeStatusValues,
+  xdf_version: XdfVersionValues,
+  order_by: DatenfelderSearchOrderValues,
+} as const satisfies EnumSpec;
+const SCHEMA_SEARCH_ENUMS: EnumSpec = { ...DATENFELDER_ENUMS, suche_nur_in: SchemaSucheInValues };
+const DOCUMENT_PROFILE_SEARCH_ENUMS: EnumSpec = {
+  ...DATENFELDER_ENUMS,
+  dokumentart: DokumentartValues,
+  suche_nur_in: SteckbriefSucheInValues,
+};
+const FIELD_SEARCH_ENUMS: EnumSpec = {
+  ...DATENFELDER_ENUMS,
+  suche_nur_in: FeldSucheInValues,
+  feldart: FeldartValues,
+  datentyp: DatentypValues,
+};
+const GROUP_SEARCH_ENUMS: EnumSpec = { ...DATENFELDER_ENUMS, suche_nur_in: GruppeSucheInValues };
+const SERVICE_PROFILE_SEARCH_ENUMS: EnumSpec = {
+  freigabe_status: FreigabeStatusValues,
+  suche_nur_in: LeistungSucheInValues,
+  sprache: SpracheValues,
+  vollzugsbehoerde: BehoerdeValues,
+  order_by: LeistungSteckbriefSearchOrderValues,
+};
+const SERVICE_TEXT_SEARCH_ENUMS: EnumSpec = {
+  vollzugsbehoerde: BehoerdeValues,
+  source: XzufiSourceValues,
+  suche_nur_in: LeistungSucheInValues,
+  order_by: LeistungStammtextSearchOrderValues,
+};
+const PROCESS_CLASS_SEARCH_ENUMS: EnumSpec = {
+  freigabe_status: FreigabeStatusValues,
+  operatives_ziel: OperativesZielValues,
+  verfahrensart: VerfahrensartValues,
+  handlungsform: HandlungsformValues,
+};
+const PROCESS_SEARCH_ENUMS: EnumSpec = {
+  freigabe_status: FreigabeStatusValues,
+  detaillierungsstufe: DetaillierungsstufeValues,
+  anwendungsgebiet: AnwendungsgebietValues,
+};
+
+/** The XZuFi `source` path segment of a service text, checked against XzufiSourceValues. */
+function sourceSegment(source: XzufiSource): string {
+  assertValid("source", source, xzufiSourceProblem);
+  return pathSegment("source", source);
+}
+
+/** The `stufe` path segment of a process, checked against DetaillierungsstufeValues. */
+function stufeSegment(stufe: Detaillierungsstufe): string {
+  assertValid("stufe", stufe, detaillierungsstufeProblem);
+  return pathSegment("stufe", stufe);
+}
 
 // Every path id goes through pathSegment(name, value): it rejects a blank id with
 // FimValidationError (an empty segment would re-target the request to a collection
@@ -60,6 +151,7 @@ class SchemasResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: SchemaSearchParams = {}): Promise<PaginatedResult<SchemaOut>> {
+    assertEnumParams(params ?? {}, SCHEMA_SEARCH_ENUMS);
     return this.e.getJson("/api/v1/schemas", params as QueryParams);
   }
 
@@ -87,6 +179,7 @@ class DocumentProfilesResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: DocumentProfileSearchParams = {}): Promise<PaginatedResult<SteckbriefOut>> {
+    assertEnumParams(params ?? {}, DOCUMENT_PROFILE_SEARCH_ENUMS);
     return this.e.getJson("/api/v1/document-profiles", params as QueryParams);
   }
 
@@ -111,6 +204,7 @@ class FieldsResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: FieldSearchParams = {}): Promise<PaginatedResult<DatenfeldOut>> {
+    assertEnumParams(params ?? {}, FIELD_SEARCH_ENUMS);
     return this.e.getJson("/api/v1/fields", params as QueryParams);
   }
 
@@ -135,6 +229,7 @@ class GroupsResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: GroupSearchParams = {}): Promise<PaginatedResult<DatenfeldgruppeOut>> {
+    assertEnumParams(params ?? {}, GROUP_SEARCH_ENUMS);
     return this.e.getJson("/api/v1/groups", params as QueryParams);
   }
 
@@ -159,6 +254,7 @@ class ServiceProfilesResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: LeistungSteckbriefSearchParams = {}): Promise<JsonObject> {
+    assertEnumParams(params ?? {}, SERVICE_PROFILE_SEARCH_ENUMS);
     return this.e.getJson("/api/v0/leistung-steckbriefe", params as QueryParams);
   }
 
@@ -185,18 +281,19 @@ class ServiceTextsResource {
   async search(
     params: LeistungStammtextSearchParams = {},
   ): Promise<PaginatedResult<LeistungStammtextOut>> {
+    assertEnumParams(params ?? {}, SERVICE_TEXT_SEARCH_ENUMS);
     return this.e.getJson("/api/v0/leistung-stammtexte", params as QueryParams);
   }
 
   async get(redaktionId: string, leistungId: string, source: XzufiSource): Promise<FullLeistungStammtextOut> {
     return this.e.getJson(
-      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${pathSegment("source", source)}`,
+      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}`,
     );
   }
 
   async downloadXzufi(redaktionId: string, leistungId: string, source: XzufiSource): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${pathSegment("source", source)}/xzufi`,
+      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}/xzufi`,
       ACCEPT_XML,
     );
   }
@@ -208,7 +305,7 @@ class ServiceTextsResource {
     languageCode: string,
   ): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${pathSegment("source", source)}/${pathSegment("languageCode", languageCode)}/pdf`,
+      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}/${pathSegment("languageCode", languageCode)}/pdf`,
       ACCEPT_PDF,
     );
   }
@@ -216,7 +313,7 @@ class ServiceTextsResource {
   /** INSTABLE per the API docs — the parsed XZuFi JSON representation. */
   async parsedXzufi(redaktionId: string, leistungId: string, source: XzufiSource): Promise<JsonObject> {
     return this.e.getJson(
-      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${pathSegment("source", source)}/parsed-xzufi`,
+      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}/parsed-xzufi`,
     );
   }
 }
@@ -243,6 +340,7 @@ class ProcessClassesResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: ProcessClassSearchParams = {}): Promise<JsonObject> {
+    assertEnumParams(params ?? {}, PROCESS_CLASS_SEARCH_ENUMS);
     return this.e.getJson("/api/v0/processclasses", params as QueryParams);
   }
 
@@ -268,6 +366,7 @@ class ProcessesResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: ProcessSearchParams = {}): Promise<JsonObject> {
+    assertEnumParams(params ?? {}, PROCESS_SEARCH_ENUMS);
     return this.e.getJson("/api/v0/processes", params as QueryParams);
   }
 
@@ -324,7 +423,7 @@ function processPath(
   stufe: Detaillierungsstufe,
   kodierung: string,
 ): string {
-  return `/api/v0/processes/${pathSegment("id", id)}/${pathSegment("version", version)}/${pathSegment("stufe", stufe)}/${pathSegment("kodierung", kodierung)}`;
+  return `/api/v0/processes/${pathSegment("id", id)}/${pathSegment("version", version)}/${stufeSegment(stufe)}/${pathSegment("kodierung", kodierung)}`;
 }
 
 /** Code lists referenced by data fields. */

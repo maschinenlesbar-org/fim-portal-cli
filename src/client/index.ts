@@ -16,16 +16,19 @@ export {
   redactUrl,
 } from "./errors.js";
 export {
+  assertEnumParams,
   assertNonBlankParams,
   assertValid,
+  detaillierungsstufeProblem,
   isBlank,
   nonEmptyProblem,
   oneOfProblem,
   pathSegment,
   pathSegmentProblem,
   searchCsvResourceProblem,
+  xzufiSourceProblem,
 } from "./validate.js";
-export type { Problem } from "./validate.js";
+export type { EnumSpec, Problem } from "./validate.js";
 
 export * from "./enums.js";
 export * from "./types.js";

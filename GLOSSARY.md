@@ -157,7 +157,8 @@ Kodierung**. CLI: `processes`.
 identified by id + version. CLI: `process-classes`.
 
 **Detaillierungsstufe.** The level of detail of a process model: `101`–`105`
-(coarse → fine). Required to address a specific process.
+(coarse → fine). Required to address a specific process. Any other value is rejected
+before a request, by the CLI and the library alike.
 
 **Verwaltungspolitische Kodierung.** The fourth part of a process address, next to
 id, version and Detaillierungsstufe (e.g. `17`). Every `processes search` result

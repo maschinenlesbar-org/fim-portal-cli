@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  assertEnumParams,
   assertNonBlankParams,
   assertValid,
   isBlank,
@@ -167,5 +168,23 @@ test("searchCsvResourceProblem accepts the portal's singular resource names only
   }
   for (const v of ["schemas", "fields", " schema", "", undefined]) {
     assert.match(searchCsvResourceProblem(v) ?? "", /^Expected one of: schema, /, String(v));
+  }
+});
+
+test("assertEnumParams checks each listed parameter, scalar or array, and ignores the rest", () => {
+  const spec = { feldart: ["input", "select"], freigabe_status: [1, 2] } as const;
+  assertEnumParams({ feldart: "input", freigabe_status: [1, 2], name: "anything", limit: 5 }, spec);
+  assertEnumParams({ feldart: undefined, freigabe_status: null }, spec);
+  for (const [params, message] of [
+    [{ feldart: "INPUT" }, "Invalid feldart: Expected one of: input, select."],
+    [{ freigabe_status: [1, 3] }, "Invalid freigabe_status: Expected one of: 1, 2."],
+    [{ freigabe_status: ["1"] }, "Invalid freigabe_status: Expected one of: 1, 2."],
+    [{ freigabe_status: 3 }, "Invalid freigabe_status: Expected one of: 1, 2."],
+  ] as const) {
+    assert.throws(
+      () => assertEnumParams(params, spec),
+      (err: unknown) => err instanceof FimValidationError && (err as Error).message === message,
+      JSON.stringify(params),
+    );
   }
 });

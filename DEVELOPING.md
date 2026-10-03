@@ -211,6 +211,18 @@ What the library rejects with `FimValidationError`, before any request:
   `SearchCsvParams` and requires `resource` to be one of `SearchCsvResourceValues`
   (`searchCsvResourceProblem`, built on `oneOfProblem`): the server answers any
   other value, or none, with a CSV of Leistungen and status 200.
+- **Out-of-domain enum values.** Each search method checks its enumerated
+  parameters against the `*Values` arrays of `enums.ts` (`assertEnumParams` with a
+  per-endpoint table): `freigabe_status`, `xdf_version`, `order_by`,
+  `suche_nur_in`, `feldart`, `datentyp`, `dokumentart`, `sprache`,
+  `vollzugsbehoerde`, `source`, `operatives_ziel`, `verfahrensart`,
+  `handlungsform`, `detaillierungsstufe` and `anwendungsgebiet`. The `stufe` of a
+  process path must be one of `DetaillierungsstufeValues`
+  (`detaillierungsstufeProblem`) and the `source` of a service-text path one of
+  `XzufiSourceValues` (`xzufiSourceProblem`); `openapi.json` also lists a path
+  source `primary`, which neither the CLI nor the library accepts. The lists the
+  CLI forwards as given (`leistungstyp`, `typisierung`, `sdg`,
+  `leistungsadressat`, `ozg_themenfeld`, the `search-csv` filters) are not checked.
 
 **Security invariant — response data is render-only.** The JSON body is decoded
 with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.
