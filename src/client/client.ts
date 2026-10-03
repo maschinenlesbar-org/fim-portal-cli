@@ -8,6 +8,7 @@
 
 import { RequestEngine, type EngineOptions, type RawResponse } from "./engine.js";
 import type { QueryParams } from "./query.js";
+import { pathSegment } from "./validate.js";
 import type {
   PaginatedResult,
   CursorPaginationResult,
@@ -48,34 +49,35 @@ import type { XzufiSource, Detaillierungsstufe } from "./enums.js";
 const ACCEPT_XML = "application/xml";
 const ACCEPT_PDF = "application/pdf";
 
-// Percent-encodes one path segment. It leaves "." and ".." unchanged; the engine
-// rejects those (see RequestEngine.buildUrl), so they cannot re-target a request.
-const enc = encodeURIComponent;
+// Every path id goes through pathSegment(name, value): it rejects a blank id with
+// FimValidationError (an empty segment would re-target the request to a collection
+// or a versions list) and percent-encodes the rest. "." and ".." pass encoding
+// unchanged; the engine rejects those (see RequestEngine.buildUrl).
 
 /** Search/filter and retrieve XDatenfelder Datenschemata. */
 class SchemasResource {
   constructor(private readonly e: RequestEngine) {}
 
-  search(params: SchemaSearchParams = {}): Promise<PaginatedResult<SchemaOut>> {
+  async search(params: SchemaSearchParams = {}): Promise<PaginatedResult<SchemaOut>> {
     return this.e.getJson("/api/v1/schemas", params as QueryParams);
   }
 
   /** All versions of a schema, ascending. */
-  versions(fimId: string): Promise<SchemaOut[]> {
-    return this.e.getJson(`/api/v1/schemas/${enc(fimId)}`);
+  async versions(fimId: string): Promise<SchemaOut[]> {
+    return this.e.getJson(`/api/v1/schemas/${pathSegment("fimId", fimId)}`);
   }
 
   /** A full schema. Pass version `"latest"` for the newest. */
-  get(fimId: string, fimVersion = "latest"): Promise<FullSchemaOut> {
-    return this.e.getJson(`/api/v1/schemas/${enc(fimId)}/${enc(fimVersion)}`);
+  async get(fimId: string, fimVersion = "latest"): Promise<FullSchemaOut> {
+    return this.e.getJson(`/api/v1/schemas/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`);
   }
 
-  downloadXdf(fimId: string, fimVersion = "latest"): Promise<RawResponse> {
-    return this.e.getRaw(`/api/v1/schemas/${enc(fimId)}/${enc(fimVersion)}/xdf`, ACCEPT_XML);
+  async downloadXdf(fimId: string, fimVersion = "latest"): Promise<RawResponse> {
+    return this.e.getRaw(`/api/v1/schemas/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}/xdf`, ACCEPT_XML);
   }
 
-  qualityReport(fimId: string, fimVersion = "latest"): Promise<QualityReport> {
-    return this.e.getJson(`/api/v1/schemas/${enc(fimId)}/${enc(fimVersion)}/quality-report`);
+  async qualityReport(fimId: string, fimVersion = "latest"): Promise<QualityReport> {
+    return this.e.getJson(`/api/v1/schemas/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}/quality-report`);
   }
 }
 
@@ -83,21 +85,21 @@ class SchemasResource {
 class DocumentProfilesResource {
   constructor(private readonly e: RequestEngine) {}
 
-  search(params: DocumentProfileSearchParams = {}): Promise<PaginatedResult<SteckbriefOut>> {
+  async search(params: DocumentProfileSearchParams = {}): Promise<PaginatedResult<SteckbriefOut>> {
     return this.e.getJson("/api/v1/document-profiles", params as QueryParams);
   }
 
-  versions(fimId: string): Promise<SteckbriefOut[]> {
-    return this.e.getJson(`/api/v1/document-profiles/${enc(fimId)}`);
+  async versions(fimId: string): Promise<SteckbriefOut[]> {
+    return this.e.getJson(`/api/v1/document-profiles/${pathSegment("fimId", fimId)}`);
   }
 
-  get(fimId: string, fimVersion = "latest"): Promise<FullSteckbriefOut> {
-    return this.e.getJson(`/api/v1/document-profiles/${enc(fimId)}/${enc(fimVersion)}`);
+  async get(fimId: string, fimVersion = "latest"): Promise<FullSteckbriefOut> {
+    return this.e.getJson(`/api/v1/document-profiles/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`);
   }
 
-  downloadXdf(fimId: string, fimVersion = "latest"): Promise<RawResponse> {
+  async downloadXdf(fimId: string, fimVersion = "latest"): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v1/document-profiles/${enc(fimId)}/${enc(fimVersion)}/xdf`,
+      `/api/v1/document-profiles/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}/xdf`,
       ACCEPT_XML,
     );
   }
@@ -107,21 +109,21 @@ class DocumentProfilesResource {
 class FieldsResource {
   constructor(private readonly e: RequestEngine) {}
 
-  search(params: FieldSearchParams = {}): Promise<PaginatedResult<DatenfeldOut>> {
+  async search(params: FieldSearchParams = {}): Promise<PaginatedResult<DatenfeldOut>> {
     return this.e.getJson("/api/v1/fields", params as QueryParams);
   }
 
-  versions(namespace: string, fimId: string): Promise<DatenfeldOut[]> {
-    return this.e.getJson(`/api/v1/fields/${enc(namespace)}/${enc(fimId)}`);
+  async versions(namespace: string, fimId: string): Promise<DatenfeldOut[]> {
+    return this.e.getJson(`/api/v1/fields/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}`);
   }
 
-  get(namespace: string, fimId: string, fimVersion = "latest"): Promise<FullDatenfeldOut> {
-    return this.e.getJson(`/api/v1/fields/${enc(namespace)}/${enc(fimId)}/${enc(fimVersion)}`);
+  async get(namespace: string, fimId: string, fimVersion = "latest"): Promise<FullDatenfeldOut> {
+    return this.e.getJson(`/api/v1/fields/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`);
   }
 
-  downloadXdf(namespace: string, fimId: string, fimVersion = "latest"): Promise<RawResponse> {
+  async downloadXdf(namespace: string, fimId: string, fimVersion = "latest"): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v1/fields/${enc(namespace)}/${enc(fimId)}/${enc(fimVersion)}/xdf`,
+      `/api/v1/fields/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}/xdf`,
       ACCEPT_XML,
     );
   }
@@ -131,21 +133,21 @@ class FieldsResource {
 class GroupsResource {
   constructor(private readonly e: RequestEngine) {}
 
-  search(params: GroupSearchParams = {}): Promise<PaginatedResult<DatenfeldgruppeOut>> {
+  async search(params: GroupSearchParams = {}): Promise<PaginatedResult<DatenfeldgruppeOut>> {
     return this.e.getJson("/api/v1/groups", params as QueryParams);
   }
 
-  versions(namespace: string, fimId: string): Promise<DatenfeldgruppeOut[]> {
-    return this.e.getJson(`/api/v1/groups/${enc(namespace)}/${enc(fimId)}`);
+  async versions(namespace: string, fimId: string): Promise<DatenfeldgruppeOut[]> {
+    return this.e.getJson(`/api/v1/groups/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}`);
   }
 
-  get(namespace: string, fimId: string, fimVersion = "latest"): Promise<FullDatenfeldgruppeOut> {
-    return this.e.getJson(`/api/v1/groups/${enc(namespace)}/${enc(fimId)}/${enc(fimVersion)}`);
+  async get(namespace: string, fimId: string, fimVersion = "latest"): Promise<FullDatenfeldgruppeOut> {
+    return this.e.getJson(`/api/v1/groups/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`);
   }
 
-  downloadXdf(namespace: string, fimId: string, fimVersion = "latest"): Promise<RawResponse> {
+  async downloadXdf(namespace: string, fimId: string, fimVersion = "latest"): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v1/groups/${enc(namespace)}/${enc(fimId)}/${enc(fimVersion)}/xdf`,
+      `/api/v1/groups/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}/xdf`,
       ACCEPT_XML,
     );
   }
@@ -155,21 +157,21 @@ class GroupsResource {
 class ServiceProfilesResource {
   constructor(private readonly e: RequestEngine) {}
 
-  search(params: LeistungSteckbriefSearchParams = {}): Promise<JsonObject> {
+  async search(params: LeistungSteckbriefSearchParams = {}): Promise<JsonObject> {
     return this.e.getJson("/api/v0/leistung-steckbriefe", params as QueryParams);
   }
 
-  get(leistungsschluessel: string): Promise<LeistungSteckbrief> {
-    return this.e.getJson(`/api/v0/leistung-steckbriefe/${enc(leistungsschluessel)}`);
+  async get(leistungsschluessel: string): Promise<LeistungSteckbrief> {
+    return this.e.getJson(`/api/v0/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}`);
   }
 
-  downloadXzufi(leistungsschluessel: string): Promise<RawResponse> {
-    return this.e.getRaw(`/api/v0/leistung-steckbriefe/${enc(leistungsschluessel)}/xzufi`, ACCEPT_XML);
+  async downloadXzufi(leistungsschluessel: string): Promise<RawResponse> {
+    return this.e.getRaw(`/api/v0/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}/xzufi`, ACCEPT_XML);
   }
 
-  exportPdf(leistungsschluessel: string, languageCode: string): Promise<RawResponse> {
+  async exportPdf(leistungsschluessel: string, languageCode: string): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v0/leistung-steckbriefe/${enc(leistungsschluessel)}/${enc(languageCode)}/pdf`,
+      `/api/v0/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}/${pathSegment("languageCode", languageCode)}/pdf`,
       ACCEPT_PDF,
     );
   }
@@ -179,41 +181,41 @@ class ServiceProfilesResource {
 class ServiceTextsResource {
   constructor(private readonly e: RequestEngine) {}
 
-  search(
+  async search(
     params: LeistungStammtextSearchParams = {},
   ): Promise<PaginatedResult<LeistungStammtextOut>> {
     return this.e.getJson("/api/v0/leistung-stammtexte", params as QueryParams);
   }
 
-  get(redaktionId: string, leistungId: string, source: XzufiSource): Promise<FullLeistungStammtextOut> {
+  async get(redaktionId: string, leistungId: string, source: XzufiSource): Promise<FullLeistungStammtextOut> {
     return this.e.getJson(
-      `/api/v0/leistung-stammtexte/${enc(redaktionId)}/${enc(leistungId)}/${enc(source)}`,
+      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${pathSegment("source", source)}`,
     );
   }
 
-  downloadXzufi(redaktionId: string, leistungId: string, source: XzufiSource): Promise<RawResponse> {
+  async downloadXzufi(redaktionId: string, leistungId: string, source: XzufiSource): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v0/leistung-stammtexte/${enc(redaktionId)}/${enc(leistungId)}/${enc(source)}/xzufi`,
+      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${pathSegment("source", source)}/xzufi`,
       ACCEPT_XML,
     );
   }
 
-  exportPdf(
+  async exportPdf(
     redaktionId: string,
     leistungId: string,
     source: XzufiSource,
     languageCode: string,
   ): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v0/leistung-stammtexte/${enc(redaktionId)}/${enc(leistungId)}/${enc(source)}/${enc(languageCode)}/pdf`,
+      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${pathSegment("source", source)}/${pathSegment("languageCode", languageCode)}/pdf`,
       ACCEPT_PDF,
     );
   }
 
   /** INSTABLE per the API docs — the parsed XZuFi JSON representation. */
-  parsedXzufi(redaktionId: string, leistungId: string, source: XzufiSource): Promise<JsonObject> {
+  async parsedXzufi(redaktionId: string, leistungId: string, source: XzufiSource): Promise<JsonObject> {
     return this.e.getJson(
-      `/api/v0/leistung-stammtexte/${enc(redaktionId)}/${enc(leistungId)}/${enc(source)}/parsed-xzufi`,
+      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${pathSegment("source", source)}/parsed-xzufi`,
     );
   }
 }
@@ -226,11 +228,11 @@ class XzufiEntityResource<T> {
     private readonly itemPath: (redaktionId: string, id: string) => string,
   ) {}
 
-  list(params: XzufiEntityListParams = {}): Promise<CursorPaginationResult<T>> {
+  async list(params: XzufiEntityListParams = {}): Promise<CursorPaginationResult<T>> {
     return this.e.getJson(this.listPath, params as QueryParams);
   }
 
-  downloadXzufi(redaktionId: string, id: string): Promise<RawResponse> {
+  async downloadXzufi(redaktionId: string, id: string): Promise<RawResponse> {
     return this.e.getRaw(this.itemPath(redaktionId, id), ACCEPT_XML);
   }
 }
@@ -239,20 +241,20 @@ class XzufiEntityResource<T> {
 class ProcessClassesResource {
   constructor(private readonly e: RequestEngine) {}
 
-  search(params: ProcessClassSearchParams = {}): Promise<JsonObject> {
+  async search(params: ProcessClassSearchParams = {}): Promise<JsonObject> {
     return this.e.getJson("/api/v0/processclasses", params as QueryParams);
   }
 
-  get(id: string, version: string): Promise<ProcessClass> {
-    return this.e.getJson(`/api/v0/processclasses/${enc(id)}/${enc(version)}`);
+  async get(id: string, version: string): Promise<ProcessClass> {
+    return this.e.getJson(`/api/v0/processclasses/${pathSegment("id", id)}/${pathSegment("version", version)}`);
   }
 
   /**
    * The XProzess XML of a process class. The OpenAPI spec says JSON, but the server
    * sends `application/xml` (an XProzess export) whatever the Accept header says.
    */
-  downloadXprozess(id: string, version: string): Promise<RawResponse> {
-    return this.e.getRaw(`/api/v0/processclasses/${enc(id)}/${enc(version)}/xprozess`, ACCEPT_XML);
+  async downloadXprozess(id: string, version: string): Promise<RawResponse> {
+    return this.e.getRaw(`/api/v0/processclasses/${pathSegment("id", id)}/${pathSegment("version", version)}/xprozess`, ACCEPT_XML);
   }
 }
 
@@ -264,15 +266,15 @@ class ProcessClassesResource {
 class ProcessesResource {
   constructor(private readonly e: RequestEngine) {}
 
-  search(params: ProcessSearchParams = {}): Promise<JsonObject> {
+  async search(params: ProcessSearchParams = {}): Promise<JsonObject> {
     return this.e.getJson("/api/v0/processes", params as QueryParams);
   }
 
-  get(id: string, version: string, stufe: Detaillierungsstufe, kodierung: string): Promise<Process> {
+  async get(id: string, version: string, stufe: Detaillierungsstufe, kodierung: string): Promise<Process> {
     return this.e.getJson(processPath(id, version, stufe, kodierung));
   }
 
-  downloadXprozess(
+  async downloadXprozess(
     id: string,
     version: string,
     stufe: Detaillierungsstufe,
@@ -283,7 +285,7 @@ class ProcessesResource {
 
   // The report and visualization endpoints serve PDF, not XML, so we negotiate
   // application/pdf to match what the server actually returns.
-  downloadReport(
+  async downloadReport(
     id: string,
     version: string,
     stufe: Detaillierungsstufe,
@@ -292,7 +294,7 @@ class ProcessesResource {
     return this.e.getRaw(`${processPath(id, version, stufe, kodierung)}/report`, ACCEPT_PDF);
   }
 
-  downloadVisualization(
+  async downloadVisualization(
     id: string,
     version: string,
     stufe: Detaillierungsstufe,
@@ -301,7 +303,7 @@ class ProcessesResource {
     return this.e.getRaw(`${processPath(id, version, stufe, kodierung)}/visualization`, ACCEPT_PDF);
   }
 
-  downloadVisualizationDisplay(
+  async downloadVisualizationDisplay(
     id: string,
     version: string,
     stufe: Detaillierungsstufe,
@@ -321,14 +323,14 @@ function processPath(
   stufe: Detaillierungsstufe,
   kodierung: string,
 ): string {
-  return `/api/v0/processes/${enc(id)}/${enc(version)}/${enc(stufe)}/${enc(kodierung)}`;
+  return `/api/v0/processes/${pathSegment("id", id)}/${pathSegment("version", version)}/${pathSegment("stufe", stufe)}/${pathSegment("kodierung", kodierung)}`;
 }
 
 /** Code lists referenced by data fields. */
 class CodeListsResource {
   constructor(private readonly e: RequestEngine) {}
 
-  list(params: Pagination = {}): Promise<PaginatedResult<CodeList>> {
+  async list(params: Pagination = {}): Promise<PaginatedResult<CodeList>> {
     return this.e.getJson("/api/v0/code-lists", params as QueryParams);
   }
 }
@@ -338,7 +340,7 @@ class ToolsResource {
   constructor(private readonly e: RequestEngine) {}
 
   /** Streamed CSV export of a search. Returns the raw response. */
-  searchCsvDownload(params: Record<string, string | undefined>): Promise<RawResponse> {
+  async searchCsvDownload(params: Record<string, string | undefined>): Promise<RawResponse> {
     return this.e.getRaw("/tools/search-csv-download", "text/csv", params as QueryParams);
   }
 }
@@ -372,17 +374,17 @@ export class FimPortalClient {
     this.organizationalUnits = new XzufiEntityResource<OrganisationseinheitOut>(
       this.engine,
       "/api/v0/organizational-unit",
-      (r, id) => `/api/v0/organizational-unit/${enc(r)}/${enc(id)}/xzufi`,
+      (redaktionId, id) => `/api/v0/organizational-unit/${pathSegment("redaktionId", redaktionId)}/${pathSegment("id", id)}/xzufi`,
     );
     this.specializations = new XzufiEntityResource<SpezialisierungOut>(
       this.engine,
       "/api/v0/specialization",
-      (r, id) => `/api/v0/specialization/${enc(r)}/${enc(id)}/xzufi`,
+      (redaktionId, id) => `/api/v0/specialization/${pathSegment("redaktionId", redaktionId)}/${pathSegment("id", id)}/xzufi`,
     );
     this.onlineServices = new XzufiEntityResource<OnlinedienstOut>(
       this.engine,
       "/api/v0/online-service",
-      (r, id) => `/api/v0/online-service/${enc(r)}/${enc(id)}/xzufi`,
+      (redaktionId, id) => `/api/v0/online-service/${pathSegment("redaktionId", redaktionId)}/${pathSegment("id", id)}/xzufi`,
     );
     this.processClasses = new ProcessClassesResource(this.engine);
     this.processes = new ProcessesResource(this.engine);

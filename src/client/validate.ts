@@ -55,3 +55,22 @@ export function assertNonBlankParams(params: QueryParams): void {
     }
   }
 }
+
+/**
+ * A path id (a FIM id, version, namespace, Leistungsschlüssel, language code, …)
+ * must be a non-blank string. An empty last segment turns
+ * `/api/v1/schemas/<id>` into `/api/v1/schemas/` (the search collection) and
+ * `/api/v1/schemas/S1/<version>` into the versions list, which the library would
+ * return as the requested object; an empty middle segment requests `//`.
+ */
+export const pathSegmentProblem: Problem<string> = (value) =>
+  typeof value !== "string" || isBlank(value) ? "Expected a non-empty value." : undefined;
+
+/**
+ * Validate one path id (pathSegmentProblem) and percent-encode it for the request
+ * path. Throws `FimValidationError` (`Invalid <name>: ...`) for a blank id. "." and
+ * ".." pass through encoding unchanged and are rejected by RequestEngine.buildUrl.
+ */
+export function pathSegment(name: string, value: string): string {
+  return encodeURIComponent(assertValid(name, value, pathSegmentProblem));
+}

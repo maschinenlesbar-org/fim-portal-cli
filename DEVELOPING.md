@@ -202,6 +202,11 @@ What the library rejects with `FimValidationError`, before any request:
   search, list or `tools.searchCsvDownload` call (`assertNonBlankParams`, run by
   `RequestEngine.buildUrl`). The API treats an empty parameter as no filter and
   would answer with the unfiltered result. `undefined`/`null` still mean "omitted".
+- **Blank path ids.** A blank id, version, namespace, Leistungsschlüssel, language
+  code or Kodierung (`pathSegment`/`pathSegmentProblem`): an empty last segment
+  would turn `schemas.versions("")` into the search collection and
+  `schemas.get("S1", "")` into the versions list, returned as the requested object.
+  `RequestEngine.buildUrl` also rejects `.`/`..` and any empty segment.
 
 **Security invariant — response data is render-only.** The JSON body is decoded
 with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.

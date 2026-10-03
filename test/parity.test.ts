@@ -79,3 +79,41 @@ test("parity: search-csv with a non-blank term sends the identical request", asy
   assert.ok(lib.ok);
   assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
 });
+
+// ---- Finding #1 (PAT-10): blank path ids ----
+
+const blankIdCases: Array<[string[], (t: Transport) => unknown, RegExp]> = [
+  [["schemas", "versions", ""], (t) => client(t).schemas.versions(""), /^Invalid fimId: Expected a non-empty value\.$/],
+  [["schemas", "versions", "  "], (t) => client(t).schemas.versions("  "), /^Invalid fimId: /],
+  [["schemas", "get", "S1", ""], (t) => client(t).schemas.get("S1", ""), /^Invalid fimVersion: /],
+  [["schemas", "quality-report", "", "1.0"], (t) => client(t).schemas.qualityReport("", "1.0"), /^Invalid fimId: /],
+  [["document-profiles", "versions", ""], (t) => client(t).documentProfiles.versions(""), /^Invalid fimId: /],
+  [["fields", "get", "ns", "F1", ""], (t) => client(t).fields.get("ns", "F1", ""), /^Invalid fimVersion: /],
+  [["groups", "xdf", "ns", "", "1.0"], (t) => client(t).groups.downloadXdf("ns", "", "1.0"), /^Invalid fimId: /],
+  [["service-profiles", "get", ""], (t) => client(t).serviceProfiles.get(""), /^Invalid leistungsschluessel: /],
+  [["service-profiles", "pdf", "K", ""], (t) => client(t).serviceProfiles.exportPdf("K", ""), /^Invalid languageCode: /],
+  [["service-texts", "get", "", "L1", "leika"], (t) => client(t).serviceTexts.get("", "L1", "leika"), /^Invalid redaktionId: /],
+  [["service-texts", "pdf", "R1", "L1", "leika", " "], (t) => client(t).serviceTexts.exportPdf("R1", "L1", "leika", " "), /^Invalid languageCode: /],
+  [["organizational-units", "xzufi", "R1", ""], (t) => client(t).organizationalUnits.downloadXzufi("R1", ""), /^Invalid id: /],
+  [["specializations", "xzufi", "", "S1"], (t) => client(t).specializations.downloadXzufi("", "S1"), /^Invalid redaktionId: /],
+  [["process-classes", "get", "P1", ""], (t) => client(t).processClasses.get("P1", ""), /^Invalid version: /],
+  [["processes", "report", "P1", " ", "101", "17"], (t) => client(t).processes.downloadReport("P1", " ", "101", "17"), /^Invalid version: /],
+  [["processes", "get", "P1", "1.0", "101", ""], (t) => client(t).processes.get("P1", "1.0", "101", ""), /^Invalid kodierung: /],
+];
+
+for (const [argv, call, message] of blankIdCases) {
+  test(`parity: a blank path id is rejected by CLI and library alike (${argv.join(" ")})`, async () => {
+    await assertBothReject(argv, call, message);
+  });
+}
+
+test("parity: a valid path id sends the identical request from CLI and library", async () => {
+  const { cli, lib } = await parity(
+    ["schemas", "get", "S1", "1.0"],
+    (t) => client(t).schemas.get("S1", "1.0"),
+    () => jsonResponse({ fim_id: "S1" }),
+  );
+  assert.equal(cli.code, 0);
+  assert.ok(lib.ok);
+  assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
+});

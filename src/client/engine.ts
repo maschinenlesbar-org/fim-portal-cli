@@ -4,7 +4,13 @@
 
 import { nodeHttpTransport, type Transport } from "./http.js";
 import { buildQueryString, type QueryParams } from "./query.js";
-import { FimApiError, FimError, FimNetworkError, FimParseError, redactUrl } from "./errors.js";
+import {
+  FimApiError,
+  FimNetworkError,
+  FimParseError,
+  FimValidationError,
+  redactUrl,
+} from "./errors.js";
 import { assertNonBlankParams } from "./validate.js";
 
 export const DEFAULT_BASE_URL = "https://fimportal.de";
@@ -178,12 +184,14 @@ export class RequestEngine {
   /**
    * Build a fully-qualified URL from a path and optional query parameters.
    *
-   * Throws a FimError for a path with a "." or ".." segment. The resource methods
-   * put ids into the path with `encodeURIComponent`, which leaves those two
-   * unchanged, and URL parsing then resolves them: `schemas get S1 ..` would request
-   * `/api/v1/schemas/` (the search) and print its result with exit 0. Neither can
-   * name a resource. (Percent-encoded forms such as "%2e%2e" are safe:
-   * encodeURIComponent turns their "%" into "%25".)
+   * Throws a FimValidationError for a path with a "." or ".." segment. The
+   * resource methods put ids into the path with `pathSegment` (encodeURIComponent),
+   * which leaves those two unchanged, and URL parsing then resolves them:
+   * `schemas get S1 ..` would request `/api/v1/schemas/` (the search) and print its
+   * result with exit 0. Neither can name a resource. (Percent-encoded forms such as
+   * "%2e%2e" are safe: encodeURIComponent turns their "%" into "%25".) An empty
+   * segment (`//` or a trailing `/`) is rejected the same way; `pathSegment`
+   * already refuses a blank id, so this is a backstop for future path builders.
    *
    * Throws a FimValidationError for a blank query value, a blank array element, an
    * empty array or a blank parameter name (assertNonBlankParams): the API treats an
@@ -192,10 +200,16 @@ export class RequestEngine {
    */
   buildUrl(path: string, query?: QueryParams): string {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    const dotSegment = normalizedPath.split("/").find((s) => s === "." || s === "..");
+    const segments = normalizedPath.split("/").slice(1);
+    const dotSegment = segments.find((s) => s === "." || s === "..");
     if (dotSegment !== undefined) {
-      throw new FimError(
+      throw new FimValidationError(
         `Invalid path segment "${dotSegment}" in ${normalizedPath}: "." and ".." cannot be used as an id.`,
+      );
+    }
+    if (segments.includes("")) {
+      throw new FimValidationError(
+        `Invalid path ${normalizedPath}: an empty segment cannot be used as an id.`,
       );
     }
     if (query) assertNonBlankParams(query);

@@ -15,7 +15,14 @@ export {
   FimValidationError,
   redactUrl,
 } from "./errors.js";
-export { assertNonBlankParams, assertValid, isBlank, nonEmptyProblem } from "./validate.js";
+export {
+  assertNonBlankParams,
+  assertValid,
+  isBlank,
+  nonEmptyProblem,
+  pathSegment,
+  pathSegmentProblem,
+} from "./validate.js";
 export type { Problem } from "./validate.js";
 
 export * from "./enums.js";

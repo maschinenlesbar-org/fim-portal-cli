@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MAX_RETRY_AFTER_MS, RequestEngine, parseRetryAfter, sanitizeServerText } from "../src/client/engine.js";
-import { FimApiError, FimNetworkError, FimParseError, redactUrl } from "../src/client/errors.js";
+import { FimApiError, FimNetworkError, FimParseError, FimValidationError, redactUrl } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
 const noSleep = async (): Promise<void> => {};
@@ -300,4 +300,16 @@ test("a 3xx names the redirect target instead of a bare status", async () => {
     );
     assert.equal(mt.calls.length, 1); // still not followed
   }
+});
+
+test("buildUrl rejects an empty path segment as a backstop, before any request", () => {
+  const engine = new RequestEngine({ transport: async () => { throw new Error("no request expected"); } });
+  for (const path of ["/api/v1/schemas/", "/api/v1/schemas//1.0", "api/v0/processes/P1//101/17"]) {
+    assert.throws(
+      () => engine.buildUrl(path),
+      (err: unknown) => err instanceof FimValidationError && /an empty segment cannot be used as an id/.test((err as Error).message),
+      path,
+    );
+  }
+  assert.equal(engine.buildUrl("/api/v1/schemas"), "https://fimportal.de/api/v1/schemas");
 });

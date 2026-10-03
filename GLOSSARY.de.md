@@ -237,7 +237,9 @@ erlauben zusätzlich `Stichwort`).
 **Leere Filterwerte.** Die API behandelt einen leeren Parameter (`name=`) wie keinen
 Filter und antwortet mit dem ungefilterten Ergebnis. Ein leerer Wert (`""` oder nur
 Leerraum) wird deshalb vor jeder Anfrage zurückgewiesen: von der CLI als Bedienfehler, von
-der Bibliothek (`FimPortalClient`) mit einem `FimValidationError`.
+der Bibliothek (`FimPortalClient`) mit einem `FimValidationError`. Dasselbe gilt für eine
+leere ID oder Version im Pfad: Sie würde aus der Anfrage nach einem Objekt die Suche oder
+die Versionsliste machen.
 
 **order_by.** Sortierung der Ergebnisse. Die zulässigen Werte hängen von der Ressource ab –
 die Datenfelder-Ressourcen teilen sich einen Satz (`relevance`, `id_asc`, `name_asc`, …);

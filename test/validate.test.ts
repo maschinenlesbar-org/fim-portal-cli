@@ -1,6 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assertNonBlankParams, assertValid, isBlank, nonEmptyProblem, type Problem } from "../src/client/validate.js";
+import {
+  assertNonBlankParams,
+  assertValid,
+  isBlank,
+  nonEmptyProblem,
+  pathSegment,
+  pathSegmentProblem,
+  type Problem,
+} from "../src/client/validate.js";
 import { FimError, FimValidationError } from "../src/client/errors.js";
 import * as lib from "../src/index.js";
 import { run } from "../src/cli/run.js";
@@ -119,4 +127,23 @@ test("assertNonBlankParams accepts omitted values and non-string values", () => 
     freigabe_status: [5, 6],
     nummernkreis: ["07"],
   });
+});
+
+// ---- path ids (PAT-10) ----
+
+test("pathSegmentProblem rejects a blank or non-string id", () => {
+  assert.equal(pathSegmentProblem(""), "Expected a non-empty value.");
+  assert.equal(pathSegmentProblem(" \t"), "Expected a non-empty value.");
+  assert.equal(pathSegmentProblem(undefined as unknown as string), "Expected a non-empty value.");
+  assert.equal(pathSegmentProblem("S07000009"), undefined);
+  assert.equal(pathSegmentProblem(" S1 "), undefined);
+});
+
+test("pathSegment percent-encodes a valid id and names the parameter on a blank one", () => {
+  assert.equal(pathSegment("namespace", "urn:xoev-de:fim"), "urn%3Axoev-de%3Afim");
+  assert.equal(pathSegment("fimVersion", "1.0"), "1.0");
+  assert.throws(
+    () => pathSegment("fimId", " "),
+    (err: unknown) => err instanceof FimValidationError && (err as Error).message === "Invalid fimId: Expected a non-empty value.",
+  );
 });
