@@ -250,12 +250,14 @@ Treffer einer Suche mit `--fts-query`.
 **Offset-Paginierung.** Die v1-/XDatenfelder-Endpoints und die meisten v0-Such-Endpoints
 blättern mit `offset` + `limit` (limit `1`–`200`, Standard `200`) und liefern eine
 **PaginatedResult**-Hülle (`items`, `offset`, `limit`, `count`,
-`total_count`).
+`total_count`). Ein `limit` außerhalb von `1`–`200` oder ein negativer oder gebrochener
+`offset` wird vor jeder Anfrage zurückgewiesen, von der CLI wie von der Bibliothek.
 
 **Cursor-Paginierung.** Die XZuFi-Entitätslisten (`organizational-units`,
 `specializations`, `online-services`) blättern mit `cursor` + `limit` und liefern eine
 **CursorPaginationResult**-Hülle (`items`, `limit`, `count`, `next_cursor`).
-Übergeben Sie den zurückgegebenen `next_cursor` beim nächsten Aufruf als `--cursor`.
+Übergeben Sie den zurückgegebenen `next_cursor` beim nächsten Aufruf als `--cursor` (eine
+nicht negative Ganzzahl).
 
 **Unveränderliche URLs.** Das Portal stellt Codelisten, JSON-Schema- und XSD-Dateien unter
 festen URLs bereit, die für den stabilen Produktivbetrieb gedacht sind; die vollständigen

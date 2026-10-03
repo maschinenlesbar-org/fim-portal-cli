@@ -223,6 +223,13 @@ What the library rejects with `FimValidationError`, before any request:
   source `primary`, which neither the CLI nor the library accepts. The lists the
   CLI forwards as given (`leistungstyp`, `typisierung`, `sdg`,
   `leistungsadressat`, `ozg_themenfeld`, the `search-csv` filters) are not checked.
+- **Out-of-range paging.** Every search and list method (and `codeLists.list`)
+  runs `assertPagination`: `limit` an integer in `LIMIT_MIN`..`LIMIT_MAX`
+  (1..200, exported from `params.ts`), `offset` and `cursor` a non-negative safe
+  integer. NaN, Infinity, fractions and `1e21` are refused rather than sent as
+  text. (`openapi.json` gives `cursor` no minimum; the library keeps the CLI's
+  `>= 0`, since a cursor is always a previous page's `next_cursor`.) The CLI's
+  `--limit`, `--offset` and `--cursor` parsers use the same rules and constants.
 
 **Security invariant — response data is render-only.** The JSON body is decoded
 with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.

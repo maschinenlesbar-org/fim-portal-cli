@@ -210,3 +210,41 @@ test("parity: valid enum values send the identical request from CLI and library"
     assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests), argv.join(" "));
   }
 });
+
+// ---- Finding #4 (PAT-11): pagination bounds ----
+
+const paginationCases: Array<[string[], (t: Transport) => unknown, RegExp]> = [
+  [["schemas", "search", "--limit", "500"], (t) => client(t).schemas.search({ limit: 500 }), /^Invalid limit: Must be <= 200\.$/],
+  [["schemas", "search", "--limit", "0"], (t) => client(t).schemas.search({ limit: 0 }), /^Invalid limit: Must be >= 1\.$/],
+  [["groups", "search", "--limit", "1.5"], (t) => client(t).groups.search({ limit: 1.5 }), /^Invalid limit: Expected an integer\.$/],
+  [["processes", "search", "--limit", "Infinity"], (t) => client(t).processes.search({ limit: Infinity }), /^Invalid limit: Expected an integer\.$/],
+  [["fields", "search", "--offset", "-1"], (t) => client(t).fields.search({ offset: -1 }), /^Invalid offset: Expected a non-negative integer\.$/],
+  [["service-texts", "search", "--offset", "NaN"], (t) => client(t).serviceTexts.search({ offset: NaN }), /^Invalid offset: /],
+  [["document-profiles", "search", "--offset", "1e21"], (t) => client(t).documentProfiles.search({ offset: 1e21 }), /^Invalid offset: /],
+  [["service-profiles", "search", "--limit", "201"], (t) => client(t).serviceProfiles.search({ limit: 201 }), /^Invalid limit: /],
+  [["process-classes", "search", "--limit", "500"], (t) => client(t).processClasses.search({ limit: 500 }), /^Invalid limit: /],
+  [["code-lists", "--offset", "1e21"], (t) => client(t).codeLists.list({ offset: 1e21 }), /^Invalid offset: /],
+  [["code-lists", "--limit", "500"], (t) => client(t).codeLists.list({ limit: 500 }), /^Invalid limit: /],
+  [["specializations", "list", "--cursor", "-1"], (t) => client(t).specializations.list({ cursor: -1 }), /^Invalid cursor: Expected a non-negative integer\.$/],
+  [["online-services", "list", "--limit", "0"], (t) => client(t).onlineServices.list({ limit: 0 }), /^Invalid limit: /],
+  [["organizational-units", "list", "--cursor", "1.5"], (t) => client(t).organizationalUnits.list({ cursor: 1.5 }), /^Invalid cursor: /],
+];
+
+for (const [argv, call, message] of paginationCases) {
+  test(`parity: an out-of-range page parameter is rejected by CLI and library alike (${argv.join(" ")})`, async () => {
+    await assertBothReject(argv, call, message);
+  });
+}
+
+test("parity: in-range pagination sends the identical request from CLI and library", async () => {
+  for (const [argv, call] of [
+    [["schemas", "search", "--offset", "20", "--limit", "10"], (t: Transport) => client(t).schemas.search({ offset: 20, limit: 10 })],
+    [["code-lists", "--offset", "0", "--limit", "200"], (t: Transport) => client(t).codeLists.list({ offset: 0, limit: 200 })],
+    [["specializations", "list", "--cursor", "0", "--limit", "1"], (t: Transport) => client(t).specializations.list({ cursor: 0, limit: 1 })],
+  ] as const) {
+    const { cli, lib } = await parity([...argv], call, () => jsonResponse({ items: [] }));
+    assert.equal(cli.code, 0, argv.join(" "));
+    assert.ok(lib.ok, argv.join(" "));
+    assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests), argv.join(" "));
+  }
+});

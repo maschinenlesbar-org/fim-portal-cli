@@ -10,6 +10,7 @@ import { RequestEngine, type EngineOptions, type RawResponse } from "./engine.js
 import type { QueryParams } from "./query.js";
 import {
   assertEnumParams,
+  assertPagination,
   assertValid,
   detaillierungsstufeProblem,
   pathSegment,
@@ -152,6 +153,7 @@ class SchemasResource {
 
   async search(params: SchemaSearchParams = {}): Promise<PaginatedResult<SchemaOut>> {
     assertEnumParams(params ?? {}, SCHEMA_SEARCH_ENUMS);
+    assertPagination(params ?? {});
     return this.e.getJson("/api/v1/schemas", params as QueryParams);
   }
 
@@ -180,6 +182,7 @@ class DocumentProfilesResource {
 
   async search(params: DocumentProfileSearchParams = {}): Promise<PaginatedResult<SteckbriefOut>> {
     assertEnumParams(params ?? {}, DOCUMENT_PROFILE_SEARCH_ENUMS);
+    assertPagination(params ?? {});
     return this.e.getJson("/api/v1/document-profiles", params as QueryParams);
   }
 
@@ -205,6 +208,7 @@ class FieldsResource {
 
   async search(params: FieldSearchParams = {}): Promise<PaginatedResult<DatenfeldOut>> {
     assertEnumParams(params ?? {}, FIELD_SEARCH_ENUMS);
+    assertPagination(params ?? {});
     return this.e.getJson("/api/v1/fields", params as QueryParams);
   }
 
@@ -230,6 +234,7 @@ class GroupsResource {
 
   async search(params: GroupSearchParams = {}): Promise<PaginatedResult<DatenfeldgruppeOut>> {
     assertEnumParams(params ?? {}, GROUP_SEARCH_ENUMS);
+    assertPagination(params ?? {});
     return this.e.getJson("/api/v1/groups", params as QueryParams);
   }
 
@@ -255,6 +260,7 @@ class ServiceProfilesResource {
 
   async search(params: LeistungSteckbriefSearchParams = {}): Promise<JsonObject> {
     assertEnumParams(params ?? {}, SERVICE_PROFILE_SEARCH_ENUMS);
+    assertPagination(params ?? {});
     return this.e.getJson("/api/v0/leistung-steckbriefe", params as QueryParams);
   }
 
@@ -282,6 +288,7 @@ class ServiceTextsResource {
     params: LeistungStammtextSearchParams = {},
   ): Promise<PaginatedResult<LeistungStammtextOut>> {
     assertEnumParams(params ?? {}, SERVICE_TEXT_SEARCH_ENUMS);
+    assertPagination(params ?? {});
     return this.e.getJson("/api/v0/leistung-stammtexte", params as QueryParams);
   }
 
@@ -327,6 +334,7 @@ class XzufiEntityResource<T> {
   ) {}
 
   async list(params: XzufiEntityListParams = {}): Promise<CursorPaginationResult<T>> {
+    assertPagination(params ?? {});
     return this.e.getJson(this.listPath, params as QueryParams);
   }
 
@@ -341,6 +349,7 @@ class ProcessClassesResource {
 
   async search(params: ProcessClassSearchParams = {}): Promise<JsonObject> {
     assertEnumParams(params ?? {}, PROCESS_CLASS_SEARCH_ENUMS);
+    assertPagination(params ?? {});
     return this.e.getJson("/api/v0/processclasses", params as QueryParams);
   }
 
@@ -367,6 +376,7 @@ class ProcessesResource {
 
   async search(params: ProcessSearchParams = {}): Promise<JsonObject> {
     assertEnumParams(params ?? {}, PROCESS_SEARCH_ENUMS);
+    assertPagination(params ?? {});
     return this.e.getJson("/api/v0/processes", params as QueryParams);
   }
 
@@ -431,6 +441,7 @@ class CodeListsResource {
   constructor(private readonly e: RequestEngine) {}
 
   async list(params: Pagination = {}): Promise<PaginatedResult<CodeList>> {
+    assertPagination(params ?? {});
     return this.e.getJson("/api/v0/code-lists", params as QueryParams);
   }
 }

@@ -31,16 +31,27 @@ import type {
   Anwendungsgebiet,
 } from "./enums.js";
 
-/** Offset/limit pagination shared by the v1 search endpoints. */
+/** Smallest page size (`limit`) the API accepts. */
+export const LIMIT_MIN = 1;
+/** Largest page size (`limit`) the API accepts; also its default. */
+export const LIMIT_MAX = 200;
+
+/**
+ * Offset/limit pagination shared by the search endpoints and the code lists. Both
+ * are checked before any request (assertPagination).
+ */
 export interface Pagination {
+  /** A non-negative safe integer. */
   offset?: number;
-  /** 1..200, defaults to 200 server-side. */
+  /** An integer in LIMIT_MIN..LIMIT_MAX (1..200), defaults to 200 server-side. */
   limit?: number;
 }
 
 /** Cursor pagination shared by the v0 XZuFi entity listings. */
 export interface CursorPagination {
+  /** A non-negative safe integer: the `next_cursor` of the previous page. */
   cursor?: number;
+  /** An integer in LIMIT_MIN..LIMIT_MAX (1..200). */
   limit?: number;
 }
 

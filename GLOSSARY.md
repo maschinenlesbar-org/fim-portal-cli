@@ -249,12 +249,13 @@ an `--fts-query` search.
 **Offset pagination.** The v1/XDatenfelder and most v0 search endpoints page with
 `offset` + `limit` (limit `1`–`200`, default `200`) and return a
 **PaginatedResult** envelope (`items`, `offset`, `limit`, `count`,
-`total_count`).
+`total_count`). A `limit` outside `1`–`200` or a negative or fractional `offset` is
+rejected before any request, by the CLI and the library alike.
 
 **Cursor pagination.** The XZuFi entity listings (`organizational-units`,
 `specializations`, `online-services`) page with `cursor` + `limit` and return a
 **CursorPaginationResult** envelope (`items`, `limit`, `count`, `next_cursor`).
-Pass the returned `next_cursor` as the next `--cursor`.
+Pass the returned `next_cursor` as the next `--cursor` (a non-negative integer).
 
 **Immutable URLs.** The portal serves code lists, JSON Schema and XSD files
 behind constant URLs intended for stable production use; the full URLs are

@@ -2,9 +2,8 @@ import { Command } from "commander";
 import type { CliDeps } from "../io.js";
 import {
   action,
+  addPagination,
   choiceOption,
-  parseIntArg,
-  parseBoundedInt,
   parseNonEmpty,
   pruneUndefined,
   renderJson,
@@ -13,20 +12,17 @@ import {
 import { SearchCsvResourceValues, type Pagination, type SearchCsvParams } from "../../client/params.js";
 
 export function registerMiscCommands(program: Command, deps: CliDeps): void {
-  program
-    .command("code-lists")
-    .description("List the code lists referenced by data fields")
-    .option("--offset <n>", "offset within the total dataset (>= 0)", parseIntArg)
-    .option("--limit <n>", "max number of results (1..200)", parseBoundedInt(1, 200))
-    .action(
-      action(deps, async ({ client, global, opts }) => {
-        const params = pruneUndefined({
-          offset: opts["offset"],
-          limit: opts["limit"],
-        }) as Pagination;
-        renderJson(deps, global, await client.codeLists.list(params));
-      }),
-    );
+  addPagination(
+    program.command("code-lists").description("List the code lists referenced by data fields"),
+  ).action(
+    action(deps, async ({ client, global, opts }) => {
+      const params = pruneUndefined({
+        offset: opts["offset"],
+        limit: opts["limit"],
+      }) as Pagination;
+      renderJson(deps, global, await client.codeLists.list(params));
+    }),
+  );
 
   // search-csv exposes a convenient subset of the CSV filters. The OpenAPI spec
   // types every search-csv-download parameter as a free-form string, and the server

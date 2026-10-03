@@ -11,7 +11,8 @@ import {
   type RawResponse,
 } from "../client/engine.js";
 import type { QueryParams } from "../client/query.js";
-import { nonEmptyProblem } from "../client/validate.js";
+import { intInRangeProblem, nonEmptyProblem, nonNegativeIntProblem } from "../client/validate.js";
+import { LIMIT_MAX, LIMIT_MIN } from "../client/params.js";
 import {
   FreigabeStatusValues,
   XdfVersionValues,
@@ -35,26 +36,29 @@ function parseDecimalInt(value: string): number | undefined {
   return n;
 }
 
-/** commander value-parser: a non-negative integer. */
+/**
+ * commander value-parser: a non-negative integer. The CLI only turns the argv
+ * string into a number; the rule is the library's nonNegativeIntProblem.
+ */
 export function parseIntArg(value: string): number {
   const n = parseDecimalInt(value);
-  if (n === undefined || n < 0) {
-    throw new InvalidArgumentError("Expected a non-negative integer.");
-  }
-  return n;
+  const reason = nonNegativeIntProblem(n ?? NaN);
+  if (reason !== undefined) throw new InvalidArgumentError(reason);
+  return n!;
 }
 
 /**
- * Build a commander value-parser for an integer constrained to [min, max].
- * Thrown at parse time, so commander prints a clear message and exits.
+ * Build a commander value-parser for an integer constrained to [min, max], with
+ * the library's intInRangeProblem rule. Thrown at parse time, so commander prints
+ * a clear message and exits.
  */
 export function parseBoundedInt(min: number, max?: number): (value: string) => number {
+  const problem = intInRangeProblem(min, max);
   return (value: string) => {
     const n = parseDecimalInt(value);
-    if (n === undefined) throw new InvalidArgumentError("Expected an integer.");
-    if (n < min) throw new InvalidArgumentError(`Must be >= ${min}.`);
-    if (max !== undefined && n > max) throw new InvalidArgumentError(`Must be <= ${max}.`);
-    return n;
+    const reason = problem(n ?? NaN);
+    if (reason !== undefined) throw new InvalidArgumentError(reason);
+    return n!;
   };
 }
 
@@ -308,11 +312,18 @@ export function action(
   };
 }
 
+/** The --limit option of every search and list command: the library's LIMIT_MIN..LIMIT_MAX. */
+export function addLimitOption(cmd: Command): Command {
+  return cmd.option(
+    "--limit <n>",
+    `max number of results (${LIMIT_MIN}..${LIMIT_MAX})`,
+    parseBoundedInt(LIMIT_MIN, LIMIT_MAX),
+  );
+}
+
 /** Add the shared offset/limit pagination options to a command. */
 export function addPagination(cmd: Command): Command {
-  return cmd
-    .option("--offset <n>", "offset within the total dataset (>= 0)", parseIntArg)
-    .option("--limit <n>", "max number of results (1..200)", parseBoundedInt(1, 200));
+  return addLimitOption(cmd.option("--offset <n>", "offset within the total dataset (>= 0)", parseIntArg));
 }
 
 /** Add an Option constrained to a fixed set of choices. */

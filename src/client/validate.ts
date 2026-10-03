@@ -6,7 +6,7 @@
 
 import { FimValidationError } from "./errors.js";
 import type { QueryParams } from "./query.js";
-import { SearchCsvResourceValues } from "./params.js";
+import { LIMIT_MAX, LIMIT_MIN, SearchCsvResourceValues } from "./params.js";
 import { DetaillierungsstufeValues, XzufiSourceValues } from "./enums.js";
 
 /** A rule: the reason `value` is invalid, or `undefined` when it is valid. */
@@ -122,3 +122,40 @@ export const detaillierungsstufeProblem: Problem<unknown> = oneOfProblem(Detaill
 
 /** The `source` path segment of a service text: one of XzufiSourceValues. */
 export const xzufiSourceProblem: Problem<unknown> = oneOfProblem(XzufiSourceValues);
+
+/**
+ * A rule for an integer option: valid when `value` is a safe integer in
+ * `min..max`. The reasons match the CLI's integer parsers ("Expected an integer.",
+ * "Must be >= 1.", "Must be <= 200.").
+ */
+export function intInRangeProblem(min: number, max: number = Number.MAX_SAFE_INTEGER): Problem<unknown> {
+  return (value) => {
+    if (typeof value !== "number" || !Number.isSafeInteger(value)) return "Expected an integer.";
+    if (value < min) return `Must be >= ${min}.`;
+    if (value > max) return `Must be <= ${max}.`;
+    return undefined;
+  };
+}
+
+/** A non-negative safe integer (an `offset` or a `cursor`). */
+export const nonNegativeIntProblem: Problem<unknown> = (value) =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? undefined
+    : "Expected a non-negative integer.";
+
+/** A page size: an integer in LIMIT_MIN..LIMIT_MAX (1..200). */
+export const limitProblem: Problem<unknown> = intInRangeProblem(LIMIT_MIN, LIMIT_MAX);
+
+/**
+ * Check the paging parameters a search or list call sets: `offset` and `cursor` a
+ * non-negative safe integer, `limit` an integer in 1..200. `undefined`/`null` mean
+ * omitted. Throws `FimValidationError` (`Invalid limit: Must be <= 200.`). The API
+ * documents these bounds; NaN, Infinity, fractions or 1e21 would otherwise be sent
+ * as text and fail late with a 422, or be read some other way.
+ */
+export function assertPagination(params: object): void {
+  const { offset, limit, cursor } = params as { offset?: unknown; limit?: unknown; cursor?: unknown };
+  if (offset !== undefined && offset !== null) assertValid("offset", offset, nonNegativeIntProblem);
+  if (limit !== undefined && limit !== null) assertValid("limit", limit, limitProblem);
+  if (cursor !== undefined && cursor !== null) assertValid("cursor", cursor, nonNegativeIntProblem);
+}

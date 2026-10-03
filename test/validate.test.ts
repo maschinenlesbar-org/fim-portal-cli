@@ -3,9 +3,12 @@ import assert from "node:assert/strict";
 import {
   assertEnumParams,
   assertNonBlankParams,
+  assertPagination,
   assertValid,
+  intInRangeProblem,
   isBlank,
   nonEmptyProblem,
+  nonNegativeIntProblem,
   oneOfProblem,
   pathSegment,
   pathSegmentProblem,
@@ -18,6 +21,7 @@ import { run } from "../src/cli/run.js";
 import { FimPortalClient } from "../src/client/client.js";
 import type { CliDeps } from "../src/cli/io.js";
 import type { QueryParams } from "../src/client/query.js";
+import { LIMIT_MAX, LIMIT_MIN } from "../src/client/params.js";
 import { jsonResponse, makeMockTransport, parity } from "./helpers.js";
 
 const notFoo: Problem<string> = (v) => (v === "foo" ? "Must not be foo." : undefined);
@@ -183,6 +187,52 @@ test("assertEnumParams checks each listed parameter, scalar or array, and ignore
   ] as const) {
     assert.throws(
       () => assertEnumParams(params, spec),
+      (err: unknown) => err instanceof FimValidationError && (err as Error).message === message,
+      JSON.stringify(params),
+    );
+  }
+});
+
+// ---- pagination (PAT-11) ----
+
+test("intInRangeProblem accepts safe integers in range only, with the CLI's messages", () => {
+  const p = intInRangeProblem(1, 200);
+  for (const v of [1, 100, 200]) assert.equal(p(v), undefined, String(v));
+  for (const [v, reason] of [
+    [0, "Must be >= 1."],
+    [-1, "Must be >= 1."],
+    [201, "Must be <= 200."],
+    [1.5, "Expected an integer."],
+    [NaN, "Expected an integer."],
+    [Infinity, "Expected an integer."],
+    [2 ** 53, "Expected an integer."],
+    ["10", "Expected an integer."],
+  ] as const) {
+    assert.equal(p(v), reason, String(v));
+  }
+});
+
+test("nonNegativeIntProblem accepts 0 and positive safe integers only", () => {
+  for (const v of [0, 1, Number.MAX_SAFE_INTEGER]) assert.equal(nonNegativeIntProblem(v), undefined, String(v));
+  for (const v of [-1, 1.5, NaN, Infinity, 1e21, "5"]) {
+    assert.equal(nonNegativeIntProblem(v), "Expected a non-negative integer.", String(v));
+  }
+});
+
+test("assertPagination checks offset, limit and cursor when set", () => {
+  assert.equal(LIMIT_MIN, 1);
+  assert.equal(LIMIT_MAX, 200);
+  assertPagination({});
+  assertPagination({ offset: 0, limit: 1, cursor: 0 });
+  assertPagination({ offset: 10_000, limit: 200, cursor: 5, name: "x" });
+  for (const [params, message] of [
+    [{ limit: 201 }, "Invalid limit: Must be <= 200."],
+    [{ limit: 0 }, "Invalid limit: Must be >= 1."],
+    [{ offset: -1 }, "Invalid offset: Expected a non-negative integer."],
+    [{ cursor: NaN }, "Invalid cursor: Expected a non-negative integer."],
+  ] as const) {
+    assert.throws(
+      () => assertPagination(params),
       (err: unknown) => err instanceof FimValidationError && (err as Error).message === message,
       JSON.stringify(params),
     );

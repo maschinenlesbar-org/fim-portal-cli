@@ -2,8 +2,8 @@ import { Command } from "commander";
 import type { CliDeps } from "../io.js";
 import {
   action,
+  addLimitOption,
   parseIntArg,
-  parseBoundedInt,
   parseNonEmpty,
   pruneUndefined,
   renderJson,
@@ -29,11 +29,12 @@ function registerEntity(
 ): void {
   const cmd = program.command(name).description(description);
 
-  const list = cmd
-    .command("list")
-    .description(`List ${name} (cursor paginated)`)
-    .option("--cursor <n>", "pagination cursor (>= 0)", parseIntArg)
-    .option("--limit <n>", "max number of results (1..200)", parseBoundedInt(1, 200));
+  const list = addLimitOption(
+    cmd
+      .command("list")
+      .description(`List ${name} (cursor paginated)`)
+      .option("--cursor <n>", "pagination cursor (>= 0)", parseIntArg),
+  );
   if (fullText) list.option("--fts-query <q>", "full-text search query", parseNonEmpty);
   list
     .action(
