@@ -5,6 +5,7 @@ import {
   assertNonBlankParams,
   assertPagination,
   assertValid,
+  headerValueProblem,
   intInRangeProblem,
   isBlank,
   nonEmptyProblem,
@@ -236,5 +237,22 @@ test("assertPagination checks offset, limit and cursor when set", () => {
       (err: unknown) => err instanceof FimValidationError && (err as Error).message === message,
       JSON.stringify(params),
     );
+  }
+});
+
+// ---- header values (PAT-5) ----
+
+test("headerValueProblem allows Latin-1 and tab, and rejects blank, controls, DEL and > U+00FF", () => {
+  for (const v of ["fim-portal-cli", "müller-bot/1.0\t(test)", "a b"]) assert.equal(headerValueProblem(v), undefined, v);
+  for (const [v, reason] of [
+    ["", "Expected a non-empty value."],
+    [" \t ", "Expected a non-empty value."],
+    ["a" + String.fromCharCode(0x0d, 0x0a) + "b", "Value contains control characters."],
+    ["a" + String.fromCharCode(0), "Value contains control characters."],
+    ["a" + String.fromCharCode(0x7f), "Value contains control characters."],
+    ["agent€", "Value contains characters outside Latin-1 (above U+00FF)."],
+    [undefined, "Expected a non-empty value."],
+  ] as const) {
+    assert.equal(headerValueProblem(v), reason, JSON.stringify(v));
   }
 });

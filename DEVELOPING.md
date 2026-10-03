@@ -240,6 +240,12 @@ What the library rejects with `FimValidationError`, before any request:
   caps a `timeoutMs` it is handed directly at `MAX_TIMEOUT_MS`. The CLI's
   `--timeout`, `--max-retries` and `--max-response-bytes` parsers use the same
   constants.
+- **An unsendable User-Agent** (thrown by the constructor, `assertHeaderValue` /
+  `headerValueProblem`): a blank `userAgent`, a C0 control character or DEL (tab is
+  allowed) or a character above U+00FF. Only `undefined` selects the default
+  `fim-portal-cli`. The CLI's `--user-agent` parser applies the same rule. Should
+  an injected header still be one Node refuses, the default transport rejects with
+  `FimNetworkError` ("Invalid request: ...") rather than a raw `TypeError`.
 
 **Security invariant — response data is render-only.** The JSON body is decoded
 with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.

@@ -6,6 +6,7 @@ export {
   DEFAULT_BASE_URL,
   MAX_RETRIES,
   MAX_RETRY_AFTER_MS,
+  assertHeaderValue,
   intOption,
   parseRetryAfter,
 } from "./engine.js";
@@ -28,6 +29,7 @@ export {
   assertPagination,
   assertValid,
   detaillierungsstufeProblem,
+  headerValueProblem,
   intInRangeProblem,
   isBlank,
   limitProblem,

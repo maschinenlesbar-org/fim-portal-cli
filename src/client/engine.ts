@@ -11,7 +11,7 @@ import {
   FimValidationError,
   redactUrl,
 } from "./errors.js";
-import { assertNonBlankParams, assertValid, intInRangeProblem } from "./validate.js";
+import { assertNonBlankParams, assertValid, headerValueProblem, intInRangeProblem } from "./validate.js";
 
 export const DEFAULT_BASE_URL = "https://fimportal.de";
 
@@ -30,7 +30,10 @@ export interface EngineOptions {
   baseUrl?: string;
   /** Swappable transport. Defaults to the built-in node http/https transport. */
   transport?: Transport;
-  /** Value of the User-Agent header. */
+  /**
+   * Value of the User-Agent header: non-blank Latin-1 without control characters
+   * (tab allowed). Defaults to "fim-portal-cli".
+   */
   userAgent?: string;
   /**
    * Per-request timeout in milliseconds: an integer 0..`MAX_TIMEOUT_MS` (2^31 - 1
@@ -168,6 +171,14 @@ function assertHttpScheme(baseUrl: string): void {
 }
 
 /**
+ * Check a value bound for an HTTP header (headerValueProblem) and return it, or
+ * throw a FimValidationError (`Invalid <name>: Value contains control characters.`).
+ */
+export function assertHeaderValue(name: string, value: string): string {
+  return assertValid(name, value, headerValueProblem);
+}
+
+/**
  * A numeric engine option: `fallback` when undefined, else an integer in 0..max, or
  * a FimValidationError (`Invalid <name>: ...`). A negative or NaN value would
  * otherwise silently disable the timeout or the size cap.
@@ -193,7 +204,10 @@ export class RequestEngine {
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     assertHttpScheme(this.baseUrl);
     this.transport = options.transport ?? nodeHttpTransport;
-    this.userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
+    // Only undefined selects the default; a blank or unsendable value is refused
+    // here rather than sent blank or failing late with Node's raw TypeError.
+    this.userAgent =
+      options.userAgent === undefined ? DEFAULT_USER_AGENT : assertHeaderValue("userAgent", options.userAgent);
     // Range-check the numeric options: a negative, NaN or fractional value would
     // otherwise silently disable the timeout or the size cap, and an unbounded
     // maxRetries would keep retrying against a production API.

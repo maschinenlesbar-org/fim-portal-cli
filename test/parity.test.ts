@@ -284,3 +284,39 @@ test("parity: in-range engine options send the identical request from CLI and li
   assert.ok(lib.ok);
   assert.deepEqual(cli.requests, lib.requests);
 });
+
+// ---- Finding #6 (PAT-5): User-Agent validity ----
+
+const CR = String.fromCharCode(0x0d);
+const LF = String.fromCharCode(0x0a);
+const userAgentCases: Array<[string, RegExp]> = [
+  [`a${CR}${LF}X-Evil: 1`, /^Invalid userAgent: Value contains control characters\.$/],
+  [`x${String.fromCharCode(0)}y`, /^Invalid userAgent: Value contains control characters\.$/],
+  [`a${String.fromCharCode(0x7f)}`, /^Invalid userAgent: Value contains control characters\.$/],
+  ["agent€", /^Invalid userAgent: Value contains characters outside Latin-1 \(above U\+00FF\)\.$/],
+  ["", /^Invalid userAgent: Expected a non-empty value\.$/],
+  ["   ", /^Invalid userAgent: Expected a non-empty value\.$/],
+];
+
+for (const [userAgent, message] of userAgentCases) {
+  test(`parity: an unsendable User-Agent ${JSON.stringify(userAgent)} is rejected by CLI and library alike`, async () => {
+    await assertBothReject(
+      ["--user-agent", userAgent, "schemas", "versions", "S1"],
+      (t) => new FimPortalClient({ userAgent, transport: t }).schemas.versions("S1"),
+      message,
+    );
+  });
+}
+
+test("parity: a valid Latin-1 User-Agent with a tab is sent identically by CLI and library", async () => {
+  const userAgent = "müller-bot/1.0\t(test)";
+  const { cli, lib } = await parity(
+    ["--user-agent", userAgent, "schemas", "versions", "S1"],
+    (t) => new FimPortalClient({ userAgent, transport: t }).schemas.versions("S1"),
+    () => jsonResponse([]),
+  );
+  assert.equal(cli.code, 0);
+  assert.ok(lib.ok);
+  assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
+  assert.equal(lib.requests[0]?.headers?.["User-Agent"], userAgent);
+});

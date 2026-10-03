@@ -145,3 +145,16 @@ test("nodeHttpTransport returns the body when it is within maxResponseBytes", as
   assert.equal(res.status, 200);
   assert.equal(res.body.length, 1000);
 });
+
+test("nodeHttpTransport turns a header value Node refuses into a FimNetworkError instead of a raw TypeError", async () => {
+  // Node checks header values synchronously, before any socket is opened.
+  await assert.rejects(
+    () =>
+      nodeHttpTransport({
+        method: "GET",
+        url: "http://127.0.0.1:1/x",
+        headers: { "User-Agent": "a" + String.fromCharCode(0x0d, 0x0a) + "X-Evil: 1" },
+      }),
+    (err: unknown) => err instanceof FimNetworkError && /^Invalid request: /.test((err as Error).message),
+  );
+});
