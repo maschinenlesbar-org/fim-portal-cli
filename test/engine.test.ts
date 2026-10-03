@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MAX_RETRY_AFTER_MS, RequestEngine, parseRetryAfter, sanitizeServerText } from "../src/client/engine.js";
+import { MAX_RETRIES, MAX_RETRY_AFTER_MS, RequestEngine, parseRetryAfter, sanitizeServerText } from "../src/client/engine.js";
+import { MAX_TIMEOUT_MS } from "../src/client/http.js";
 import { FimApiError, FimNetworkError, FimParseError, FimValidationError, redactUrl } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
@@ -312,4 +313,26 @@ test("buildUrl rejects an empty path segment as a backstop, before any request",
     );
   }
   assert.equal(engine.buildUrl("/api/v1/schemas"), "https://fimportal.de/api/v1/schemas");
+});
+
+test("the constructor range-checks the numeric options before any request", () => {
+  for (const [options, message] of [
+    [{ timeoutMs: -1 }, "Invalid timeoutMs: Must be >= 0."],
+    [{ timeoutMs: MAX_TIMEOUT_MS + 1 }, `Invalid timeoutMs: Must be <= ${MAX_TIMEOUT_MS}.`],
+    [{ maxRetries: MAX_RETRIES + 1 }, `Invalid maxRetries: Must be <= ${MAX_RETRIES}.`],
+    [{ maxRetries: NaN }, "Invalid maxRetries: Expected an integer."],
+    [{ retryDelayMs: -5 }, "Invalid retryDelayMs: Must be >= 0."],
+    [{ retryDelayMs: Infinity }, "Invalid retryDelayMs: Expected an integer."],
+    [{ maxResponseBytes: 0.5 }, "Invalid maxResponseBytes: Expected an integer."],
+  ] as const) {
+    assert.throws(
+      () => new RequestEngine({ ...options, transport: async () => jsonResponse({}) }),
+      (err: unknown) => err instanceof FimValidationError && (err as Error).message === message,
+      JSON.stringify(options),
+    );
+  }
+  assert.equal(MAX_RETRIES, 10);
+  // 0 keeps its documented meaning (no timeout, no retries, no backoff, no cap).
+  new RequestEngine({ timeoutMs: 0, maxRetries: 0, retryDelayMs: 0, maxResponseBytes: 0 });
+  new RequestEngine({ timeoutMs: MAX_TIMEOUT_MS, maxRetries: MAX_RETRIES });
 });

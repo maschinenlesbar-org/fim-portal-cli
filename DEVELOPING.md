@@ -154,7 +154,8 @@ built-in `http`/`https`; tests inject a mock. This is the only HTTP seam.
 status }` — raw bytes, never lossily decoded.
 
 **Retry / backoff.** Transient `429` (rate limit) and `503` responses are retried
-automatically, up to `--max-retries` (`0`–`10` in the CLI). Each retry waits the
+automatically, up to `maxRetries` (`--max-retries`, `0`–`MAX_RETRIES` = 10 in the CLI and
+the library). Each retry waits the
 response's `Retry-After` — delay-seconds or an IMF-fixdate HTTP-date, parsed by
 `parseRetryAfter` — or, without a usable one, `retryDelayMs * attempt`. A `Retry-After`
 longer than `MAX_RETRY_AFTER_MS` (30 s) is not retried: the `FimApiError` surfaces at
@@ -166,7 +167,8 @@ redacted, sanitised), e.g. `HTTP 301 for GET http://fimportal.de/...: redirect t
 https://fimportal.de/... not followed`.
 
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
-default 100 MiB), guarding against unbounded responses.
+default 100 MiB), guarding against unbounded responses. A non-negative integer: the
+engine rejects anything else rather than silently dropping the cap.
 
 **Query builder.** [`buildQueryString`](src/client/query.ts) — a dependency-free
 serialiser: omits `undefined`/`null`, repeats keys for arrays, renders booleans as
@@ -230,6 +232,14 @@ What the library rejects with `FimValidationError`, before any request:
   text. (`openapi.json` gives `cursor` no minimum; the library keeps the CLI's
   `>= 0`, since a cursor is always a previous page's `next_cursor`.) The CLI's
   `--limit`, `--offset` and `--cursor` parsers use the same rules and constants.
+- **Out-of-range engine options** (thrown by the constructor, `intOption`):
+  `timeoutMs` an integer 0..`MAX_TIMEOUT_MS` (2^31 − 1 ms), `maxRetries` 0..`MAX_RETRIES`
+  (10), `retryDelayMs` and `maxResponseBytes` non-negative safe integers. `0` keeps
+  its meaning (no timeout, no retries, no backoff, no cap); a negative or NaN value
+  would silently have disabled the timeout or the cap. The default transport still
+  caps a `timeoutMs` it is handed directly at `MAX_TIMEOUT_MS`. The CLI's
+  `--timeout`, `--max-retries` and `--max-response-bytes` parsers use the same
+  constants.
 
 **Security invariant — response data is render-only.** The JSON body is decoded
 with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.

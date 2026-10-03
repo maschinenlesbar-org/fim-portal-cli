@@ -248,3 +248,39 @@ test("parity: in-range pagination sends the identical request from CLI and libra
     assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests), argv.join(" "));
   }
 });
+
+// ---- Finding #5 (PAT-8): the engine's numeric limits ----
+
+const engineOptionCases: Array<[string[], Record<string, number>, RegExp]> = [
+  [["--timeout", "-1"], { timeoutMs: -1 }, /^Invalid timeoutMs: Must be >= 0\.$/],
+  [["--timeout", "NaN"], { timeoutMs: NaN }, /^Invalid timeoutMs: Expected an integer\.$/],
+  [["--timeout", "1.5"], { timeoutMs: 1.5 }, /^Invalid timeoutMs: Expected an integer\.$/],
+  [["--timeout", "2147483648"], { timeoutMs: 2_147_483_648 }, /^Invalid timeoutMs: Must be <= 2147483647\.$/],
+  [["--max-response-bytes", "-1"], { maxResponseBytes: -1 }, /^Invalid maxResponseBytes: Must be >= 0\.$/],
+  [["--max-response-bytes", "NaN"], { maxResponseBytes: NaN }, /^Invalid maxResponseBytes: Expected an integer\.$/],
+  [["--max-retries", "11"], { maxRetries: 11 }, /^Invalid maxRetries: Must be <= 10\.$/],
+  [["--max-retries", "50"], { maxRetries: 50 }, /^Invalid maxRetries: Must be <= 10\.$/],
+  [["--max-retries", "1.5"], { maxRetries: 1.5 }, /^Invalid maxRetries: Expected an integer\.$/],
+  [["--max-retries", "-1"], { maxRetries: -1 }, /^Invalid maxRetries: Must be >= 0\.$/],
+];
+
+for (const [flags, options, message] of engineOptionCases) {
+  test(`parity: an out-of-range engine option is rejected by CLI and library alike (${flags.join(" ")})`, async () => {
+    await assertBothReject(
+      [...flags, "schemas", "versions", "S1"],
+      (t) => new FimPortalClient({ ...options, transport: t }).schemas.versions("S1"),
+      message,
+    );
+  });
+}
+
+test("parity: in-range engine options send the identical request from CLI and library", async () => {
+  const { cli, lib } = await parity(
+    ["--timeout", "0", "--max-retries", "10", "--max-response-bytes", "0", "schemas", "versions", "S1"],
+    (t) => new FimPortalClient({ timeoutMs: 0, maxRetries: 10, maxResponseBytes: 0, transport: t }).schemas.versions("S1"),
+    () => jsonResponse([]),
+  );
+  assert.equal(cli.code, 0);
+  assert.ok(lib.ok);
+  assert.deepEqual(cli.requests, lib.requests);
+});
