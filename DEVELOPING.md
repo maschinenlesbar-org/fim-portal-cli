@@ -246,6 +246,12 @@ What the library rejects with `FimValidationError`, before any request:
   `fim-portal-cli`. The CLI's `--user-agent` parser applies the same rule. Should
   an injected header still be one Node refuses, the default transport rejects with
   `FimNetworkError` ("Invalid request: ...") rather than a raw `TypeError`.
+- **Whitespace in the base URL** (thrown by the constructor,
+  `baseUrlWhitespaceProblem`): surrounding whitespace, or whitespace or a control
+  character anywhere inside. `new URL()` trims and strips those silently, but the
+  engine concatenates request paths onto the raw string, so `"https://h/ "` would
+  request `/%20/api/...`. The check runs on the raw `baseUrl`, after the scheme and
+  query/fragment checks; the CLI's `--base-url` parser applies the same rule.
 
 **Security invariant — response data is render-only.** The JSON body is decoded
 with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.

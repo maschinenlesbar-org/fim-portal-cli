@@ -320,3 +320,40 @@ test("parity: a valid Latin-1 User-Agent with a tab is sent identically by CLI a
   assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
   assert.equal(lib.requests[0]?.headers?.["User-Agent"], userAgent);
 });
+
+// ---- Finding #7 (PAT-1): whitespace in the base URL ----
+
+const TAB = String.fromCharCode(0x09);
+const baseUrlWhitespaceCases: Array<[string, RegExp]> = [
+  ["https://x.example/ ", /^Invalid baseUrl: A base URL cannot have surrounding whitespace\.$/],
+  [" https://x.example", /^Invalid baseUrl: A base URL cannot have surrounding whitespace\.$/],
+  ["https://x.example ", /^Invalid baseUrl: A base URL cannot have surrounding whitespace\.$/],
+  [`${TAB}https://x.example`, /^Invalid baseUrl: A base URL cannot have surrounding whitespace\.$/],
+  [`https://x.example${LF}`, /^Invalid baseUrl: A base URL cannot have surrounding whitespace\.$/],
+  // new URL() silently strips an interior tab or newline too; the engine would not.
+  [`https://x.ex${TAB}ample`, /^Invalid baseUrl: A base URL cannot contain whitespace or control characters\.$/],
+  [`https://x.example/fi${LF}m`, /^Invalid baseUrl: A base URL cannot contain whitespace or control characters\.$/],
+  [`https://x.example/f${String.fromCharCode(0x7f)}`, /^Invalid baseUrl: A base URL cannot contain whitespace or control characters\.$/],
+];
+
+for (const [baseUrl, message] of baseUrlWhitespaceCases) {
+  test(`parity: base URL ${JSON.stringify(baseUrl)} is rejected by CLI and library alike`, async () => {
+    await assertBothReject(
+      ["--base-url", baseUrl, "schemas", "versions", "S1"],
+      (t) => new FimPortalClient({ baseUrl, transport: t }).schemas.versions("S1"),
+      message,
+    );
+  });
+}
+
+test("parity: a clean base URL with a trailing slash sends the identical request", async () => {
+  const { cli, lib } = await parity(
+    ["--base-url", "https://x.example/", "schemas", "versions", "S1"],
+    (t) => new FimPortalClient({ baseUrl: "https://x.example/", transport: t }).schemas.versions("S1"),
+    () => jsonResponse([]),
+  );
+  assert.equal(cli.code, 0);
+  assert.ok(lib.ok);
+  assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
+  assert.equal(lib.requests[0]?.url, "https://x.example/api/v1/schemas/S1");
+});

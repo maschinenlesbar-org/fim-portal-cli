@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  baseUrlWhitespaceProblem,
   assertEnumParams,
   assertNonBlankParams,
   assertPagination,
@@ -255,4 +256,19 @@ test("headerValueProblem allows Latin-1 and tab, and rejects blank, controls, DE
   ] as const) {
     assert.equal(headerValueProblem(v), reason, JSON.stringify(v));
   }
+});
+
+// ---- base URL whitespace (PAT-1) ----
+
+test("baseUrlWhitespaceProblem rejects surrounding whitespace and interior whitespace or controls", () => {
+  for (const v of ["https://fimportal.de", "https://mirror.example/fim/", "http://127.0.0.1:18113"]) {
+    assert.equal(baseUrlWhitespaceProblem(v), undefined, v);
+  }
+  for (const v of [" https://h", "https://h ", "\thttps://h", "https://h\n"]) {
+    assert.equal(baseUrlWhitespaceProblem(v), "A base URL cannot have surrounding whitespace.", JSON.stringify(v));
+  }
+  for (const v of ["https://h/a b", "https://h\t.example", "https://h/\rx", "https://h/" + String.fromCharCode(0) + "x", "https://h/\u00a0x"]) {
+    assert.equal(baseUrlWhitespaceProblem(v), "A base URL cannot contain whitespace or control characters.", JSON.stringify(v));
+  }
+  assert.equal(baseUrlWhitespaceProblem(42), "Expected a string.");
 });

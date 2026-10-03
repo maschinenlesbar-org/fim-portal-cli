@@ -11,7 +11,13 @@ import {
   FimValidationError,
   redactUrl,
 } from "./errors.js";
-import { assertNonBlankParams, assertValid, headerValueProblem, intInRangeProblem } from "./validate.js";
+import {
+  assertNonBlankParams,
+  assertValid,
+  baseUrlWhitespaceProblem,
+  headerValueProblem,
+  intInRangeProblem,
+} from "./validate.js";
 
 export const DEFAULT_BASE_URL = "https://fimportal.de";
 
@@ -203,6 +209,9 @@ export class RequestEngine {
   constructor(options: EngineOptions = {}) {
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     assertHttpScheme(this.baseUrl);
+    // Whitespace is checked on the raw value, not the slash-stripped one: new URL()
+    // hides it from the check above, but buildUrl concatenates the raw string.
+    if (options.baseUrl !== undefined) assertValid("baseUrl", options.baseUrl, baseUrlWhitespaceProblem);
     this.transport = options.transport ?? nodeHttpTransport;
     // Only undefined selects the default; a blank or unsendable value is refused
     // here rather than sent blank or failing late with Node's raw TypeError.

@@ -12,6 +12,7 @@ import {
 } from "../client/engine.js";
 import type { QueryParams } from "../client/query.js";
 import {
+  baseUrlWhitespaceProblem,
   headerValueProblem,
   intInRangeProblem,
   nonEmptyProblem,
@@ -116,11 +117,11 @@ export function parseBaseUrl(value: string): string {
   if (/[?#]/.test(value)) {
     throw new InvalidArgumentError("A base URL cannot have a query (?) or fragment (#).");
   }
-  // new URL() trims surrounding whitespace silently; the raw value is what the
-  // engine uses, so reject it rather than guess.
-  if (value !== value.trim()) {
-    throw new InvalidArgumentError("A base URL cannot have surrounding whitespace.");
-  }
+  // The library's rule, checked the same way by the engine: new URL() trims
+  // surrounding whitespace and strips interior tabs/newlines silently, but the
+  // engine concatenates the raw value.
+  const whitespace = baseUrlWhitespaceProblem(value);
+  if (whitespace !== undefined) throw new InvalidArgumentError(whitespace);
   return value;
 }
 

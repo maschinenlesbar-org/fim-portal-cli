@@ -28,6 +28,7 @@ export {
   assertNonBlankParams,
   assertPagination,
   assertValid,
+  baseUrlWhitespaceProblem,
   detaillierungsstufeProblem,
   headerValueProblem,
   intInRangeProblem,
