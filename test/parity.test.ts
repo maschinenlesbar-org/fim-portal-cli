@@ -117,3 +117,34 @@ test("parity: a valid path id sends the identical request from CLI and library",
   assert.ok(lib.ok);
   assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
 });
+
+// ---- Finding #3 (PAT-12): the search-csv resource is required and from the allow-list ----
+
+const csvResourceCases: Array<[string[], Record<string, string | undefined>]> = [
+  [["search-csv", "--resource", "schemas", "--term", "Name"], { resource: "schemas", term: "Name" }],
+  [["search-csv", "--resource", " schema", "--term", "Name"], { resource: " schema", term: "Name" }],
+  [["search-csv", "--resource", "", "--term", "Name"], { resource: "", term: "Name" }],
+  [["search-csv", "--term", "Name"], { term: "Name" }],
+];
+
+for (const [argv, params] of csvResourceCases) {
+  test(`parity: search-csv rejects resource ${JSON.stringify(params["resource"])} on both sides`, async () => {
+    await assertBothReject(
+      argv,
+      // A plain-JS caller (or a cast) can pass any string or none at all.
+      (t) => client(t).tools.searchCsvDownload(params as never),
+      /^Invalid resource: Expected one of: schema, document-profile, field, group, leistung-steckbriefe, processclass, process\.$/,
+    );
+  });
+}
+
+test("parity: search-csv with a known resource sends the identical request", async () => {
+  const { cli, lib } = await parity(
+    ["search-csv", "--resource", "schema", "--term", "Name"],
+    (t) => client(t).tools.searchCsvDownload({ resource: "schema", term: "Name" }),
+    () => rawResponse("a;b\n", "text/csv"),
+  );
+  assert.equal(cli.code, 0);
+  assert.ok(lib.ok);
+  assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
+});

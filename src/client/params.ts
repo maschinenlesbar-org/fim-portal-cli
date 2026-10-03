@@ -169,7 +169,9 @@ export interface ProcessClassSearchParams extends Pagination {
  * of the portal's own search page (fimportal.de/search?resource=...). The OpenAPI
  * spec types the parameter as a free string, and the server never rejects a value:
  * anything it does not recognise (e.g. the plural `schemas`) silently exports
- * Leistungen instead. So the CLI validates against this list.
+ * Leistungen instead. So `tools.searchCsvDownload` requires one of these and throws
+ * `FimValidationError` otherwise (searchCsvResourceProblem); the CLI's
+ * `--resource` choices are this list.
  */
 export const SearchCsvResourceValues = [
   "schema",
@@ -181,6 +183,23 @@ export const SearchCsvResourceValues = [
   "process",
 ] as const;
 export type SearchCsvResource = (typeof SearchCsvResourceValues)[number];
+
+/**
+ * Query of `tools.searchCsvDownload`. `resource` is required; the named filters are
+ * the ones the CLI exposes, and any other filter of the portal's search page passes
+ * through as a string. A blank value is rejected like every other query value.
+ */
+export interface SearchCsvParams {
+  resource: SearchCsvResource;
+  term?: string;
+  xdf_version?: string;
+  order_by?: string;
+  feldart?: string;
+  datentyp?: string;
+  dokumentart?: string;
+  sprache?: string;
+  [filter: string]: string | undefined;
+}
 
 export interface ProcessSearchParams extends Pagination {
   freigabe_status?: FreigabeStatus[];

@@ -162,7 +162,7 @@ test("tools.searchCsvDownload hits /tools/search-csv-download and forwards param
   const mt = makeMockTransport(() => rawResponse(fx.csvBody, "text/csv"));
   const client = new FimPortalClient({ transport: mt.transport });
   const res = await client.tools.searchCsvDownload({
-    resource: "fields",
+    resource: "field",
     term: "Name",
     xdf_version: "2.0",
     feldart: "input",
@@ -171,7 +171,7 @@ test("tools.searchCsvDownload hits /tools/search-csv-download and forwards param
   assert.equal(res.contentType, "text/csv");
   const url = new URL(mt.last().url);
   assert.equal(url.pathname, "/tools/search-csv-download");
-  assert.equal(url.searchParams.get("resource"), "fields");
+  assert.equal(url.searchParams.get("resource"), "field");
   assert.equal(url.searchParams.get("term"), "Name");
   assert.equal(url.searchParams.get("xdf_version"), "2.0");
   assert.equal(url.searchParams.get("feldart"), "input");

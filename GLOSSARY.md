@@ -292,7 +292,8 @@ the text doesn't have exits `4` ("Could not find language"), and so does the
 **search-csv.** A tools endpoint that streams a search result as CSV. Its
 `--resource` takes the portal's singular resource names (`schema`, `field`,
 `processclass`, …); the server answers any name it does not know with a CSV of
-Leistungen, so the CLI rejects those.
+Leistungen, so the CLI and the library (`tools.searchCsvDownload`) reject those, and a
+missing resource too.
 
 ---
 

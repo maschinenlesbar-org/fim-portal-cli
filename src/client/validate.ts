@@ -6,6 +6,7 @@
 
 import { FimValidationError } from "./errors.js";
 import type { QueryParams } from "./query.js";
+import { SearchCsvResourceValues } from "./params.js";
 
 /** A rule: the reason `value` is invalid, or `undefined` when it is valid. */
 export type Problem<T = unknown> = (value: T) => string | undefined;
@@ -74,3 +75,21 @@ export const pathSegmentProblem: Problem<string> = (value) =>
 export function pathSegment(name: string, value: string): string {
   return encodeURIComponent(assertValid(name, value, pathSegmentProblem));
 }
+
+/**
+ * A rule for an enumerated value: valid when `value` is one of `allowed` (compared
+ * with `includes`, so no inherited `Object.prototype` name can pass and no trimming
+ * or case-folding happens).
+ */
+export function oneOfProblem<T>(allowed: readonly T[]): Problem<unknown> {
+  return (value) =>
+    (allowed as readonly unknown[]).includes(value) ? undefined : `Expected one of: ${allowed.join(", ")}.`;
+}
+
+/**
+ * The `resource` of `tools.searchCsvDownload` is required and must be one of
+ * SearchCsvResourceValues: the server never rejects a value, it answers anything it
+ * does not recognise (the plural `schemas`, a padded or missing name) with a CSV of
+ * Leistungen.
+ */
+export const searchCsvResourceProblem: Problem<unknown> = oneOfProblem(SearchCsvResourceValues);

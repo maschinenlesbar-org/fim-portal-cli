@@ -5,8 +5,10 @@ import {
   assertValid,
   isBlank,
   nonEmptyProblem,
+  oneOfProblem,
   pathSegment,
   pathSegmentProblem,
+  searchCsvResourceProblem,
   type Problem,
 } from "../src/client/validate.js";
 import { FimError, FimValidationError } from "../src/client/errors.js";
@@ -146,4 +148,24 @@ test("pathSegment percent-encodes a valid id and names the parameter on a blank 
     () => pathSegment("fimId", " "),
     (err: unknown) => err instanceof FimValidationError && (err as Error).message === "Invalid fimId: Expected a non-empty value.",
   );
+});
+
+// ---- enumerated values (PAT-12) ----
+
+test("oneOfProblem accepts exactly the listed values", () => {
+  const problem = oneOfProblem(["a", "b"] as const);
+  assert.equal(problem("a"), undefined);
+  assert.equal(problem("b"), undefined);
+  for (const v of ["c", " a", "A", "", undefined, null, 1, "toString", "constructor"]) {
+    assert.equal(problem(v), "Expected one of: a, b.", String(v));
+  }
+});
+
+test("searchCsvResourceProblem accepts the portal's singular resource names only", () => {
+  for (const v of ["schema", "document-profile", "field", "group", "leistung-steckbriefe", "processclass", "process"]) {
+    assert.equal(searchCsvResourceProblem(v), undefined, v);
+  }
+  for (const v of ["schemas", "fields", " schema", "", undefined]) {
+    assert.match(searchCsvResourceProblem(v) ?? "", /^Expected one of: schema, /, String(v));
+  }
 });

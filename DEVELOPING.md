@@ -207,6 +207,10 @@ What the library rejects with `FimValidationError`, before any request:
   would turn `schemas.versions("")` into the search collection and
   `schemas.get("S1", "")` into the versions list, returned as the requested object.
   `RequestEngine.buildUrl` also rejects `.`/`..` and any empty segment.
+- **A missing or unknown `search-csv` resource.** `tools.searchCsvDownload` takes
+  `SearchCsvParams` and requires `resource` to be one of `SearchCsvResourceValues`
+  (`searchCsvResourceProblem`, built on `oneOfProblem`): the server answers any
+  other value, or none, with a CSV of Leistungen and status 200.
 
 **Security invariant — response data is render-only.** The JSON body is decoded
 with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.

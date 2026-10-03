@@ -8,7 +8,7 @@
 
 import { RequestEngine, type EngineOptions, type RawResponse } from "./engine.js";
 import type { QueryParams } from "./query.js";
-import { pathSegment } from "./validate.js";
+import { assertValid, pathSegment, searchCsvResourceProblem } from "./validate.js";
 import type {
   PaginatedResult,
   CursorPaginationResult,
@@ -43,6 +43,7 @@ import type {
   ProcessSearchParams,
   XzufiEntityListParams,
   Pagination,
+  SearchCsvParams,
 } from "./params.js";
 import type { XzufiSource, Detaillierungsstufe } from "./enums.js";
 
@@ -339,8 +340,15 @@ class CodeListsResource {
 class ToolsResource {
   constructor(private readonly e: RequestEngine) {}
 
-  /** Streamed CSV export of a search. Returns the raw response. */
-  async searchCsvDownload(params: Record<string, string | undefined>): Promise<RawResponse> {
+  /**
+   * Streamed CSV export of a search. Returns the raw response.
+   *
+   * Rejects with `FimValidationError`, before any request, when `resource` is
+   * missing or not one of SearchCsvResourceValues: the server would answer it with a
+   * CSV of Leistungen and status 200.
+   */
+  async searchCsvDownload(params: SearchCsvParams): Promise<RawResponse> {
+    assertValid("resource", (params ?? {}).resource, searchCsvResourceProblem);
     return this.e.getRaw("/tools/search-csv-download", "text/csv", params as QueryParams);
   }
 }

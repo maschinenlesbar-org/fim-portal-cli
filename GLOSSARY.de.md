@@ -295,7 +295,8 @@ Exit-Code `4` („Could not find language“), ebenso der Wert des Suchfilters `
 **search-csv.** Ein Tools-Endpoint, der ein Suchergebnis als CSV streamt. Sein
 `--resource` erwartet die Ressourcennamen des Portals im Singular (`schema`, `field`,
 `processclass`, …); auf jeden unbekannten Namen antwortet der Server mit einer CSV der
-Leistungen, deshalb weist die CLI solche Namen zurück.
+Leistungen, deshalb weisen die CLI und die Bibliothek (`tools.searchCsvDownload`) solche
+Namen zurück, ebenso eine fehlende Ressource.
 
 ---
 

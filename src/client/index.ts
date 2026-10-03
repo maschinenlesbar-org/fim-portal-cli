@@ -20,8 +20,10 @@ export {
   assertValid,
   isBlank,
   nonEmptyProblem,
+  oneOfProblem,
   pathSegment,
   pathSegmentProblem,
+  searchCsvResourceProblem,
 } from "./validate.js";
 export type { Problem } from "./validate.js";
 

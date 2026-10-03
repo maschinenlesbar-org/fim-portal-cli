@@ -10,7 +10,7 @@ import {
   renderJson,
   renderRaw,
 } from "../shared.js";
-import { SearchCsvResourceValues, type Pagination } from "../../client/params.js";
+import { SearchCsvResourceValues, type Pagination, type SearchCsvParams } from "../../client/params.js";
 
 export function registerMiscCommands(program: Command, deps: CliDeps): void {
   program
@@ -31,10 +31,10 @@ export function registerMiscCommands(program: Command, deps: CliDeps): void {
   // search-csv exposes a convenient subset of the CSV filters. The OpenAPI spec
   // types every search-csv-download parameter as a free-form string, and the server
   // does not reject unknown values: an unrecognised --resource silently exports
-  // Leistungen instead. So --resource is checked against the values the portal's
-  // own search page uses (SearchCsvResourceValues); the other filters are
-  // forwarded verbatim. A blank value is rejected locally (parseNonEmpty): it is
-  // never a meaningful filter.
+  // Leistungen instead. The library requires a resource from SearchCsvResourceValues;
+  // the --resource choices are that list, so commander reports a bad one as a usage
+  // error with the allowed values. The other filters are forwarded verbatim. A blank
+  // value is rejected (parseNonEmpty, and the library): it is never a meaningful filter.
   program
     .command("search-csv")
     .description("Download a search result as CSV (tools/search-csv-download)")
@@ -59,7 +59,7 @@ export function registerMiscCommands(program: Command, deps: CliDeps): void {
           datentyp: opts["datentyp"],
           dokumentart: opts["dokumentart"],
           sprache: opts["sprache"],
-        }) as Record<string, string | undefined>;
+        }) as SearchCsvParams;
         renderRaw(deps, global, await client.tools.searchCsvDownload(params));
       }),
     );
