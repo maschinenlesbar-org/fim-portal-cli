@@ -5,6 +5,7 @@
 import { nodeHttpTransport, type Transport } from "./http.js";
 import { buildQueryString, type QueryParams } from "./query.js";
 import { FimApiError, FimError, FimNetworkError, FimParseError, redactUrl } from "./errors.js";
+import { assertNonBlankParams } from "./validate.js";
 
 export const DEFAULT_BASE_URL = "https://fimportal.de";
 const DEFAULT_USER_AGENT = "fim-portal-cli";
@@ -183,6 +184,11 @@ export class RequestEngine {
    * `/api/v1/schemas/` (the search) and print its result with exit 0. Neither can
    * name a resource. (Percent-encoded forms such as "%2e%2e" are safe:
    * encodeURIComponent turns their "%" into "%25".)
+   *
+   * Throws a FimValidationError for a blank query value, a blank array element, an
+   * empty array or a blank parameter name (assertNonBlankParams): the API treats an
+   * empty parameter as no filter, so `name=` would return the unfiltered result.
+   * Every search, list and CSV method goes through here, so all are covered.
    */
   buildUrl(path: string, query?: QueryParams): string {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -192,6 +198,7 @@ export class RequestEngine {
         `Invalid path segment "${dotSegment}" in ${normalizedPath}: "." and ".." cannot be used as an id.`,
       );
     }
+    if (query) assertNonBlankParams(query);
     const qs = query ? buildQueryString(query) : "";
     return `${this.baseUrl}${normalizedPath}${qs ? `?${qs}` : ""}`;
   }

@@ -233,6 +233,11 @@ when; the `seit`/`bis` variants are date-range filters.
 `Rechtsgrundlagen`). Allowed modules differ per resource (schemas additionally
 allow `Stichwort`).
 
+**Blank filter values.** The API treats an empty parameter (`name=`) as no filter
+and answers with the unfiltered result. So a blank value (`""` or whitespace only)
+is rejected before any request: by the CLI as a usage error, and by the library
+(`FimPortalClient`) with a `FimValidationError`.
+
 **order_by.** Result ordering. The allowed values differ by resource —
 Datenfelder resources share one set (`relevance`, `id_asc`, `name_asc`, …); services
 have their own sets (including `relevance`, `titel_asc`). `relevance` ranks the hits of

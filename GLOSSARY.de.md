@@ -234,6 +234,11 @@ getroffen wurde.
 `Rechtsgrundlagen`). Welche Module zulässig sind, hängt von der Ressource ab (Datenschemata
 erlauben zusätzlich `Stichwort`).
 
+**Leere Filterwerte.** Die API behandelt einen leeren Parameter (`name=`) wie keinen
+Filter und antwortet mit dem ungefilterten Ergebnis. Ein leerer Wert (`""` oder nur
+Leerraum) wird deshalb vor jeder Anfrage zurückgewiesen: von der CLI als Bedienfehler, von
+der Bibliothek (`FimPortalClient`) mit einem `FimValidationError`.
+
 **order_by.** Sortierung der Ergebnisse. Die zulässigen Werte hängen von der Ressource ab –
 die Datenfelder-Ressourcen teilen sich einen Satz (`relevance`, `id_asc`, `name_asc`, …);
 Leistungen haben eigene Sätze (u. a. `relevance`, `titel_asc`). `relevance` ordnet die

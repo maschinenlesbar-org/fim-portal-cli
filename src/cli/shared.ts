@@ -11,6 +11,7 @@ import {
   type RawResponse,
 } from "../client/engine.js";
 import type { QueryParams } from "../client/query.js";
+import { nonEmptyProblem } from "../client/validate.js";
 import {
   FreigabeStatusValues,
   XdfVersionValues,
@@ -57,11 +58,14 @@ export function parseBoundedInt(min: number, max?: number): (value: string) => n
   };
 }
 
-/** commander value-parser: a non-empty (after trimming) string. */
+/**
+ * commander value-parser: a non-empty (after trimming) string. The rule is the
+ * library's nonEmptyProblem, which the client enforces on every query value too;
+ * here it only turns a blank value into an early usage error.
+ */
 export function parseNonEmpty(value: string): string {
-  if (value.trim() === "") {
-    throw new InvalidArgumentError("Expected a non-empty value.");
-  }
+  const reason = nonEmptyProblem(value);
+  if (reason !== undefined) throw new InvalidArgumentError(reason);
   return value;
 }
 
@@ -139,7 +143,7 @@ export function assertEnum<T extends string>(
 
 /**
  * commander value-parser/accumulator for repeatable string options. Each value
- * must be non-empty: a blank one would otherwise be sent as an empty parameter.
+ * must be non-empty (parseNonEmpty); the library rejects a blank element too.
  */
 export function collect(value: string, previous: string[] = []): string[] {
   return previous.concat([parseNonEmpty(value)]);

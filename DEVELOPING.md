@@ -195,6 +195,14 @@ functions and report the reason as a usage error, so the CLI and the library
 cannot drift apart. `test/helpers.ts` has a `parity()` helper that drives one
 input through `run()` and through the library on one recording mock transport.
 
+What the library rejects with `FimValidationError`, before any request:
+
+- **Blank query values.** A blank string (`""` or whitespace only), a blank
+  element of an array filter, an empty array or a blank parameter name, in any
+  search, list or `tools.searchCsvDownload` call (`assertNonBlankParams`, run by
+  `RequestEngine.buildUrl`). The API treats an empty parameter as no filter and
+  would answer with the unfiltered result. `undefined`/`null` still mean "omitted".
+
 **Security invariant — response data is render-only.** The JSON body is decoded
 with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.
 That cast is only safe because every parsed value flows into exactly two sinks:

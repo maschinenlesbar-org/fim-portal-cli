@@ -1,11 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assertValid, type Problem } from "../src/client/validate.js";
+import { assertNonBlankParams, assertValid, isBlank, nonEmptyProblem, type Problem } from "../src/client/validate.js";
 import { FimError, FimValidationError } from "../src/client/errors.js";
 import * as lib from "../src/index.js";
 import { run } from "../src/cli/run.js";
 import { FimPortalClient } from "../src/client/client.js";
 import type { CliDeps } from "../src/cli/io.js";
+import type { QueryParams } from "../src/client/query.js";
 import { jsonResponse, makeMockTransport, parity } from "./helpers.js";
 
 const notFoo: Problem<string> = (v) => (v === "foo" ? "Must not be foo." : undefined);
@@ -76,4 +77,46 @@ test("parity() drives the same input through run() and the library on one transp
   assert.ok(res.ok);
   assert.deepEqual(res.value, [{ fim_id: "S1" }]);
   assert.deepEqual(cli.requests.map((r) => r.url), res.requests.map((r) => r.url));
+});
+
+// ---- blank values (PAT-9) ----
+
+test("isBlank is true for empty and whitespace-only strings only", () => {
+  for (const v of ["", " ", "   ", "\t", "\n", " \t\r\n"]) assert.equal(isBlank(v), true, JSON.stringify(v));
+  for (const v of ["a", " a ", "0", "."]) assert.equal(isBlank(v), false, JSON.stringify(v));
+});
+
+test("nonEmptyProblem rejects a blank value with the CLI's message", () => {
+  assert.equal(nonEmptyProblem(""), "Expected a non-empty value.");
+  assert.equal(nonEmptyProblem(" \t"), "Expected a non-empty value.");
+  assert.equal(nonEmptyProblem("Geburt"), undefined);
+});
+
+test("assertNonBlankParams rejects blank values, blank array elements, empty arrays and blank names", () => {
+  const cases: Array<[QueryParams, string]> = [
+    [{ name: "" }, "Invalid name: Expected a non-empty value."],
+    [{ fts_query: "  " }, "Invalid fts_query: Expected a non-empty value."],
+    [{ nummernkreis: ["07", " "] }, "Invalid nummernkreis: Expected a non-empty value."],
+    [{ nummernkreis: [] }, "Invalid nummernkreis: Expected at least one value."],
+    [{ " ": "x" }, "Invalid query parameter name: Expected a non-empty value."],
+  ];
+  for (const [params, message] of cases) {
+    assert.throws(
+      () => assertNonBlankParams(params),
+      (err: unknown) => err instanceof FimValidationError && (err as Error).message === message,
+      JSON.stringify(params),
+    );
+  }
+});
+
+test("assertNonBlankParams accepts omitted values and non-string values", () => {
+  assertNonBlankParams({
+    name: "Geburt",
+    bezug: undefined,
+    gueltig_am: null,
+    limit: 10,
+    is_latest: false,
+    freigabe_status: [5, 6],
+    nummernkreis: ["07"],
+  });
 });
