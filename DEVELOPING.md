@@ -107,9 +107,10 @@ src/
     types.ts     # response interfaces (typed *Out summaries; full payloads as JsonObject)
     params.ts    # typed search-parameter objects per endpoint
     query.ts     # dependency-free query-string builder (repeated keys for arrays)
+    validate.ts  # the library's input rules (Problem functions + assertValid)
     http.ts      # the Transport interface + default node:http/https transport
     engine.ts    # URL building, retry/backoff, JSON/raw decoding, error mapping
-    errors.ts    # FimError / FimApiError / FimNetworkError / FimParseError
+    errors.ts    # FimError / FimApiError / FimNetworkError / FimParseError / FimValidationError
     client.ts    # FimPortalClient — resource groups over the engine
   cli/
     io.ts        # injectable I/O seam (stdout/stderr/file)
@@ -178,8 +179,21 @@ mocked client and captured output — no subprocess.
 
 **Error types.** [`errors.ts`](src/client/errors.ts): `FimApiError` (non-2xx,
 carries `status`/`detail`), `FimNetworkError` (transport failure/timeout),
-`FimParseError` (bad JSON), all extending `FimError`. The CLI maps a `404` to exit
-code `4`, other errors to `1`.
+`FimParseError` (bad JSON), `FimValidationError` (an input refused before any
+request), all extending `FimError`. The CLI maps a `404` to exit code `4`, a
+`FimValidationError` to the usage-error code `1` (`Error: <message>`), other
+errors to `1`.
+
+**Input validation.** The library owns every rule about what a request may
+contain. The rules are pure functions in [`validate.ts`](src/client/validate.ts):
+a `Problem` returns the reason a value is invalid, or `undefined`, and
+`assertValid(name, value, problem)` turns a reason into a `FimValidationError`
+with the message `Invalid <name>: <reason>`. Client methods call it before any
+request (an async method rejects rather than throwing synchronously), so a
+rejected input sends nothing. The CLI's commander parsers call the same `Problem`
+functions and report the reason as a usage error, so the CLI and the library
+cannot drift apart. `test/helpers.ts` has a `parity()` helper that drives one
+input through `run()` and through the library on one recording mock transport.
 
 **Security invariant — response data is render-only.** The JSON body is decoded
 with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.
@@ -204,6 +218,9 @@ npm test          # builds, then runs `node --test` over dist/test
 - **`http.test.ts`** — the default transport against a real loopback `http.createServer`.
 - **`engine.test.ts`** — URL building, JSON/raw decoding, error mapping, 429/503 retry — mocked transport.
 - **`client.test.ts`** — every endpoint's method/URL mapping + query serialisation — mocked transport.
+- **`validate.test.ts`** — the input rules, `assertValid`, and how `run()` reports a `FimValidationError`.
+- **`parity.test.ts`** — the same input through the CLI and the library (`parity()`): both reject
+  without a request, or both send the identical request.
 - **`cli.test.ts`** — end-to-end command parsing, rendering, file output and exit codes — mocked client.
 
 All HTTP is mocked with Node's built-in `node:test` `mock` facility (`test/helpers.ts`);

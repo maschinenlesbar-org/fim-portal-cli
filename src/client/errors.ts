@@ -76,6 +76,13 @@ export class FimApiError extends FimError {
   }
 }
 
+/**
+ * An input the library refuses before sending any request: a blank filter or id,
+ * an out-of-range option, a value outside an enum. The message reads
+ * `Invalid <name>: <reason>`. The CLI maps it to its usage-error exit code (1).
+ */
+export class FimValidationError extends FimError {}
+
 /** A transport-level failure (DNS, connection reset, timeout, ...). */
 export class FimNetworkError extends FimError {}
 
