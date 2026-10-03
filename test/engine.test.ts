@@ -238,7 +238,10 @@ test("a non-http(s) base URL is rejected at construction, before any request", (
     const mt = makeMockTransport(() => jsonResponse({}));
     assert.throws(
       () => new RequestEngine({ transport: mt.transport, baseUrl }),
-      (err: unknown) => err instanceof FimNetworkError && /Unsupported protocol/.test(err.message),
+      (err: unknown) =>
+        err instanceof FimValidationError &&
+        !(err instanceof FimNetworkError) &&
+        err.message === 'Invalid baseUrl: Only "http:" and "https:" base URLs are supported.',
       baseUrl,
     );
     assert.equal(mt.calls.length, 0);
@@ -249,7 +252,9 @@ test("an unparseable base URL is rejected at construction", () => {
   const mt = makeMockTransport(() => jsonResponse({}));
   assert.throws(
     () => new RequestEngine({ transport: mt.transport, baseUrl: "not a url" }),
-    (err: unknown) => err instanceof FimNetworkError && /Invalid base URL/.test(err.message),
+    (err: unknown) =>
+      err instanceof FimValidationError &&
+      err.message === "Invalid baseUrl: Expected a valid absolute URL (e.g. https://fimportal.de).",
   );
   assert.equal(mt.calls.length, 0);
 });
@@ -260,9 +265,11 @@ test("a base URL with a query or fragment is rejected at construction", () => {
     assert.throws(
       () => new RequestEngine({ transport: mt.transport, baseUrl }),
       (err: unknown) =>
-        err instanceof FimNetworkError && /Base URL must not contain a query or fragment/.test(err.message),
+        err instanceof FimValidationError &&
+        err.message === "Invalid baseUrl: A base URL cannot have a query (?) or fragment (#).",
       baseUrl,
     );
+    assert.equal(mt.calls.length, 0);
   }
 });
 

@@ -190,3 +190,27 @@ export const baseUrlWhitespaceProblem: Problem<unknown> = (value) => {
   if (/[\s\u0000-\u001f\u007f]/.test(value)) return "A base URL cannot contain whitespace or control characters.";
   return undefined;
 };
+
+/**
+ * Every rule for a base URL, in this order: a string; an absolute URL `new URL()`
+ * can parse; scheme `http:` or `https:` (the default transport also gates the
+ * scheme per hop, but a custom transport may not); no `?` or `#` (request paths
+ * are appended as a string, so `http://h/?x=1` would request `/?x=1/api/...` and
+ * `http://h/#f` would request `/`); then baseUrlWhitespaceProblem. The reasons
+ * never echo the value, so credentials in it cannot leak into a message.
+ * Userinfo is allowed: the repo deliberately sends it.
+ */
+export const baseUrlProblem: Problem<unknown> = (value) => {
+  if (typeof value !== "string") return "Expected a string.";
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return "Expected a valid absolute URL (e.g. https://fimportal.de).";
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return 'Only "http:" and "https:" base URLs are supported.';
+  }
+  if (/[?#]/.test(value)) return "A base URL cannot have a query (?) or fragment (#).";
+  return baseUrlWhitespaceProblem(value);
+};

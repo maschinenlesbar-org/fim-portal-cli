@@ -12,7 +12,7 @@ import {
 } from "../client/engine.js";
 import type { QueryParams } from "../client/query.js";
 import {
-  baseUrlWhitespaceProblem,
+  baseUrlProblem,
   headerValueProblem,
   intInRangeProblem,
   nonEmptyProblem,
@@ -92,36 +92,16 @@ export function parseHeaderValue(value: string): string {
 }
 
 /**
- * commander value-parser for `--base-url`: accept only a well-formed http(s) URL.
- *
- * The default transport already refuses non-http(s) schemes, but that check runs
- * at dial time and surfaces as a network error. Rejecting here at parse time gives
- * a clear usage error before any request is built, and — since this is the
- * reference implementation — makes the "http(s)-only" control real at the CLI
- * boundary rather than only inside one transport (a library consumer injecting a
- * custom Transport is still covered by the transport-level check). commander maps
- * every parse/usage error to exit 1 in this repo, matching the documented contract.
+ * commander value-parser for `--base-url`: the library's base-URL rule
+ * (baseUrlProblem: a parseable http(s) URL without a query, a fragment,
+ * whitespace or control characters), reported as a usage error before any request
+ * is built. The client applies the same rule when it is built, so the CLI holds no
+ * rules of its own. commander maps every parse/usage error to exit 1 in this repo,
+ * matching the documented contract.
  */
 export function parseBaseUrl(value: string): string {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new InvalidArgumentError("Expected a valid absolute URL (e.g. https://fimportal.de).");
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new InvalidArgumentError('Only "http:" and "https:" base URLs are supported.');
-  }
-  // Paths are appended to the base URL as a string, so a query or fragment would
-  // swallow every request path ("http://h/#f" requests "/" for every command).
-  if (/[?#]/.test(value)) {
-    throw new InvalidArgumentError("A base URL cannot have a query (?) or fragment (#).");
-  }
-  // The library's rule, checked the same way by the engine: new URL() trims
-  // surrounding whitespace and strips interior tabs/newlines silently, but the
-  // engine concatenates the raw value.
-  const whitespace = baseUrlWhitespaceProblem(value);
-  if (whitespace !== undefined) throw new InvalidArgumentError(whitespace);
+  const reason = baseUrlProblem(value);
+  if (reason !== undefined) throw new InvalidArgumentError(reason);
   return value;
 }
 

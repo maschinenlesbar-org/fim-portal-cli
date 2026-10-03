@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  baseUrlProblem,
   baseUrlWhitespaceProblem,
   assertEnumParams,
   assertNonBlankParams,
@@ -271,4 +272,39 @@ test("baseUrlWhitespaceProblem rejects surrounding whitespace and interior white
     assert.equal(baseUrlWhitespaceProblem(v), "A base URL cannot contain whitespace or control characters.", JSON.stringify(v));
   }
   assert.equal(baseUrlWhitespaceProblem(42), "Expected a string.");
+});
+
+// ---- base URL shape (PAT-2) ----
+
+test("baseUrlProblem applies every base-URL rule with the CLI's reasons", () => {
+  for (const v of ["https://fimportal.de", "https://mirror.example/fim/", "http://127.0.0.1:18113", "https://u:p@h.example"]) {
+    assert.equal(baseUrlProblem(v), undefined, v);
+  }
+  for (const [v, reason] of [
+    ["", "Expected a valid absolute URL (e.g. https://fimportal.de)."],
+    ["not a url", "Expected a valid absolute URL (e.g. https://fimportal.de)."],
+    ["ftp://h.example", 'Only "http:" and "https:" base URLs are supported.'],
+    ["file:///etc/passwd", 'Only "http:" and "https:" base URLs are supported.'],
+    ["https://h.example/?x=1", "A base URL cannot have a query (?) or fragment (#)."],
+    ["https://h.example/#f", "A base URL cannot have a query (?) or fragment (#)."],
+    ["https://h.example?", "A base URL cannot have a query (?) or fragment (#)."],
+    [" https://h.example", "A base URL cannot have surrounding whitespace."],
+    ["https://h.ex\tample", "A base URL cannot contain whitespace or control characters."],
+  ] as const) {
+    assert.equal(baseUrlProblem(v), reason, JSON.stringify(v));
+  }
+  assert.equal(baseUrlProblem(42), "Expected a string.");
+  assert.equal(baseUrlProblem(undefined), "Expected a string.");
+});
+
+test("validateBaseUrl returns the value without trailing slashes, or throws FimValidationError", () => {
+  assert.equal(lib.validateBaseUrl("https://h.example/fim//"), "https://h.example/fim");
+  assert.equal(lib.validateBaseUrl("https://h.example"), "https://h.example");
+  assert.throws(
+    () => lib.validateBaseUrl("ftp://h.example"),
+    (err: unknown) =>
+      err instanceof FimValidationError &&
+      err.message === 'Invalid baseUrl: Only "http:" and "https:" base URLs are supported.',
+  );
+  assert.equal(lib.baseUrlProblem, baseUrlProblem);
 });

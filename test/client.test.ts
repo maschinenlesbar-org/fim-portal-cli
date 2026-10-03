@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FimPortalClient } from "../src/client/client.js";
-import { FimError, FimNetworkError } from "../src/client/errors.js";
+import { FimError, FimValidationError } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse, queryOf } from "./helpers.js";
 import * as fx from "./fixtures.js";
 
@@ -184,7 +184,7 @@ test("the client rejects a non-http(s) base URL even with a custom transport", (
     const mt = makeMockTransport(() => jsonResponse({}));
     assert.throws(
       () => new FimPortalClient({ transport: mt.transport, baseUrl }),
-      (err: unknown) => err instanceof FimNetworkError && /Unsupported protocol/.test(err.message),
+      (err: unknown) => err instanceof FimValidationError && /Only "http:" and "https:"/.test(err.message),
       baseUrl,
     );
     assert.equal(mt.calls.length, 0);

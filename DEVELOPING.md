@@ -182,7 +182,8 @@ mocked client and captured output — no subprocess.
 **Error types.** [`errors.ts`](src/client/errors.ts): `FimApiError` (non-2xx,
 carries `status`/`detail`), `FimNetworkError` (transport failure/timeout),
 `FimParseError` (bad JSON), `FimValidationError` (an input refused before any
-request), all extending `FimError`. The CLI maps a `404` to exit code `4`, a
+request, including a bad client option such as the base URL), all extending
+`FimError`. The CLI maps a `404` to exit code `4`, a
 `FimValidationError` to the usage-error code `1` (`Error: <message>`), other
 errors to `1`.
 
@@ -246,12 +247,19 @@ What the library rejects with `FimValidationError`, before any request:
   `fim-portal-cli`. The CLI's `--user-agent` parser applies the same rule. Should
   an injected header still be one Node refuses, the default transport rejects with
   `FimNetworkError` ("Invalid request: ...") rather than a raw `TypeError`.
-- **Whitespace in the base URL** (thrown by the constructor,
-  `baseUrlWhitespaceProblem`): surrounding whitespace, or whitespace or a control
-  character anywhere inside. `new URL()` trims and strips those silently, but the
-  engine concatenates request paths onto the raw string, so `"https://h/ "` would
-  request `/%20/api/...`. The check runs on the raw `baseUrl`, after the scheme and
-  query/fragment checks; the CLI's `--base-url` parser applies the same rule.
+- **An invalid base URL** (thrown by the constructor, `validateBaseUrl` /
+  `baseUrlProblem`): one `new URL()` cannot parse, a scheme other than `http:` or
+  `https:`, a query or fragment (request paths are appended as a string, so
+  `http://h/?x=1` would request `/?x=1/api/...`), surrounding whitespace, or
+  whitespace or a control character anywhere inside (`baseUrlWhitespaceProblem`:
+  `new URL()` trims and strips those silently, but the engine concatenates request
+  paths onto the raw string, so `"https://h/ "` would request `/%20/api/...`). The
+  check runs on the raw `baseUrl`, before trailing slashes are stripped, and the
+  reasons never echo the value. A bad base URL is a configuration error, not a
+  transport failure, so it is a `FimValidationError`, no longer a
+  `FimNetworkError`; the default transport's per-hop scheme check, which runs at
+  request time, still throws `FimNetworkError`. The CLI's `--base-url` parser
+  calls `baseUrlProblem` and has no rules of its own.
 
 **Security invariant — response data is render-only.** The JSON body is decoded
 with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.

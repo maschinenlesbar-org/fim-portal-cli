@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FimPortalClient } from "../src/client/client.js";
-import { FimValidationError } from "../src/client/errors.js";
+import { FimNetworkError, FimValidationError } from "../src/client/errors.js";
 import type { Transport } from "../src/client/http.js";
 import { parity, requestShapes, jsonResponse, rawResponse } from "./helpers.js";
 
@@ -357,3 +357,36 @@ test("parity: a clean base URL with a trailing slash sends the identical request
   assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
   assert.equal(lib.requests[0]?.url, "https://x.example/api/v1/schemas/S1");
 });
+
+// ---- Finding #9 (PAT-2): one set of base-URL rules, one validation error class ----
+
+const badBaseUrlCases: Array<[string, string]> = [
+  ["ftp://x.example", 'Only "http:" and "https:" base URLs are supported.'],
+  ["file:///etc/passwd", 'Only "http:" and "https:" base URLs are supported.'],
+  ["https://x.example/?q=1", "A base URL cannot have a query (?) or fragment (#)."],
+  ["https://x.example/#frag", "A base URL cannot have a query (?) or fragment (#)."],
+  ["https://u:secret@x.example/?q=1", "A base URL cannot have a query (?) or fragment (#)."],
+  ["", "Expected a valid absolute URL (e.g. https://fimportal.de)."],
+  ["not a url with secret", "Expected a valid absolute URL (e.g. https://fimportal.de)."],
+];
+
+for (const [baseUrl, reason] of badBaseUrlCases) {
+  test(`parity: invalid base URL ${JSON.stringify(baseUrl)} is a FimValidationError with the CLI's reason`, async () => {
+    const escaped = reason.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const { cli, lib } = await parity(
+      ["--base-url", baseUrl, "schemas", "versions", "S1"],
+      (t) => new FimPortalClient({ baseUrl, transport: t }).schemas.versions("S1"),
+    );
+    assert.equal(cli.code, 1);
+    assert.equal(cli.requests.length, 0);
+    assert.match(cli.err, new RegExp(escaped));
+    assert.equal(lib.ok, false);
+    if (!lib.ok) {
+      assert.ok(lib.error instanceof FimValidationError, String(lib.error));
+      assert.ok(!(lib.error instanceof FimNetworkError), "a configuration error is not a transport failure");
+      assert.equal((lib.error as Error).message, `Invalid baseUrl: ${reason}`);
+      assert.doesNotMatch((lib.error as Error).message, /secret/);
+    }
+    assert.equal(lib.requests.length, 0);
+  });
+}
