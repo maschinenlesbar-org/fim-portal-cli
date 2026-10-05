@@ -255,7 +255,13 @@ What the library rejects with `FimValidationError`, before any request:
   `new URL()` trims and strips those silently, but the engine concatenates request
   paths onto the raw string, so `"https://h/ "` would request `/%20/api/...`). The
   check runs on the raw `baseUrl`, before trailing slashes are stripped, and the
-  reasons never echo the value. A bad base URL is a configuration error, not a
+  reasons never echo the value. The CLI also redacts on output: `run.ts`
+  (`withRedactedOutput`) takes the exact userinfo of every argument (`credentialsIn`,
+  exported) and replaces it with `***` in everything it prints — commander's usage
+  errors, which echo rejected values (`argument '<url>' is invalid`, `unknown command
+  '<url>'`), and the help that follows them — so a password with spaces, quotes, `#`,
+  `?` or `/` is caught as well as an ordinary one. `redactUrl` falls back to the same
+  text-based cut (`redactCredentials`) for a value that doesn't parse as a URL. A bad base URL is a configuration error, not a
   transport failure, so it is a `FimValidationError`, no longer a
   `FimNetworkError`; the default transport's per-hop scheme check, which runs at
   request time, still throws `FimNetworkError`. The CLI's `--base-url` parser

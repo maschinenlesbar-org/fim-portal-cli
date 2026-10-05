@@ -22,6 +22,8 @@ export {
   FimNetworkError,
   FimParseError,
   FimValidationError,
+  credentialsIn,
+  redactCredentials,
   redactUrl,
 } from "./errors.js";
 export {

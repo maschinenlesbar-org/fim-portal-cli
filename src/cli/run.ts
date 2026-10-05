@@ -5,7 +5,13 @@
 import { CommanderError, type Command } from "commander";
 import { buildProgram, defaultDeps } from "./program.js";
 import type { CliDeps } from "./io.js";
-import { FimApiError, FimError, FimValidationError } from "../client/errors.js";
+import {
+  FimApiError,
+  FimError,
+  FimValidationError,
+  credentialsIn,
+  redactCredentials,
+} from "../client/errors.js";
 
 /** commander's exit code for a usage error (a rejected option value), kept for library rejections. */
 const USAGE_EXIT_CODE = 1;
@@ -24,7 +30,51 @@ function configureTree(command: Command, deps: CliDeps): void {
   for (const child of command.commands) configureTree(child, deps);
 }
 
+/**
+ * Replace the userinfo of every URL in `text` with `***`, the form `redactUrl` gives
+ * (`https://user:secret@host` becomes `https://***@host`). Text-based, so it also
+ * covers a URL that does not parse; a backstop behind the exact-string redaction.
+ */
+export function redactUserinfo(text: string): string {
+  return text.replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/?#']*@/gi, "$1***@");
+}
+
+/**
+ * `deps` with an `io` whose `out` and `err` redact the credentials of every argument from
+ * everything they print. Commander echoes rejected values in its errors (`argument '<url>'
+ * is invalid`, `unknown command '<url>'`) and the help follows them: whatever path a
+ * credential takes to stdout or stderr, the exact userinfo (as `credentialsIn` finds it, plus
+ * its JSON-quoted form) is replaced by `***`. A pattern alone can't delimit a password with
+ * spaces, quotes, `#`, `?` or `/`; the exact strings can. Downloads (`outBinary`,
+ * `writeFile`) are data and pass unchanged, as does all output when no argument carries
+ * credentials.
+ */
+export function withRedactedOutput(deps: CliDeps, argv: readonly string[]): CliDeps {
+  // An `--option=value` token is echoed as its value alone.
+  const values = argv.map((token) => (token.startsWith("-") && token.includes("=") ? token.slice(token.indexOf("=") + 1) : token));
+  const secrets = new Set<string>();
+  for (const source of [...argv, ...values]) {
+    for (const secret of credentialsIn(source)) {
+      secrets.add(secret);
+      secrets.add(JSON.stringify(secret).slice(1, -1));
+    }
+  }
+  if (secrets.size === 0) return deps;
+  const list = [...secrets];
+  const redact = (text: string): string => redactUserinfo(redactCredentials(text, list));
+  const io = deps.io;
+  return {
+    ...deps,
+    io: {
+      ...io,
+      out: (text) => io.out(redact(text)),
+      err: (text) => io.err(redact(text)),
+    },
+  };
+}
+
 export async function run(argv: string[], deps: CliDeps = defaultDeps): Promise<number> {
+  deps = withRedactedOutput(deps, argv);
   const program = buildProgram(deps);
   configureTree(program, deps);
 
