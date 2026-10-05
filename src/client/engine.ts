@@ -515,20 +515,47 @@ export class RequestEngine {
     });
   }
 
-  /** Perform a GET expecting JSON and parse it into `T`. */
-  async getJson<T>(path: string, query?: QueryParams): Promise<T> {
+  /**
+   * Perform a GET expecting JSON and parse it into `T`. With `shape`, the parsed value
+   * must have the documented form (responseShapeProblem), or the call throws a
+   * FimParseError: a `null`, `{}` or an error envelope answered with a 2xx would
+   * otherwise be printed as data, or read as "nothing found".
+   */
+  async getJson<T>(path: string, query?: QueryParams, shape?: ResponseShape): Promise<T> {
     const res = await this.request("GET", path, { query, accept: "application/json" });
     const text = decodeBody(res.data, res.contentType, path);
+    let value: unknown;
     try {
-      return JSON.parse(text) as T;
+      value = JSON.parse(text);
     } catch (cause) {
-      throw new FimParseError(`Failed to parse JSON response from ${path}`, { cause });
+      // An HTML maintenance or proxy page is the usual non-JSON answer: name its type,
+      // so it reads as an upstream problem rather than a client bug.
+      const type = res.contentType.split(";")[0]?.trim() ?? "";
+      const hint = type !== "" && !/json/i.test(type) ? `: expected JSON, got Content-Type "${cleanDetail(type)}"` : "";
+      throw new FimParseError(`Failed to parse JSON response from ${path}${hint}`, { cause });
     }
+    const problem = shape === undefined ? undefined : responseShapeProblem(value, shape);
+    if (problem !== undefined) {
+      throw new FimParseError(`Unexpected response from ${path} (HTTP ${res.status}): ${problem}`);
+    }
+    return value as T;
   }
 
-  /** Perform a GET returning the raw bytes (XML / PDF / CSV downloads). */
+  /**
+   * Perform a GET returning the raw bytes (XML / PDF / CSV downloads). An HTML page
+   * answered with a 2xx (a maintenance or login page, a proxy's error page) is a
+   * FimParseError, not a download: no endpoint serves HTML, and the CLI would
+   * otherwise save it over the user's file with exit 0.
+   */
   async getRaw(path: string, accept: string, query?: QueryParams): Promise<RawResponse> {
-    return this.request("GET", path, { query, accept });
+    const res = await this.request("GET", path, { query, accept });
+    if (isHtml(res)) {
+      throw new FimParseError(
+        `Unexpected response from ${path} (HTTP ${res.status}): expected ${accept}, got an HTML page` +
+          (res.contentType === "" ? "" : ` (Content-Type "${cleanDetail(res.contentType)}")`),
+      );
+    }
+    return res;
   }
 
   private toApiError(
@@ -564,6 +591,58 @@ export class RequestEngine {
       ...(retry.retryAfterMs === undefined ? {} : { retryAfterMs: retry.retryAfterMs, maxRetryAfterMs: MAX_RETRY_AFTER_MS }),
     });
   }
+}
+
+/**
+ * The documented form of a JSON answer, checked by `getJson`:
+ * - `"page"`: an offset-paginated envelope, an object with an `items` array and a numeric
+ *   `total_count` (every search endpoint and the code lists);
+ * - `"cursor"`: a cursor-paginated envelope, an object with an `items` array (the XZuFi
+ *   entity listings);
+ * - `"list"`: an array (the `versions` endpoints);
+ * - `"record"`: a non-empty object, not an array (a single record, a quality report).
+ */
+export type ResponseShape = "page" | "cursor" | "list" | "record";
+
+/** Why `value` does not have the documented form `shape`, or undefined when it does. */
+export function responseShapeProblem(value: unknown, shape: ResponseShape): string | undefined {
+  const isObject = typeof value === "object" && value !== null && !Array.isArray(value);
+  const describe = (): string =>
+    value === null ? "null" : Array.isArray(value) ? "an array" : isObject ? "an object" : `a ${typeof value}`;
+  switch (shape) {
+    case "list":
+      return Array.isArray(value) ? undefined : `expected an array, got ${describe()}.`;
+    case "record":
+      if (!isObject) return `expected an object, got ${describe()}.`;
+      return Object.keys(value).length === 0 ? "expected a record, got an empty object." : undefined;
+    case "page":
+    case "cursor": {
+      if (!isObject) return `expected a result page, got ${describe()}.`;
+      const page = value as { items?: unknown; total_count?: unknown };
+      if (!Array.isArray(page.items)) return "expected a result page with an items array.";
+      if (shape === "page" && (typeof page.total_count !== "number" || !Number.isFinite(page.total_count))) {
+        return "expected a result page with a numeric total_count.";
+      }
+      return undefined;
+    }
+  }
+}
+
+/** True for a response that is an HTML page: by its Content-Type, or by its first bytes. */
+function isHtml(res: RawResponse): boolean {
+  const type = res.contentType.split(";")[0]?.trim().toLowerCase() ?? "";
+  if (type === "text/html" || type === "application/xhtml+xml") return true;
+  const head = res.data.subarray(0, 512).toString("latin1").replace(/^\uFEFF|^\xEF\xBB\xBF/, "").trimStart().toLowerCase();
+  return head.startsWith("<!doctype html") || head.startsWith("<html");
+}
+
+/** Longest server text (in characters) an error message keeps; a longer one ends in "…". */
+export const MAX_DETAIL_LENGTH = 500;
+
+/** sanitizeServerText, then cut at MAX_DETAIL_LENGTH characters. */
+export function cleanDetail(text: string): string {
+  const clean = sanitizeServerText(text);
+  return clean.length > MAX_DETAIL_LENGTH ? `${clean.slice(0, MAX_DETAIL_LENGTH)}…` : clean;
 }
 
 /**

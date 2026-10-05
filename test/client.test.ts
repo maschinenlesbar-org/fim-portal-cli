@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FimPortalClient } from "../src/client/client.js";
-import { FimError, FimValidationError } from "../src/client/errors.js";
+import { FimError, FimParseError, FimValidationError } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse, queryOf } from "./helpers.js";
 import * as fx from "./fixtures.js";
 
@@ -62,7 +62,10 @@ const cases: Array<{ name: string; run: (c: FimPortalClient) => Promise<unknown>
 
 for (const tc of cases) {
   test(`client maps ${tc.name} to GET ${tc.url.replace(BASE, "")}`, async () => {
-    const { client, mt } = clientReturning({}, tc.name.includes("download") || tc.name.includes("Pdf") ? "application/xml" : "application/json");
+    const download = tc.name.includes("download") || tc.name.includes("Pdf");
+    // A body of the documented shape: an array for `versions`, a record otherwise.
+    const body = download ? "<xml/>" : tc.name.endsWith(".versions") ? [] : { fim_id: "X1" };
+    const { client, mt } = clientReturning(body, download ? "application/xml" : "application/json");
     await tc.run(client);
     assert.equal(mt.last().method, "GET");
     assert.equal(mt.last().url, tc.url);
@@ -127,7 +130,7 @@ test("raw download returns the XML bytes untouched", async () => {
 });
 
 test("path segments are URL-encoded", async () => {
-  const { client, mt } = clientReturning({});
+  const { client, mt } = clientReturning({ fim_id: "F1" });
   await client.fields.get("urn:xoev-de:fim", "F1", "1.0");
   assert.equal(
     mt.last().url,
@@ -211,9 +214,53 @@ test("an id of . or .. is rejected before any request instead of re-targeting th
 });
 
 test("ids that merely contain dots are still encoded and sent", async () => {
-  const { client, mt } = clientReturning({});
+  const { client, mt } = clientReturning({ fim_id: "S1" });
   await client.schemas.get("S1", "1.0.0");
   await client.schemas.get("...", "%2e%2e");
   assert.equal(mt.calls[0]?.url, `${BASE}/api/v1/schemas/S1/1.0.0`);
   assert.equal(mt.calls[1]?.url, `${BASE}/api/v1/schemas/.../%252e%252e`);
+});
+
+// ---- 2xx bodies must have the documented shape (P9) ----
+
+test("a 2xx JSON body without the documented shape is a FimParseError, never data", async () => {
+  const calls: Array<[string, (c: FimPortalClient) => Promise<unknown>, unknown[]]> = [
+    ["schemas.search (page)", (c) => c.schemas.search(), [null, {}, [], "text", 42, { items: "x" }, { error: "boom" }, { items: [] }]],
+    ["processes.search (page)", (c) => c.processes.search(), [null, {}, { items: null, total_count: 0 }]],
+    ["organizationalUnits.list (cursor)", (c) => c.organizationalUnits.list(), [null, {}, { items: {} }]],
+    ["schemas.versions (list)", (c) => c.schemas.versions("S1"), [null, {}, { items: [] }, "x"]],
+    ["schemas.get (record)", (c) => c.schemas.get("S1"), [null, {}, [], "x", 0]],
+    ["processes.get (record)", (c) => c.processes.get("P1", "1.0", "101", "17"), [null, {}, []]],
+  ];
+  for (const [label, call, bodies] of calls) {
+    for (const body of bodies) {
+      const { client } = clientReturning(body);
+      await assert.rejects(
+        call(client),
+        (e: unknown) => e instanceof FimParseError && /Unexpected response from/.test(e.message),
+        `${label}: ${JSON.stringify(body)}`,
+      );
+    }
+  }
+  // The documented shapes pass.
+  assert.deepEqual(await clientReturning(fx.schemaSearchResult).client.schemas.search(), fx.schemaSearchResult);
+  assert.deepEqual(await clientReturning(fx.orgUnitListResult).client.organizationalUnits.list(), fx.orgUnitListResult);
+  assert.deepEqual(await clientReturning([fx.schemaOut]).client.schemas.versions("S1"), [fx.schemaOut]);
+});
+
+test("an HTML page answered with a 2xx to a download is a FimParseError", async () => {
+  for (const [body, type] of [
+    ["<html>oops</html>", "text/html; charset=utf-8"],
+    ["<!DOCTYPE html><html><body>maintenance</body></html>", "application/pdf"],
+    ["  <html lang=de>", ""],
+  ] as const) {
+    const { client } = clientReturning(body, type);
+    await assert.rejects(
+      client.processes.downloadReport("P1", "1.0", "101", "17"),
+      (e: unknown) => e instanceof FimParseError && /expected application\/pdf, got an HTML page/.test(e.message),
+      `${type}: ${body}`,
+    );
+  }
+  const { client } = clientReturning("%PDF-1.4", "application/pdf");
+  assert.equal((await client.processes.downloadReport("P1", "1.0", "101", "17")).data.toString(), "%PDF-1.4");
 });

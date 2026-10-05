@@ -253,7 +253,10 @@ and diagnostics go to stderr, so piping stdout into `jq` stays clean.
 > **`-o` overwrites without asking.** If the target file already exists it is
 > replaced (the bytes are fully buffered first, so a failed download never leaves
 > a half-written file). Pick a fresh path, or check for the file yourself, if you
-> need to avoid clobbering existing data.
+> need to avoid clobbering existing data. An answer that isn't the data asked for
+> fails (exit `1`) without touching the file: an HTML page (a maintenance or proxy
+> page) for a download, or a JSON body without the documented shape (`null`, `{}`,
+> a page without `items`).
 
 ```bash
 # How many schemas match a query?

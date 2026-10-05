@@ -154,17 +154,17 @@ class SchemasResource {
   async search(params: SchemaSearchParams = {}): Promise<PaginatedResult<SchemaOut>> {
     assertEnumParams(params ?? {}, SCHEMA_SEARCH_ENUMS);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v1/schemas", params as QueryParams);
+    return this.e.getJson("/api/v1/schemas", params as QueryParams, "page");
   }
 
   /** All versions of a schema, ascending. */
   async versions(fimId: string): Promise<SchemaOut[]> {
-    return this.e.getJson(`/api/v1/schemas/${pathSegment("fimId", fimId)}`);
+    return this.e.getJson(`/api/v1/schemas/${pathSegment("fimId", fimId)}`, undefined, "list");
   }
 
   /** A full schema. Pass version `"latest"` for the newest. */
   async get(fimId: string, fimVersion = "latest"): Promise<FullSchemaOut> {
-    return this.e.getJson(`/api/v1/schemas/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`);
+    return this.e.getJson(`/api/v1/schemas/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`, undefined, "record");
   }
 
   async downloadXdf(fimId: string, fimVersion = "latest"): Promise<RawResponse> {
@@ -172,7 +172,7 @@ class SchemasResource {
   }
 
   async qualityReport(fimId: string, fimVersion = "latest"): Promise<QualityReport> {
-    return this.e.getJson(`/api/v1/schemas/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}/quality-report`);
+    return this.e.getJson(`/api/v1/schemas/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}/quality-report`, undefined, "record");
   }
 }
 
@@ -183,15 +183,15 @@ class DocumentProfilesResource {
   async search(params: DocumentProfileSearchParams = {}): Promise<PaginatedResult<SteckbriefOut>> {
     assertEnumParams(params ?? {}, DOCUMENT_PROFILE_SEARCH_ENUMS);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v1/document-profiles", params as QueryParams);
+    return this.e.getJson("/api/v1/document-profiles", params as QueryParams, "page");
   }
 
   async versions(fimId: string): Promise<SteckbriefOut[]> {
-    return this.e.getJson(`/api/v1/document-profiles/${pathSegment("fimId", fimId)}`);
+    return this.e.getJson(`/api/v1/document-profiles/${pathSegment("fimId", fimId)}`, undefined, "list");
   }
 
   async get(fimId: string, fimVersion = "latest"): Promise<FullSteckbriefOut> {
-    return this.e.getJson(`/api/v1/document-profiles/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`);
+    return this.e.getJson(`/api/v1/document-profiles/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`, undefined, "record");
   }
 
   async downloadXdf(fimId: string, fimVersion = "latest"): Promise<RawResponse> {
@@ -209,15 +209,15 @@ class FieldsResource {
   async search(params: FieldSearchParams = {}): Promise<PaginatedResult<DatenfeldOut>> {
     assertEnumParams(params ?? {}, FIELD_SEARCH_ENUMS);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v1/fields", params as QueryParams);
+    return this.e.getJson("/api/v1/fields", params as QueryParams, "page");
   }
 
   async versions(namespace: string, fimId: string): Promise<DatenfeldOut[]> {
-    return this.e.getJson(`/api/v1/fields/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}`);
+    return this.e.getJson(`/api/v1/fields/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}`, undefined, "list");
   }
 
   async get(namespace: string, fimId: string, fimVersion = "latest"): Promise<FullDatenfeldOut> {
-    return this.e.getJson(`/api/v1/fields/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`);
+    return this.e.getJson(`/api/v1/fields/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`, undefined, "record");
   }
 
   async downloadXdf(namespace: string, fimId: string, fimVersion = "latest"): Promise<RawResponse> {
@@ -235,15 +235,15 @@ class GroupsResource {
   async search(params: GroupSearchParams = {}): Promise<PaginatedResult<DatenfeldgruppeOut>> {
     assertEnumParams(params ?? {}, GROUP_SEARCH_ENUMS);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v1/groups", params as QueryParams);
+    return this.e.getJson("/api/v1/groups", params as QueryParams, "page");
   }
 
   async versions(namespace: string, fimId: string): Promise<DatenfeldgruppeOut[]> {
-    return this.e.getJson(`/api/v1/groups/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}`);
+    return this.e.getJson(`/api/v1/groups/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}`, undefined, "list");
   }
 
   async get(namespace: string, fimId: string, fimVersion = "latest"): Promise<FullDatenfeldgruppeOut> {
-    return this.e.getJson(`/api/v1/groups/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`);
+    return this.e.getJson(`/api/v1/groups/${pathSegment("namespace", namespace)}/${pathSegment("fimId", fimId)}/${pathSegment("fimVersion", fimVersion)}`, undefined, "record");
   }
 
   async downloadXdf(namespace: string, fimId: string, fimVersion = "latest"): Promise<RawResponse> {
@@ -261,11 +261,11 @@ class ServiceProfilesResource {
   async search(params: LeistungSteckbriefSearchParams = {}): Promise<JsonObject> {
     assertEnumParams(params ?? {}, SERVICE_PROFILE_SEARCH_ENUMS);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/leistung-steckbriefe", params as QueryParams);
+    return this.e.getJson("/api/v0/leistung-steckbriefe", params as QueryParams, "page");
   }
 
   async get(leistungsschluessel: string): Promise<LeistungSteckbrief> {
-    return this.e.getJson(`/api/v0/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}`);
+    return this.e.getJson(`/api/v0/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}`, undefined, "record");
   }
 
   async downloadXzufi(leistungsschluessel: string): Promise<RawResponse> {
@@ -289,12 +289,14 @@ class ServiceTextsResource {
   ): Promise<PaginatedResult<LeistungStammtextOut>> {
     assertEnumParams(params ?? {}, SERVICE_TEXT_SEARCH_ENUMS);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/leistung-stammtexte", params as QueryParams);
+    return this.e.getJson("/api/v0/leistung-stammtexte", params as QueryParams, "page");
   }
 
   async get(redaktionId: string, leistungId: string, source: XzufiSource): Promise<FullLeistungStammtextOut> {
     return this.e.getJson(
       `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}`,
+      undefined,
+      "record",
     );
   }
 
@@ -321,6 +323,8 @@ class ServiceTextsResource {
   async parsedXzufi(redaktionId: string, leistungId: string, source: XzufiSource): Promise<JsonObject> {
     return this.e.getJson(
       `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}/parsed-xzufi`,
+      undefined,
+      "record",
     );
   }
 }
@@ -335,7 +339,7 @@ class XzufiEntityResource<T> {
 
   async list(params: XzufiEntityListParams = {}): Promise<CursorPaginationResult<T>> {
     assertPagination(params ?? {});
-    return this.e.getJson(this.listPath, params as QueryParams);
+    return this.e.getJson(this.listPath, params as QueryParams, "cursor");
   }
 
   async downloadXzufi(redaktionId: string, id: string): Promise<RawResponse> {
@@ -350,11 +354,11 @@ class ProcessClassesResource {
   async search(params: ProcessClassSearchParams = {}): Promise<JsonObject> {
     assertEnumParams(params ?? {}, PROCESS_CLASS_SEARCH_ENUMS);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/processclasses", params as QueryParams);
+    return this.e.getJson("/api/v0/processclasses", params as QueryParams, "page");
   }
 
   async get(id: string, version: string): Promise<ProcessClass> {
-    return this.e.getJson(`/api/v0/processclasses/${pathSegment("id", id)}/${pathSegment("version", version)}`);
+    return this.e.getJson(`/api/v0/processclasses/${pathSegment("id", id)}/${pathSegment("version", version)}`, undefined, "record");
   }
 
   /**
@@ -377,11 +381,11 @@ class ProcessesResource {
   async search(params: ProcessSearchParams = {}): Promise<JsonObject> {
     assertEnumParams(params ?? {}, PROCESS_SEARCH_ENUMS);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/processes", params as QueryParams);
+    return this.e.getJson("/api/v0/processes", params as QueryParams, "page");
   }
 
   async get(id: string, version: string, stufe: Detaillierungsstufe, kodierung: string): Promise<Process> {
-    return this.e.getJson(processPath(id, version, stufe, kodierung));
+    return this.e.getJson(processPath(id, version, stufe, kodierung), undefined, "record");
   }
 
   async downloadXprozess(
@@ -442,7 +446,7 @@ class CodeListsResource {
 
   async list(params: Pagination = {}): Promise<PaginatedResult<CodeList>> {
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/code-lists", params as QueryParams);
+    return this.e.getJson("/api/v0/code-lists", params as QueryParams, "page");
   }
 }
 

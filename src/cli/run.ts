@@ -53,15 +53,22 @@ export function withRedactedOutput(deps: CliDeps, argv: readonly string[]): CliD
   // An `--option=value` token is echoed as its value alone.
   const values = argv.map((token) => (token.startsWith("-") && token.includes("=") ? token.slice(token.indexOf("=") + 1) : token));
   const secrets = new Set<string>();
+  // A URL given as an id is echoed percent-encoded in a request path (`alice%3Apw%40host`).
+  const encoded = new Set<string>();
   for (const source of [...argv, ...values]) {
     for (const secret of credentialsIn(source)) {
       secrets.add(secret);
       secrets.add(JSON.stringify(secret).slice(1, -1));
+      encoded.add(encodeURIComponent(secret));
     }
   }
   if (secrets.size === 0) return deps;
   const list = [...secrets];
-  const redact = (text: string): string => redactUserinfo(redactCredentials(text, list));
+  const redact = (text: string): string => {
+    let out = redactUserinfo(redactCredentials(text, list));
+    for (const secret of encoded) out = out.split(`${secret}%40`).join("***%40");
+    return out;
+  };
   const io = deps.io;
   return {
     ...deps,

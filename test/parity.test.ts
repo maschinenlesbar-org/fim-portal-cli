@@ -62,7 +62,7 @@ test("parity: a non-blank filter sends the identical request from CLI and librar
   const { cli, lib } = await parity(
     ["schemas", "search", "--name", "Wohn", "--nummernkreis", "07"],
     (t) => client(t).schemas.search({ name: "Wohn", nummernkreis: ["07"] }),
-    () => jsonResponse({ items: [] }),
+    () => jsonResponse({ items: [], total_count: 0 }),
   );
   assert.equal(cli.code, 0);
   assert.ok(lib.ok);
@@ -204,7 +204,7 @@ test("parity: valid enum values send the identical request from CLI and library"
       (t: Transport) => client(t).serviceProfiles.search({ leistungstyp: ["lo"], sprache: "Deutsch" }),
     ],
   ] as const) {
-    const { cli, lib } = await parity([...argv], call, () => jsonResponse({ items: [] }));
+    const { cli, lib } = await parity([...argv], call, () => jsonResponse({ items: [], total_count: 0 }));
     assert.equal(cli.code, 0, argv.join(" "));
     assert.ok(lib.ok, argv.join(" "));
     assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests), argv.join(" "));
@@ -242,7 +242,7 @@ test("parity: in-range pagination sends the identical request from CLI and libra
     [["code-lists", "--offset", "0", "--limit", "200"], (t: Transport) => client(t).codeLists.list({ offset: 0, limit: 200 })],
     [["specializations", "list", "--cursor", "0", "--limit", "1"], (t: Transport) => client(t).specializations.list({ cursor: 0, limit: 1 })],
   ] as const) {
-    const { cli, lib } = await parity([...argv], call, () => jsonResponse({ items: [] }));
+    const { cli, lib } = await parity([...argv], call, () => jsonResponse({ items: [], total_count: 0 }));
     assert.equal(cli.code, 0, argv.join(" "));
     assert.ok(lib.ok, argv.join(" "));
     assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests), argv.join(" "));

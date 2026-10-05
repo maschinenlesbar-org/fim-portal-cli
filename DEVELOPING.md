@@ -299,8 +299,19 @@ library, the engine keeps the base URL in a real `#private` field, so
 scrubs the base URL's userinfo (raw and percent-decoded) from error bodies and
 details, transport error text and the `cause` chain it attaches.
 
+**Response shape (2xx).** `getJson` checks the documented envelope of every JSON
+answer (`responseShapeProblem`): a search or `codeLists.list` must return an object
+with an `items` array and a numeric `total_count`, a cursor listing an object with an
+`items` array, a `versions` call an array, and a single record a non-empty object.
+Anything else — `null`, `{}`, an error envelope, a bare string — is a `FimParseError`
+(`Unexpected response from <path> (HTTP 200): …`), never printed as data or read as
+"nothing found". `getRaw` refuses an HTML page (by Content-Type, or a body that starts
+`<!doctype html`/`<html`) answered to a download, so `-o` doesn't save a maintenance
+page over the user's file.
+
 **Security invariant — response data is render-only.** The JSON body is decoded
-with `JSON.parse(text) as T` and is deliberately *not* runtime-schema-validated.
+with `JSON.parse(text) as T`; only its envelope is checked (above), the records
+themselves are deliberately *not* runtime-schema-validated.
 That cast is only safe because every parsed value flows into exactly two sinks:
 `JSON.stringify` re-rendering (stdout) and the human-readable error `detail`
 string (sanitised of control characters in `engine.ts` before it reaches stderr).

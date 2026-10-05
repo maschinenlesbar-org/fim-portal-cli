@@ -229,7 +229,7 @@ test("--user-agent with control or non-Latin-1 characters is a usage error, not 
 
 test("a deeply nested response fails pretty-printing cleanly and still prints with --compact", async () => {
   const depth = 200_000;
-  const deep = () => rawResponse("[".repeat(depth) + "]".repeat(depth), "application/json");
+  const deep = () => rawResponse('{"x":' + "[".repeat(depth) + "]".repeat(depth) + "}", "application/json");
   const pretty = makeCli(deep);
   assert.equal(await run(["schemas", "get", "X"], pretty.deps), 1);
   assert.deepEqual(pretty.out, []);
@@ -239,7 +239,7 @@ test("a deeply nested response fails pretty-printing cleanly and still prints wi
   // should a runtime's stack still be too small, it must fail just as cleanly.
   const compact = makeCli(deep);
   const code = await run(["--compact", "schemas", "get", "X"], compact.deps);
-  if (code === 0) assert.equal(compact.out.join("").length, 2 * depth);
+  if (code === 0) assert.equal(compact.out.join("").length, 2 * depth + 6);
   else assert.equal(compact.err.join("\n"), "Error: The response is nested too deeply to print.");
 });
 
@@ -349,14 +349,14 @@ test("organizational-units and online-services list forward --fts-query", async 
 });
 
 test("specializations list has no --fts-query (the endpoint does not support it)", async () => {
-  const cli = makeCli(() => jsonResponse({ items: [] }));
+  const cli = makeCli(() => jsonResponse({ items: [], total_count: 0 }));
   const code = await run(["specializations", "list", "--fts-query", "x"], cli.deps);
   assert.equal(code, 1);
   assert.equal(cli.mt.calls.length, 0);
 });
 
 test("process-classes search forwards --is-latest", async () => {
-  const cli = makeCli(() => jsonResponse({ items: [] }));
+  const cli = makeCli(() => jsonResponse({ items: [], total_count: 0 }));
   const code = await run(["process-classes", "search", "--is-latest"], cli.deps);
   assert.equal(code, 0);
   assert.equal(new URL(cli.mt.last().url).searchParams.get("is_latest"), "true");
@@ -387,7 +387,7 @@ test("unknown command is a usage error (non-zero exit, no HTTP call)", async () 
 // ---- H1: service searches expose order_by and lagen_portalverbund ----
 
 test("service-profiles search forwards --order-by and --lagen-portalverbund", async () => {
-  const cli = makeCli(() => jsonResponse({ items: [] }));
+  const cli = makeCli(() => jsonResponse({ items: [], total_count: 0 }));
   const code = await run(
     [
       "service-profiles",
@@ -406,7 +406,7 @@ test("service-profiles search forwards --order-by and --lagen-portalverbund", as
 });
 
 test("service-profiles search rejects an order value from a different enum", async () => {
-  const cli = makeCli(() => jsonResponse({ items: [] }));
+  const cli = makeCli(() => jsonResponse({ items: [], total_count: 0 }));
   // "name_asc" is a Datenfelder order, not a Leistungsteckbrief order.
   const code = await run(["service-profiles", "search", "--order-by", "name_asc"], cli.deps);
   assert.notEqual(code, 0);
@@ -704,3 +704,11 @@ for (const [input, argv] of blankCases) {
     assert.equal(cli.mt.calls.length, 0);
   });
 }
+
+test("a download answered with an HTML page fails and writes no file", async () => {
+  const cli = makeCli(() => rawResponse("<html>oops</html>", "text/html"));
+  const code = await run(["-o", "report.pdf", "processes", "report", "P1", "1.0", "101", "17"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.files.size, 0);
+  assert.match(cli.err.join("\n"), /expected application\/pdf, got an HTML page \(Content-Type "text\/html"\)/);
+});
