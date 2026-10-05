@@ -33,7 +33,7 @@ straight into [`jq`](https://jqlang.github.io/jq/) or save to a file.
 npm i -g @maschinenlesbar.org/fim-portal-cli
 ```
 
-This installs the **`fim-portal`** command. Requires **Node.js 20+**.
+This installs the **`fim-portal`** command. Requires **Node.js 22.12+**.
 
 Check it works:
 
@@ -295,7 +295,8 @@ stderr's reader is gone (`2>&1 | true`), a failed run still exits with its own c
 ## Troubleshooting
 
 - **`command not found: fim-portal`** — the global npm bin directory isn't on your
-  `PATH`. Run `npm bin -g` to find it and add it, or run via
+  `PATH`. Run `npm prefix -g` and add its `bin` directory (on Windows, the prefix
+  itself) to `PATH`, or run via
   `npx @maschinenlesbar.org/fim-portal-cli …`.
 - **Exit `4` / "not found"** — the id doesn't exist in the portal. Re-fetch it
   from a fresh `search` result; ids and versions can change as the catalogue updates.
