@@ -17,6 +17,8 @@ import {
   FimNetworkError,
   FimParseError,
   FimValidationError,
+  credentialsIn,
+  redactCredentials,
   redactUrl,
 } from "./errors.js";
 import {
@@ -266,7 +268,12 @@ const realSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 export class RequestEngine {
-  private readonly baseUrl: string;
+  // A real private field (not TypeScript's `private`): util.inspect, console.log and
+  // JSON.stringify of a client never show it, so a password in the base URL can't be
+  // logged by accident. Messages use redactUrl.
+  readonly #baseUrl: string;
+  /** The base URL's userinfo, raw and percent-decoded, for scrubbing server and transport text. */
+  readonly #credentials: string[];
   private readonly transport: Transport;
   private readonly userAgent: string;
   private readonly timeoutMs: number;
@@ -278,7 +285,14 @@ export class RequestEngine {
   constructor(options: EngineOptions = {}) {
     // Checked on the raw value, before the slash strip: buildUrl concatenates it.
     // Only undefined selects the default.
-    this.baseUrl = options.baseUrl === undefined ? DEFAULT_BASE_URL : validateBaseUrl(options.baseUrl);
+    this.#baseUrl = options.baseUrl === undefined ? DEFAULT_BASE_URL : validateBaseUrl(options.baseUrl);
+    this.#credentials = credentialsIn(this.#baseUrl).flatMap((raw) => {
+      try {
+        return [raw, decodeURIComponent(raw)];
+      } catch {
+        return [raw];
+      }
+    });
     this.transport = options.transport ?? nodeHttpTransport;
     // Only undefined selects the default; a blank or unsendable value is refused
     // here rather than sent blank or failing late with Node's raw TypeError.
@@ -297,6 +311,35 @@ export class RequestEngine {
       DEFAULT_MAX_RESPONSE_BYTES,
     );
     this.sleep = options.sleep ?? realSleep;
+  }
+
+  /**
+   * `text` without the base URL's credentials: server text (an error body that echoes the
+   * request URL) and transport text (fetch's "Request cannot be constructed from a URL that
+   * includes credentials: <url>") can carry them.
+   */
+  private scrub(text: string): string {
+    return this.#credentials.length === 0 ? text : redactCredentials(text, this.#credentials);
+  }
+
+  /**
+   * A transport failure as the `cause` of the error the engine raises: the original when its
+   * text carries no credentials, otherwise a copy with them scrubbed (message, `code` and the
+   * cause chain kept), so logging the error with its causes can't reveal the base URL's
+   * password.
+   */
+  private scrubCause(cause: unknown, depth = 0): unknown {
+    if (this.#credentials.length === 0 || depth > 5) return cause;
+    if (typeof cause === "string") return this.scrub(cause);
+    if (!(cause instanceof Error)) return cause;
+    const inner = this.scrubCause(cause.cause, depth + 1);
+    const message = this.scrub(cause.message);
+    if (message === cause.message && inner === cause.cause && !this.scrub(cause.stack ?? "").includes("***@")) return cause;
+    const copy = new Error(message, inner === undefined ? undefined : { cause: inner });
+    copy.name = cause.name;
+    const code = (cause as { code?: unknown }).code;
+    if (code !== undefined) Object.assign(copy, { code });
+    return copy;
   }
 
   /**
@@ -332,7 +375,7 @@ export class RequestEngine {
     }
     if (query) assertNonBlankParams(query);
     const qs = query ? buildQueryString(query) : "";
-    return `${this.baseUrl}${normalizedPath}${qs ? `?${qs}` : ""}`;
+    return `${this.#baseUrl}${normalizedPath}${qs ? `?${qs}` : ""}`;
   }
 
   /**
@@ -449,9 +492,17 @@ export class RequestEngine {
    * can rely on every failure being a FimError. Any other FimError passes through.
    */
   private toNetworkError(method: string, url: string, cause: unknown): FimError {
-    if (cause instanceof FimError) return cause;
+    if (cause instanceof FimError && !(cause instanceof FimNetworkError)) return cause;
+    if (cause instanceof FimNetworkError) {
+      // The default transport's own errors carry no URL; scrub one that does anyway.
+      const scrubbed = this.scrubCause(cause);
+      if (scrubbed === cause) return cause;
+      return new FimNetworkError(this.scrub(cause.message), { cause: this.scrubCause(cause.cause) });
+    }
     const reason = cause instanceof Error ? cause.message : String(cause);
-    return new FimNetworkError(`${method} ${redactUrl(url)} failed: ${sanitizeServerText(reason)}`, { cause });
+    return new FimNetworkError(`${method} ${redactUrl(url)} failed: ${sanitizeServerText(this.scrub(reason))}`, {
+      cause: this.scrubCause(cause),
+    });
   }
 
   /** Perform a GET expecting JSON and parse it into `T`. */
@@ -477,7 +528,7 @@ export class RequestEngine {
     body: Buffer,
     locationHeader?: string,
   ): FimApiError {
-    const text = body.toString("utf8");
+    const text = this.scrub(body.toString("utf8"));
     let detail: string | undefined;
     try {
       const parsed = JSON.parse(text) as { detail?: unknown };
