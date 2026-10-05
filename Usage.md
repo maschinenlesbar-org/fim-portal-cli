@@ -245,10 +245,17 @@ fim-portal -o fields.csv search-csv --resource field --term Name
 `--resource` (required) is one of `schema`, `document-profile`, `field`, `group`,
 `leistung-steckbriefe`, `processclass`, `process` — the names the portal's own search
 page uses. The CLI checks it, because the server does not: any other value (the
-plural `schemas`, say) silently exports Leistungen. Additional pass-through filters:
-`--xdf-version`, `--order-by`, `--feldart`, `--datentyp`, `--dokumentart`,
-`--sprache`. These are forwarded verbatim; only a blank value is rejected locally,
-as a usage error.
+plural `schemas`, say) silently exports Leistungen. Additional filters:
+`--xdf-version` (`2.0`, `3.0.0`; the four XDatenfelder resources), `--feldart` and
+`--datentyp` (`field`), `--dokumentart` (`document-profile`), `--sprache`
+(`leistung-steckbriefe`), and `--order-by` (the sort orders of the resource's JSON
+search). The server ignores a value it doesn't know and a filter for another resource,
+and exports the unfiltered result; the CLI rejects both before the request, as a usage
+error naming the allowed values or resources.
+
+```bash
+fim-portal -o select-fields.csv search-csv --resource field --term Familienname --feldart select
+```
 
 #### 12. List the referenced code lists
 

@@ -299,7 +299,10 @@ Exit-Code `4` („Could not find language“), ebenso der Wert des Suchfilters `
 `--resource` erwartet die Ressourcennamen des Portals im Singular (`schema`, `field`,
 `processclass`, …); auf jeden unbekannten Namen antwortet der Server mit einer CSV der
 Leistungen, deshalb weisen die CLI und die Bibliothek (`tools.searchCsvDownload`) solche
-Namen zurück, ebenso eine fehlende Ressource.
+Namen zurück, ebenso eine fehlende Ressource. Einen unbekannten Filterwert
+(`feldart=SELECT`) und einen Filter für eine andere Ressource (`feldart` bei `schema`)
+ignoriert der Server ebenfalls und exportiert das ungefilterte Ergebnis; auch diese weisen
+CLI und Bibliothek vor der Anfrage zurück.
 
 ---
 

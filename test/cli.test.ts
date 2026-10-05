@@ -524,10 +524,6 @@ test("search-csv maps options to query params and streams CSV to stdout", async 
       "input",
       "--datentyp",
       "text",
-      "--dokumentart",
-      "001",
-      "--sprache",
-      "Deutsch",
     ],
     cli.deps,
   );
@@ -541,8 +537,16 @@ test("search-csv maps options to query params and streams CSV to stdout", async 
   assert.equal(q.get("order_by"), "name_asc");
   assert.equal(q.get("feldart"), "input");
   assert.equal(q.get("datentyp"), "text");
-  assert.equal(q.get("dokumentart"), "001");
-  assert.equal(q.get("sprache"), "Deutsch");
+
+  for (const [resource, flag, value, key] of [
+    ["document-profile", "--dokumentart", "001", "dokumentart"],
+    ["leistung-steckbriefe", "--sprache", "Englisch", "sprache"],
+    ["leistung-steckbriefe", "--order-by", "titel_asc", "order_by"],
+  ] as const) {
+    const other = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+    assert.equal(await run(["search-csv", "--resource", resource, flag, value], other.deps), 0);
+    assert.equal(new URL(other.mt.last().url).searchParams.get(key), value);
+  }
 });
 
 test("search-csv requires --resource", async () => {
@@ -571,15 +575,26 @@ test("search-csv rejects a --resource the server would silently replace with Lei
   }
 });
 
-test("search-csv forwards the other filters verbatim (no enum guard)", async () => {
-  // Only --resource is checked; the other CSV filters are forwarded unvalidated.
-  const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
-  const code = await run(
-    ["search-csv", "--resource", "field", "--feldart", "bogus"],
-    cli.deps,
-  );
-  assert.equal(code, 0);
-  assert.equal(new URL(cli.mt.last().url).searchParams.get("feldart"), "bogus");
+test("search-csv refuses a filter value or a filter the export would ignore, before any request", async () => {
+  // Each of these exported the unfiltered result, byte for byte, live (exploratory 01 and 06).
+  for (const [argv, message] of [
+    [["--resource", "field", "--feldart", "SELECT"], /option '--feldart <art>' argument 'SELECT' is invalid/],
+    [["--resource", "field", "--feldart", "bogus"], /Allowed choices are input, select/],
+    [["--resource", "field", "--datentyp", "string"], /option '--datentyp <typ>' argument 'string' is invalid/],
+    [["--resource", "field", "--xdf-version", "3"], /Allowed choices are 2\.0, 3\.0\.0/],
+    [["--resource", "document-profile", "--dokumentart", "1"], /option '--dokumentart <code>' argument '1' is invalid/],
+    [["--resource", "leistung-steckbriefe", "--sprache", "Klingonisch"], /Allowed choices are Deutsch/],
+    [["--resource", "schema", "--feldart", "select"], /Invalid feldart: it filters resource field only, not schema/],
+    [["--resource", "schema", "--sprache", "Englisch"], /Invalid sprache: it filters resource leistung-steckbriefe only, not schema/],
+    [["--resource", "process", "--xdf-version", "2.0"], /Invalid xdf_version: it filters resource schema, document-profile, field, group only, not process/],
+    [["--resource", "field", "--order-by", "titel_asc"], /Invalid order_by: Expected one of: relevance/],
+  ] as const) {
+    const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+    const code = await run(["search-csv", ...argv], cli.deps);
+    assert.equal(code, 1, argv.join(" "));
+    assert.equal(cli.mt.calls.length, 0, argv.join(" "));
+    assert.match(cli.err.join("\n"), message, argv.join(" "));
+  }
 });
 
 test("search-csv writes the CSV to --output and reports bytes on stderr", async () => {

@@ -57,7 +57,8 @@ export interface CursorPagination {
 
 /**
  * Query of an XZuFi entity listing. `fts_query` is accepted by the
- * organizational-unit and online-service listings only; specializations ignore it.
+ * organizational-unit and online-service listings only; the specialization listing
+ * ignores it upstream, so `specializations.list` rejects it.
  */
 export interface XzufiEntityListParams extends CursorPagination {
   fts_query?: string;
@@ -197,8 +198,10 @@ export type SearchCsvResource = (typeof SearchCsvResourceValues)[number];
 
 /**
  * Query of `tools.searchCsvDownload`. `resource` is required; the named filters are
- * the ones the CLI exposes, and any other filter of the portal's search page passes
- * through as a string. A blank value is rejected like every other query value.
+ * the ones the CLI exposes, and the other parameters of the spec are allowed as strings
+ * (SEARCH_CSV_FILTERS in filters.ts). An unknown key, a filter for another resource and
+ * a value outside a filter's known domain are rejected (the server would ignore them and
+ * export the unfiltered result), as is a blank value.
  */
 export interface SearchCsvParams {
   resource: SearchCsvResource;

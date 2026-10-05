@@ -126,6 +126,34 @@ export function collectFreigabeStatus(value: string, previous: number[] = []): n
   return previous.concat([n]);
 }
 
+/** The accumulating parsers: options using them take several values on purpose. */
+const COLLECTORS: ReadonlySet<unknown> = new Set([collect, collectFreigabeStatus]);
+
+/**
+ * Make giving a single-value option twice a usage error, on `command` and every
+ * subcommand. Commander keeps the last value silently: `--name A --name B` searched for
+ * B only, and `--feldart input --feldart select` exported the select fields alone, with
+ * nothing telling the user that a filter was dropped. Repeatable options (the `collect`
+ * parsers, documented as "repeatable") and flags without a value are left alone. Call it
+ * once on a freshly built program: the check counts per Option object.
+ */
+export function forbidRepeatedOptions(command: Command): void {
+  for (const option of command.options) {
+    if ((!option.required && !option.optional) || option.variadic || COLLECTORS.has(option.parseArg)) continue;
+    const parse = option.parseArg;
+    let given = false;
+    const guarded = (value: string, previous: unknown): unknown => {
+      if (given) {
+        throw new InvalidArgumentError(`${option.long ?? option.short} was given more than once; it takes one value.`);
+      }
+      given = true;
+      return parse === undefined ? value : parse(value, previous);
+    };
+    option.parseArg = guarded as typeof option.parseArg;
+  }
+  for (const child of command.commands) forbidRepeatedOptions(child);
+}
+
 export interface GlobalOptions {
   baseUrl?: string;
   timeout?: number;

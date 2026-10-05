@@ -295,7 +295,9 @@ the text doesn't have exits `4` ("Could not find language"), and so does the
 `--resource` takes the portal's singular resource names (`schema`, `field`,
 `processclass`, …); the server answers any name it does not know with a CSV of
 Leistungen, so the CLI and the library (`tools.searchCsvDownload`) reject those, and a
-missing resource too.
+missing resource too. The server also ignores a filter value it doesn't know
+(`feldart=SELECT`) and a filter for another resource (`feldart` on `schema`) and exports
+the unfiltered result; the CLI and the library reject those as well, before the request.
 
 ---
 

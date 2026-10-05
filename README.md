@@ -184,18 +184,25 @@ across `document-profiles search`, `fields search` and `groups search`.
 | Flag | Meaning |
 | --- | --- |
 | `--resource <name>` | required — `schema`, `document-profile`, `field`, `group`, `leistung-steckbriefe`, `processclass` or `process` |
-| `--term <text>` | search term |
-| `--xdf-version <v>` | XDF version |
-| `--feldart <kind>` | field kind |
-| `--datentyp <type>` | data type |
-| `--dokumentart <code>` | document kind |
-| `--sprache <lang>` | language |
-| `--order-by <field>` | sort field |
+| `--term <text>` | search term (every resource) |
+| `--xdf-version <v>` | XDF version `2.0` or `3.0.0` (`schema`, `document-profile`, `field`, `group`) |
+| `--feldart <kind>` | field kind, e.g. `select` (`field`) |
+| `--datentyp <type>` | data type, e.g. `text` (`field`) |
+| `--dokumentart <code>` | document kind, e.g. `001` (`document-profile`) |
+| `--sprache <lang>` | language, e.g. `Englisch` (`leistung-steckbriefe`) |
+| `--order-by <field>` | sort order of the resource's JSON search (`name_asc`, `titel_asc`, …) |
 
-`search-csv` wraps `tools/search-csv-download`. `--resource` is checked locally,
-because the server never rejects one: an unknown value (such as the plural `schemas`)
-silently exports Leistungen instead. The other filters are forwarded verbatim (only a
-blank value is rejected locally).
+`search-csv` wraps `tools/search-csv-download`, whose server rejects nothing: an
+unknown `--resource` (such as the plural `schemas`) silently exports Leistungen, and a
+filter value it doesn't know (`--feldart SELECT`, `--dokumentart 1`) or a filter for
+another resource (`--feldart` with `--resource schema`) is ignored, exporting the
+**unfiltered** result. So the CLI checks all of it before any request: the filters
+with a known domain take only its values (the error lists them), each filter only the
+resources in brackets above, and `--order-by` only the resource's sort orders. A
+rejected value or filter is a usage error (exit `1`).
+
+Every option that takes one value is a usage error when given twice
+(`--name A --name B` used to search for `B` alone); the repeatable ones say so above.
 
 ## Common tasks
 

@@ -108,6 +108,7 @@ src/
     params.ts    # typed search-parameter objects per endpoint
     query.ts     # dependency-free query-string builder (repeated keys for arrays)
     validate.ts  # the library's input rules (Problem functions + assertValid)
+    filters.ts   # each endpoint's query parameters (tables) + assertParams / assertSearchCsvParams
     http.ts      # the Transport interface + default node:http/https transport
     engine.ts    # URL building, retry/backoff, JSON/raw decoding, error mapping
     errors.ts    # FimError / FimApiError / FimNetworkError / FimParseError / FimValidationError
@@ -236,22 +237,51 @@ What the library rejects with `FimValidationError`, before any request:
   would turn `schemas.versions("")` into the search collection and
   `schemas.get("S1", "")` into the versions list, returned as the requested object.
   `RequestEngine.buildUrl` also rejects `.`/`..` and any empty segment.
-- **A missing or unknown `search-csv` resource.** `tools.searchCsvDownload` takes
-  `SearchCsvParams` and requires `resource` to be one of `SearchCsvResourceValues`
-  (`searchCsvResourceProblem`, built on `oneOfProblem`): the server answers any
-  other value, or none, with a CSV of Leistungen and status 200.
+- **Unknown parameters and wrong value types.** Every search and list call checks
+  its parameters against its table in [`filters.ts`](src/client/filters.ts)
+  (`assertParams`, tables such as `SCHEMA_SEARCH_PARAMS`, read from `openapi.json`):
+  the parameters must be an object (`schemas.search("Geburt")` used to send
+  `?0=G&1=e…`), every key one of the endpoint's (own keys only, so `__proto__` and
+  `constructor` count as unknown), and every value what its parameter takes — a
+  string, a date string or valid `Date`, an integer, a boolean, one of the enum
+  values, and a list only where the API takes one. The portal ignores a key it does
+  not know and answers with the whole catalogue: `fts_querry`, `ftsQuery` and the
+  pre-0.1.0 `versionshinweis` returned 1890 schemas instead of 0. The error names the
+  likely key (`did you mean fts_query?`). `specializations.list` takes no `fts_query`
+  (the endpoint ignored it). A parameter added upstream after the table was written can
+  still be sent with `{ allowUnknownFilters: true }` as the call's second argument (the
+  shape dip-bundestag-cli uses); its value must still be a scalar or a list of them.
+- **A missing or unknown `search-csv` resource, and filters the export would ignore.**
+  `tools.searchCsvDownload` takes `SearchCsvParams` and requires `resource` to be one
+  of `SearchCsvResourceValues`: the server answers any other value, or none, with a
+  CSV of Leistungen and status 200. It ignores filters in the same way, exporting the
+  unfiltered result byte for byte, so `assertSearchCsvParams` also refuses a key that
+  is not one of the spec's parameters (`SEARCH_CSV_FILTERS`), a filter for another
+  resource (`feldart` on `schema`, `sprache` on anything but `leistung-steckbriefe`),
+  a value outside a filter's domain (`feldart: "SELECT"`, `dokumentart: "1"`,
+  `detaillierungsstufe: "999"`; the domains are those of the matching JSON search,
+  confirmed live for `xdf_version` and `datentyp` on 2026-10-06) and an `order_by`
+  outside the resource's JSON sort orders (`CSV_ORDER_VALUES`; unchecked for the
+  process resources, whose JSON searches have none). `allowUnknownFilters` lets all of
+  these through. The CLI's `search-csv` offers the domains as choices.
+- **A single-value CLI option given twice** (`forbidRepeatedOptions` in
+  `cli/shared.ts`): commander kept the last value silently, so `--name A --name B`
+  searched for `B` alone. It is a usage error now; the repeatable options
+  (`--nummernkreis`, `--freigabe-status`, the service lists) still collect.
 - **Out-of-domain enum values.** Each search method checks its enumerated
-  parameters against the `*Values` arrays of `enums.ts` (`assertEnumParams` with a
-  per-endpoint table): `freigabe_status`, `xdf_version`, `order_by`,
+  parameters against the `*Values` arrays of `enums.ts` (`assertParams` with the
+  endpoint's table; the older `assertEnumParams` stays exported): `freigabe_status`, `xdf_version`, `order_by`,
   `suche_nur_in`, `feldart`, `datentyp`, `dokumentart`, `sprache`,
   `vollzugsbehoerde`, `source`, `operatives_ziel`, `verfahrensart`,
-  `handlungsform`, `detaillierungsstufe` and `anwendungsgebiet`. The `stufe` of a
+  `handlungsform`, `detaillierungsstufe` and `anwendungsgebiet` (the `enum` entries of
+  the tables in `filters.ts`). The `stufe` of a
   process path must be one of `DetaillierungsstufeValues`
   (`detaillierungsstufeProblem`) and the `source` of a service-text path one of
   `XzufiSourceValues` (`xzufiSourceProblem`); `openapi.json` also lists a path
   source `primary`, which neither the CLI nor the library accepts. The lists the
   CLI forwards as given (`leistungstyp`, `typisierung`, `sdg`,
-  `leistungsadressat`, `ozg_themenfeld`, the `search-csv` filters) are not checked.
+  `leistungsadressat`, `ozg_themenfeld`) are not checked against a value list: the
+  API answers an unknown value there with a 422 naming the allowed ones.
 - **Out-of-range paging.** Every search and list method (and `codeLists.list`)
   runs `assertPagination`: `limit` an integer in `LIMIT_MIN`..`LIMIT_MAX`
   (1..200, exported from `params.ts`), `offset` and `cursor` a non-negative safe
@@ -337,6 +367,10 @@ npm test          # builds, then runs `node --test` over dist/test
 - **`engine.test.ts`** — URL building, JSON/raw decoding, error mapping, 429/503 retry — mocked transport.
 - **`client.test.ts`** — every endpoint's method/URL mapping + query serialisation — mocked transport.
 - **`validate.test.ts`** — the input rules, `assertValid`, and how `run()` reports a `FimValidationError`.
+- **`filters.test.ts`** — unknown and misspelled parameters, value types, the CSV export's filter checks,
+  `allowUnknownFilters`, and repeated CLI options (P10).
+- **`conformance-*.test.ts`** — the checks shared across the maschinenlesbar.org CLIs (fix plan
+  2026-10-06), copied from autobahn-cli with a per-repo adapter block; P12 (`-o -`) was piloted here.
 - **`parity.test.ts`** — the same input through the CLI and the library (`parity()`): both reject
   without a request, or both send the identical request.
 - **`cli.test.ts`** — end-to-end command parsing, rendering, file output and exit codes — mocked client.

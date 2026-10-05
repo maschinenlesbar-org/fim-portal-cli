@@ -11,6 +11,7 @@ import { FimPortalClient } from "../client/client.js";
 import { MAX_TIMEOUT_MS } from "../client/http.js";
 import { MAX_RETRIES, MAX_RETRY_AFTER_MS } from "../client/engine.js";
 import {
+  forbidRepeatedOptions,
   parseBaseUrl,
   parseBoundedInt,
   parseHeaderValue,
@@ -88,6 +89,7 @@ export function buildProgram(deps: CliDeps = defaultDeps): Command {
   registerXzufiEntityCommands(program, deps);
   registerProcessCommands(program, deps);
   registerMiscCommands(program, deps);
+  forbidRepeatedOptions(program);
 
   return program;
 }
