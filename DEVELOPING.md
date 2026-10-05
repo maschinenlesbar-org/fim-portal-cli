@@ -265,7 +265,10 @@ What the library rejects with `FimValidationError`, before any request:
 - **An invalid base URL** (thrown by the constructor, `validateBaseUrl` /
   `baseUrlProblem`): one `new URL()` cannot parse, a scheme other than `http:` or
   `https:`, a query or fragment (request paths are appended as a string, so
-  `http://h/?x=1` would request `/?x=1/api/...`), surrounding whitespace, or
+  `http://h/?x=1` would request `/?x=1/api/...`), a `%` in the user name or password
+  that doesn't start an escape (Node decodes the userinfo for the Authorization header
+  and failed at request time with "URI malformed"; a literal `%` is `%25`),
+  surrounding whitespace, or
   whitespace or a control character anywhere inside (`baseUrlWhitespaceProblem`:
   `new URL()` trims and strips those silently, but the engine concatenates request
   paths onto the raw string, so `"https://h/ "` would request `/%20/api/...`). The

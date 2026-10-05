@@ -196,7 +196,9 @@ export const baseUrlWhitespaceProblem: Problem<unknown> = (value) => {
  * can parse; scheme `http:` or `https:` (the default transport also gates the
  * scheme per hop, but a custom transport may not); no `?` or `#` (request paths
  * are appended as a string, so `http://h/?x=1` would request `/?x=1/api/...` and
- * `http://h/#f` would request `/`); then baseUrlWhitespaceProblem. The reasons
+ * `http://h/#f` would request `/`); a `%` in the user name or password that starts a
+ * valid escape (`%25` for a literal one: Node decodes the userinfo for the Authorization
+ * header and failed at request time); then baseUrlWhitespaceProblem. The reasons
  * never echo the value, so credentials in it cannot leak into a message.
  * Userinfo is allowed: the repo deliberately sends it.
  */
@@ -212,5 +214,14 @@ export const baseUrlProblem: Problem<unknown> = (value) => {
     return 'Only "http:" and "https:" base URLs are supported.';
   }
   if (/[?#]/.test(value)) return "A base URL cannot have a query (?) or fragment (#).";
+  // Node decodes the userinfo into the Authorization header and throws "URI malformed" for a
+  // "%" that isn't an escape — at request time, as a network error. Reject it here.
+  for (const part of [url.username, url.password]) {
+    try {
+      decodeURIComponent(part);
+    } catch {
+      return 'The user name or password has a "%" that is not followed by two hex digits; write a literal "%" as %25.';
+    }
+  }
   return baseUrlWhitespaceProblem(value);
 };
