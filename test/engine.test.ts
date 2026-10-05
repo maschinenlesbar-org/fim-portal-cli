@@ -360,3 +360,18 @@ test("the constructor range-checks the numeric options before any request", () =
   new RequestEngine({ timeoutMs: 0, maxRetries: 0, retryDelayMs: 0, maxResponseBytes: 0 });
   new RequestEngine({ timeoutMs: MAX_TIMEOUT_MS, maxRetries: MAX_RETRIES });
 });
+
+test("a JSON body is decoded by its declared charset, BOM dropped; an unknown charset is a FimParseError", async () => {
+  const text = "Müller µg/l";
+  for (const [charset, body] of [
+    ["iso-8859-1", Buffer.from(JSON.stringify({ name: text }), "latin1")],
+    ["utf-8", Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(JSON.stringify({ name: text }))])],
+  ] as const) {
+    const engine = new RequestEngine({
+      transport: async () => rawResponse(body, `application/json; charset=${charset}`),
+    });
+    assert.deepEqual(await engine.getJson("/x"), { name: text }, charset);
+  }
+  const engine = new RequestEngine({ transport: async () => rawResponse("{}", "application/json; charset=x-klingon") });
+  await assert.rejects(engine.getJson("/x"), (e: unknown) => e instanceof FimParseError && /Unsupported response charset "x-klingon"/.test((e as Error).message));
+});

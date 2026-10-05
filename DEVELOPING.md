@@ -159,6 +159,10 @@ checked on the body it returns; headers may come as a plain record in any case, 
 `Error`, a string, `null`, a response without a valid status — becomes a
 `FimNetworkError` (URL redacted, the original as `cause`).
 
+**Decoding.** A JSON body is decoded by the charset its `Content-Type` declares
+(UTF-8 when it names none) with `TextDecoder`, which also drops a leading byte order
+mark; an unknown charset label is a `FimParseError`. Downloads stay raw bytes.
+
 **RawResponse.** The result of a download method: `{ data: Buffer, contentType,
 status }` — raw bytes, never lossily decoded.
 
