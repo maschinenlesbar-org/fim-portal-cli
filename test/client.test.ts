@@ -264,3 +264,19 @@ test("an HTML page answered with a 2xx to a download is a FimParseError", async 
   const { client } = clientReturning("%PDF-1.4", "application/pdf");
   assert.equal((await client.processes.downloadReport("P1", "1.0", "101", "17")).data.toString(), "%PDF-1.4");
 });
+
+test("every method DEVELOPING.md's Methods paragraph names exists on the client", async () => {
+  const { readFileSync } = await import("node:fs");
+  const text = readFileSync(new URL("../../DEVELOPING.md", import.meta.url), "utf8");
+  const paragraph = text.slice(text.indexOf("### Methods"), text.indexOf("## Authentication internals"));
+  const named = [...paragraph.matchAll(/`(\w+)\(\)`/g)].map((m) => m[1]!);
+  assert.ok(named.length >= 10, paragraph);
+  const client = new FimPortalClient({ transport: async () => jsonResponse({}) }) as unknown as Record<string, object>;
+  const methods = new Set<string>();
+  for (const group of Object.values(client)) {
+    for (let proto = Object.getPrototypeOf(group); proto && proto !== Object.prototype; proto = Object.getPrototypeOf(proto)) {
+      for (const name of Object.getOwnPropertyNames(proto)) methods.add(name);
+    }
+  }
+  for (const name of named) assert.ok(methods.has(name), `DEVELOPING.md names ${name}(), which no resource group has`);
+});

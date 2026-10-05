@@ -86,8 +86,11 @@ new FimPortalClient({
 
 Each resource group exposes the methods that correspond to its CLI sub-commands:
 `search()`, `get()`, `versions()`, `downloadXdf()`, `downloadXzufi()`,
-`downloadXprozess()`, `downloadPdf()`, `list()` (cursor resources), and
-`qualityReport()` / `visualization()` / `report()` (processes/schemas).
+`downloadXprozess()`, `exportPdf()` (service profiles and texts), `parsedXzufi()`
+(service texts), `list()` (cursor resources and `codeLists`), `qualityReport()`
+(schemas), `downloadReport()` / `downloadVisualization()` /
+`downloadVisualizationDisplay()` (processes) and `searchCsvDownload()` (`tools`).
+`test/client.test.ts` checks that every method named here exists.
 
 ## Authentication internals
 
