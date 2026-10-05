@@ -148,7 +148,16 @@ errors. Sits between the client's resource methods and the transport.
 
 **Transport.** A single function `(HttpRequest) => Promise<HttpResponse>`
 ([`http.ts`](src/client/http.ts)). The default (`nodeHttpTransport`) uses Node's
-built-in `http`/`https`; tests inject a mock. This is the only HTTP seam.
+built-in `http`/`https`; tests inject a mock. This is the only HTTP seam. The engine
+holds every transport to the same contract, so a custom one (a `fetch` adapter, a test
+double) needs none of it itself: each call runs under the overall `timeoutMs` deadline
+(the request carries an `AbortSignal`, `HttpRequest.signal`, that fires then, and the
+call rejects at the deadline whether the transport stops or not); `maxResponseBytes` is
+checked on the body it returns; headers may come as a plain record in any case, a
+`Headers` object or a `Map`; the body may be a `Buffer`, any `ArrayBuffer` view or an
+`ArrayBuffer` (from any realm). Whatever else a transport throws or returns — a plain
+`Error`, a string, `null`, a response without a valid status — becomes a
+`FimNetworkError` (URL redacted, the original as `cause`).
 
 **RawResponse.** The result of a download method: `{ data: Buffer, contentType,
 status }` — raw bytes, never lossily decoded.
@@ -159,7 +168,10 @@ the library). Each retry waits the
 response's `Retry-After` — delay-seconds or an IMF-fixdate HTTP-date, parsed by
 `parseRetryAfter` — or, without a usable one, `retryDelayMs * attempt`. A `Retry-After`
 longer than `MAX_RETRY_AFTER_MS` (30 s) is not retried: the `FimApiError` surfaces at
-once. `FimApiError` is raised after all retries are exhausted.
+once. `FimApiError` is raised after all retries are exhausted. A connection reset
+(`ECONNRESET`, `EPIPE`, `ECONNABORTED`, undici's `UND_ERR_SOCKET`, anywhere in the
+error's `cause` chain, from any transport) is retried the same way, with the linear
+backoff; a timeout, a refused connection or a DNS failure is not.
 
 **Redirects.** Not followed, by design. A 3xx surfaces as a `FimApiError` (exit `1`)
 whose message and `location` field name the redirect target (resolved, userinfo
@@ -168,7 +180,10 @@ https://fimportal.de/... not followed`.
 
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
 default 100 MiB), guarding against unbounded responses. A non-negative integer: the
-engine rejects anything else rather than silently dropping the cap.
+engine rejects anything else rather than silently dropping the cap. The default
+transport aborts as soon as the cap is passed; for any transport the engine rejects a
+larger body with `FimNetworkError` (`Response exceeded the size limit of N bytes
+(maxResponseBytes; --max-response-bytes on the CLI)`).
 
 **Query builder.** [`buildQueryString`](src/client/query.ts) — a dependency-free
 serialiser: omits `undefined`/`null`, repeats keys for arrays, renders booleans as
