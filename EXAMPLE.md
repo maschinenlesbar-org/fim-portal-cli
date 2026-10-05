@@ -3,7 +3,8 @@
 Real examples for the Claude Code skills of the `fim-portal` plugin, one per skill: a request,
 the `fim-portal` commands the skill ran, and the answer Claude gave.
 
-Every example ran against the live API on 15 September 2026 with `fim-portal` 0.0.9.
+Every example ran against the live API on 6 October 2026, shortly after midnight, with the
+`fim-portal` build released as 0.3.0 (20 requests in all).
 The data changes, so your results will differ; the ids and keys shown work for trying the
 requests yourself. Long lists are shortened.
 
@@ -16,20 +17,20 @@ Skills: [fim-field-finder](#fim-field-finder) · [fim-quality-audit](#fim-qualit
 > Is there a released, reusable FIM select field for nationality (Staatsangehörigkeit) with a code list behind it?
 
 ```bash
-fim-portal --compact fields search --fts-query "Staatsangehörigkeit" --feldart select --freigabe-status 5 --freigabe-status 6 --freigabe-status 7 --is-latest --limit 50
-fim-portal --compact fields search --name "Staatsangehörigkeit" --is-latest --limit 50   # 86 hits
-fim-portal --compact fields search --freigabe-status 7 --is-latest --limit 1            # label: "inaktiv"
-fim-portal --compact fields get baukasten F60000236
-fim-portal --compact fields get baukasten F00000001839
-fim-portal --compact fields get baukasten F00000000039
+fim-portal --compact fields search --fts-query "Staatsangehörigkeit" --feldart select --freigabe-status 5 --freigabe-status 6 --is-latest --limit 20
+fim-portal --compact fields search --name "Staatsangehörigkeit" --feldart select --is-latest --limit 50   # 45 hits
+fim-portal --compact fields get baukasten F60000236 | jq '.code_list, (.schemas | length)'
+fim-portal --compact fields get baukasten F00000001839 | jq '.code_list, (.schemas | length)'
+fim-portal --compact fields get baukasten F00000000039 | jq '.code_list, (.schemas | length)'
 ```
 
-The released filter left 4 fields, two of them unrelated. Status 7 turned out to be labelled
-"inaktiv", so only 5 (silber) and 6 (gold) count as released. The name search matched 86 latest
-fields. Its first page was mostly XDF2 copies "in Bearbeitung", and the central-Baukasten
-`Staatsangehörigkeit` (F00000000039) turned up there as a draft. So the canonical hit is the
-gold field from number range 60000, not the 00000 one. `fields get` lists every schema that uses
-a field, which the skill used as a reuse signal.
+The released filter (5 silber, 6 gold) left 4 fields, two of them unrelated. The name search for
+select fields matched 45 latest ones, almost all XDF2 copies "in Bearbeitung". Two are worth
+flagging: the central-Baukasten `Staatsangehörigkeit` (F00000000039) is a draft, and so is the
+XDF3 successor of the gold field, F60000000236 v1.7.0. So the canonical hit is the gold field
+from number range 60000, not the 00000 one. `fields get` lists every schema version that uses a
+field (148 for F60000236, about 1.2 MB), so the skill read only the code list and that count
+with `jq`, as a reuse signal.
 
 ```
 Reusable select fields for „Staatsangehörigkeit" (select · text, released, latest)
@@ -42,6 +43,8 @@ Reusable select fields for „Staatsangehörigkeit" (select · text, released, l
     code list 15830 (same Destatis list, 2023-02-24) · used in 7 schemas · no bezug
  ⚠ F00000000039  v2.1.0  Staatsangehörigkeit          baukasten · nk 00000 · XDF 3.0.0 · status 3 Entwurf
     the central XDF3 field with the same definition, still a draft, on the older code list 15917 (2020-05-11), 8 schemas
+ ⚠ F60000000236  v1.7.0  Staatsangehörigkeit          nk 60000 · XDF 3.0.0 · status 3 Entwurf · code list 15926
+    the XDF3 successor of no. 1, not released yet
 
  Other released select hits are not about nationality: F00000003381 Zweck des Aufenthalts (Schweiz),
  F00000003398 Status des Antragstellers gemäß Assoziationsabkommen EWG/Türkei.
@@ -133,29 +136,29 @@ Next steps offered: `fim-portal -o hundesteuer.xml schemas xdf S05000039 1.1`, o
 > Tell me everything about the FIM service for Germans living abroad who need a Personalausweis.
 
 ```bash
-fim-portal --compact service-profiles search --fts-query "Personalausweis" --sprache Deutsch --limit 10
+fim-portal --compact service-profiles search --fts-query "Personalausweis" --sprache Deutsch --limit 10   # 54 hits
+fim-portal --compact service-profiles search --fts-query "Personalausweis Wohnsitz im Ausland" --sprache Deutsch --limit 10
 fim-portal --compact service-profiles get 99008001012011
-fim-portal --compact service-texts get B100019 102241587 leika     # exit 4: not under this source
-fim-portal --compact service-texts search --leistungsschluessel 99008001012011 --limit 50
+fim-portal --compact service-texts search --leistungsschluessel 99008001012011
 fim-portal --compact service-texts get B100019 102241587 pvog
 ```
 
-The search matched 52 services; `99008001012011` was the one for residents abroad. The
-federal text wasn't under `leika`, so the skill looked up which source each text belongs to
-before fetching it.
+The broad search matched 54 services, and the one for residents abroad wasn't on its first page,
+so the skill narrowed the query: 2 hits, `99008001012011` first. Before fetching a text it looked
+up which source each one belongs to: the federal text sits under `pvog`, not `leika`.
 
 ```
 Personalausweis für Deutsche mit Wohnsitz im Ausland   (key 99008001012011)
   Citizen name: „Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz
                 beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen"
-  For:          citizens (001)     Type: lovd     Status: 6 (technically released), changed 2026-04-20
+  For:          citizens (001)     Type: lovd     Status: 6 (fachlich freigegeben, gold), changed 2026-04-20
   OZG:          Personalausweis (#10119), Querschnittsleistungen     SDG: 1010100
   Legal basis:  PAuswG §§ 1(4) Nr. 2, 5(2) Nr. 9, 7(2), 8(2)(4), 23(4), 35; KonsG § 2;
                 PAuswVwV G.5.2.1/G.5.2.2; Personalausweis- und eID-Karten-Gebührenverordnung
   Process:      none linked        Replacements: none
-  Regional texts: 9 Redaktionen
+  Regional texts: 10 Redaktionen
     • federal  B100019 (pvog) — canonical
-    • states   L100002, L100008, L100010, L100012, L100038, L100039, L100040 (landesredaktion)
+    • states   L100002, L100008, L100010, L100012, L100038, L100039, L100040, L100041 (landesredaktion)
     • Berlin   L100108 (pvog) — also covers people not registered in Berlin and tourists
   Federal summary: apply in person at the German mission abroad responsible for your place
     of residence; with an important reason you can also apply at any Bürgeramt in Germany,

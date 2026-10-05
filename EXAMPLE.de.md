@@ -3,7 +3,8 @@
 Echte Beispiele für die Claude-Code-Skills des Plugins `fim-portal`, eines pro Skill: eine
 Anfrage, die `fim-portal`-Befehle, die der Skill ausgeführt hat, und Claudes Antwort.
 
-Jedes Beispiel lief am 15. September 2026 mit `fim-portal` 0.0.9 gegen die Live-API.
+Jedes Beispiel lief am 6. Oktober 2026 kurz nach Mitternacht gegen die Live-API, mit dem Stand
+von `fim-portal`, der als 0.3.0 erscheint (insgesamt 20 Anfragen).
 Die Daten ändern sich, Ihre Ergebnisse werden also abweichen; mit den gezeigten IDs und
 Schlüsseln können Sie die Anfragen selbst ausprobieren. Lange Listen sind gekürzt.
 
@@ -16,21 +17,20 @@ Skills: [fim-field-finder](#fim-field-finder) · [fim-quality-audit](#fim-qualit
 > Gibt es ein freigegebenes, wiederverwendbares FIM-Auswahlfeld für die Staatsangehörigkeit mit hinterlegter Codeliste?
 
 ```bash
-fim-portal --compact fields search --fts-query "Staatsangehörigkeit" --feldart select --freigabe-status 5 --freigabe-status 6 --freigabe-status 7 --is-latest --limit 50
-fim-portal --compact fields search --name "Staatsangehörigkeit" --is-latest --limit 50   # 86 Treffer
-fim-portal --compact fields search --freigabe-status 7 --is-latest --limit 1            # Label: „inaktiv"
-fim-portal --compact fields get baukasten F60000236
-fim-portal --compact fields get baukasten F00000001839
-fim-portal --compact fields get baukasten F00000000039
+fim-portal --compact fields search --fts-query "Staatsangehörigkeit" --feldart select --freigabe-status 5 --freigabe-status 6 --is-latest --limit 20
+fim-portal --compact fields search --name "Staatsangehörigkeit" --feldart select --is-latest --limit 50   # 45 Treffer
+fim-portal --compact fields get baukasten F60000236 | jq '.code_list, (.schemas | length)'
+fim-portal --compact fields get baukasten F00000001839 | jq '.code_list, (.schemas | length)'
+fim-portal --compact fields get baukasten F00000000039 | jq '.code_list, (.schemas | length)'
 ```
 
-Der Freigabe-Filter ließ 4 Felder übrig, zwei davon ohne Bezug zum Thema. Status 7 heißt
-„inaktiv", also zählen nur 5 (silber) und 6 (gold) als freigegeben. Die Namenssuche fand 86
-aktuelle Felder. Die erste Seite bestand überwiegend aus XDF2-Kopien „in Bearbeitung", und das
-zentrale Baukasten-Feld `Staatsangehörigkeit` (F00000000039) tauchte dort als Entwurf auf. Der
-maßgebliche Treffer ist daher das Gold-Feld aus dem Nummernkreis 60000, nicht das aus 00000.
-`fields get` listet alle Schemata, die ein Feld verwenden – das hat der Skill als
-Wiederverwendungssignal genutzt.
+Der Freigabe-Filter (5 silber, 6 gold) ließ 4 Felder übrig, zwei davon ohne Bezug zum Thema. Die
+Namenssuche nach Auswahlfeldern fand 45 aktuelle, fast alle XDF2-Kopien „in Bearbeitung". Zwei
+verdienen einen Hinweis: Das zentrale Baukasten-Feld `Staatsangehörigkeit` (F00000000039) ist
+ein Entwurf, ebenso der XDF3-Nachfolger des Gold-Feldes, F60000000236 v1.7.0. Der maßgebliche
+Treffer ist daher das Gold-Feld aus dem Nummernkreis 60000, nicht das aus 00000. `fields get`
+listet jede Schemaversion, die ein Feld verwendet (148 für F60000236, etwa 1,2 MB); der Skill
+hat deshalb mit `jq` nur die Codeliste und diese Zahl gelesen, als Wiederverwendungssignal.
 
 ```
 Wiederverwendbare Auswahlfelder für „Staatsangehörigkeit" (select · text, freigegeben, aktuell)
@@ -43,6 +43,8 @@ Wiederverwendbare Auswahlfelder für „Staatsangehörigkeit" (select · text, f
     Codeliste 15830 (dieselbe Destatis-Liste, 2023-02-24) · in 7 Schemata verwendet · kein Bezug
  ⚠ F00000000039  v2.1.0  Staatsangehörigkeit          baukasten · NK 00000 · XDF 3.0.0 · Status 3 Entwurf
     zentrales XDF3-Feld mit derselben Definition, noch Entwurf, ältere Codeliste 15917 (2020-05-11), 8 Schemata
+ ⚠ F60000000236  v1.7.0  Staatsangehörigkeit          NK 60000 · XDF 3.0.0 · Status 3 Entwurf · Codeliste 15926
+    der XDF3-Nachfolger von Nr. 1, noch nicht freigegeben
 
  Weitere freigegebene Auswahlfelder betreffen nicht die Staatsangehörigkeit: F00000003381 Zweck des
  Aufenthalts (Schweiz), F00000003398 Status des Antragstellers gemäß Assoziationsabkommen EWG/Türkei.
@@ -134,29 +136,30 @@ Als Nächstes angeboten: `fim-portal -o hundesteuer.xml schemas xdf S05000039 1.
 > Alles zur FIM-Leistung, mit der Deutsche mit Wohnsitz im Ausland einen Personalausweis beantragen.
 
 ```bash
-fim-portal --compact service-profiles search --fts-query "Personalausweis" --sprache Deutsch --limit 10
+fim-portal --compact service-profiles search --fts-query "Personalausweis" --sprache Deutsch --limit 10   # 54 Treffer
+fim-portal --compact service-profiles search --fts-query "Personalausweis Wohnsitz im Ausland" --sprache Deutsch --limit 10
 fim-portal --compact service-profiles get 99008001012011
-fim-portal --compact service-texts get B100019 102241587 leika     # Exit 4: nicht unter dieser Quelle
-fim-portal --compact service-texts search --leistungsschluessel 99008001012011 --limit 50
+fim-portal --compact service-texts search --leistungsschluessel 99008001012011
 fim-portal --compact service-texts get B100019 102241587 pvog
 ```
 
-Die Suche fand 52 Leistungen; `99008001012011` ist die für Menschen mit Wohnsitz im Ausland.
-Der Bundestext lag nicht unter `leika`. Deshalb hat der Skill zuerst nachgesehen, zu welcher
-Quelle jeder Text gehört, und ihn dann abgerufen.
+Die breite Suche fand 54 Leistungen, die für Menschen mit Wohnsitz im Ausland stand nicht auf der
+ersten Seite. Deshalb hat der Skill die Suche eingeengt: 2 Treffer, `99008001012011` zuerst. Bevor
+er einen Text abrief, hat er nachgesehen, zu welcher Quelle jeder gehört: Der Bundestext liegt
+unter `pvog`, nicht unter `leika`.
 
 ```
 Personalausweis für Deutsche mit Wohnsitz im Ausland   (Schlüssel 99008001012011)
   Bezeichnung:  „Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz
                 beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen"
-  Für:          Bürgerinnen und Bürger (001)   Typ: lovd   Status: 6 (technisch freigegeben), geändert 2026-04-20
+  Für:          Bürgerinnen und Bürger (001)   Typ: lovd   Status: 6 (fachlich freigegeben, gold), geändert 2026-04-20
   OZG:          Personalausweis (#10119), Querschnittsleistungen     SDG: 1010100
   Rechtsgrundlagen: PAuswG §§ 1(4) Nr. 2, 5(2) Nr. 9, 7(2), 8(2)(4), 23(4), 35; KonsG § 2;
                 PAuswVwV G.5.2.1/G.5.2.2; Personalausweis- und eID-Karten-Gebührenverordnung
   Prozess:      keiner verknüpft   Ersetzungen: keine
-  Regionale Texte: 9 Redaktionen
+  Regionale Texte: 10 Redaktionen
     • Bund     B100019 (pvog) – maßgeblich
-    • Länder   L100002, L100008, L100010, L100012, L100038, L100039, L100040 (landesredaktion)
+    • Länder   L100002, L100008, L100010, L100012, L100038, L100039, L100040, L100041 (landesredaktion)
     • Berlin   L100108 (pvog) – gilt auch für in Berlin nicht gemeldete Personen und Touristen
   Kurzfassung (Bund): Antrag persönlich bei der deutschen Auslandsvertretung, die für den
     Wohnort zuständig ist; aus wichtigem Grund auch in jedem Bürgeramt in Deutschland – den
