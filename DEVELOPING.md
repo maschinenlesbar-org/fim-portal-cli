@@ -164,11 +164,15 @@ status }` — raw bytes, never lossily decoded.
 
 **Retry / backoff.** Transient `429` (rate limit) and `503` responses are retried
 automatically, up to `maxRetries` (`--max-retries`, `0`–`MAX_RETRIES` = 10 in the CLI and
-the library). Each retry waits the
-response's `Retry-After` — delay-seconds or an IMF-fixdate HTTP-date, parsed by
-`parseRetryAfter` — or, without a usable one, `retryDelayMs * attempt`. A `Retry-After`
-longer than `MAX_RETRY_AFTER_MS` (30 s) is not retried: the `FimApiError` surfaces at
-once. `FimApiError` is raised after all retries are exhausted. A connection reset
+the library). Each retry waits `retryDelayMs * attempt` (`retryDelayMs` 0..30 000,
+default 200), or the response's `Retry-After` — delay-seconds or an IMF-fixdate
+HTTP-date, parsed by `parseRetryAfter` — when that is longer: the header can lengthen a
+wait, never shorten it, so `Retry-After: 0` or a past date doesn't turn the retries into a
+burst. A `Retry-After` longer than `MAX_RETRY_AFTER_MS` (30 s) is not retried: the
+`FimApiError` surfaces at once, with `retryAfterMs` set and a message that names the
+wait (`…; the server asked to retry after 3600 s, longer than the 30 s the client waits;
+not retried — try again after that`). `FimApiError` is raised after all retries are
+exhausted; its `retries` field and the message's `(after N retries)` say how many ran. A connection reset
 (`ECONNRESET`, `EPIPE`, `ECONNABORTED`, undici's `UND_ERR_SOCKET`, anywhere in the
 error's `cause` chain, from any transport) is retried the same way, with the linear
 backoff; a timeout, a refused connection or a DNS failure is not.

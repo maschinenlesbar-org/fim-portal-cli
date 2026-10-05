@@ -176,10 +176,26 @@ test("without a usable Retry-After the retries back off linearly", async () => {
 test("a Retry-After above MAX_RETRY_AFTER_MS is not retried: the error surfaces at once", async () => {
   for (const header of ["31", "99999999999999999999", "Fri, 31 Dec 9999 23:59:59 GMT"]) {
     const { engine, mt, delays } = retryingEngine(header);
-    await assert.rejects(() => engine.getJson("/x"), (e: unknown) => e instanceof FimApiError && e.status === 429);
+    await assert.rejects(
+      () => engine.getJson("/x"),
+      (e: unknown) =>
+        e instanceof FimApiError &&
+        e.status === 429 &&
+        e.retries === 0 &&
+        e.retryAfterMs !== undefined &&
+        /: slow down; the server asked to retry after \d+ s, longer than the 30 s the client waits; not retried/.test(e.message),
+    );
     assert.equal(mt.calls.length, 1, header);
     assert.deepEqual(delays, [], header);
   }
+});
+
+test("an error after retries says how many ran", async () => {
+  const { engine } = retryingEngine("1");
+  await assert.rejects(
+    () => engine.getJson("/x"),
+    (e: unknown) => e instanceof FimApiError && e.retries === 2 && / \(after 2 retries\)$/.test(e.message),
+  );
 });
 
 test("parseRetryAfter reads delay-seconds and IMF-fixdate HTTP-dates", () => {
@@ -330,6 +346,7 @@ test("the constructor range-checks the numeric options before any request", () =
     [{ maxRetries: NaN }, "Invalid maxRetries: Expected an integer."],
     [{ retryDelayMs: -5 }, "Invalid retryDelayMs: Must be >= 0."],
     [{ retryDelayMs: Infinity }, "Invalid retryDelayMs: Expected an integer."],
+    [{ retryDelayMs: MAX_RETRY_AFTER_MS + 1 }, `Invalid retryDelayMs: Must be <= ${MAX_RETRY_AFTER_MS}.`],
     [{ maxResponseBytes: 0.5 }, "Invalid maxResponseBytes: Expected an integer."],
   ] as const) {
     assert.throws(
