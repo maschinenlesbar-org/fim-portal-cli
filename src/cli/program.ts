@@ -75,7 +75,7 @@ export function buildProgram(deps: CliDeps = defaultDeps): Command {
     .option("--compact", "print JSON on a single line instead of pretty-printed")
     .option(
       "-o, --output <file>",
-      "for downloads: write bytes to this file instead of stdout",
+      'for downloads: write bytes to this file instead of stdout ("-" = stdout)',
       parseNonEmpty,
     )
     .showHelpAfterError();

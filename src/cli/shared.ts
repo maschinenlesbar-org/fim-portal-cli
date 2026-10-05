@@ -200,22 +200,36 @@ function stringifyJson(value: unknown, compact: boolean): string {
   }
 }
 
+/** The `-o` value that means stdout, as in other Unix tools (`-o -`). */
+export const STDOUT_PATH = "-";
+
+/**
+ * The file `--output` names, or undefined for stdout: no `-o` at all, or `-o -`. A
+ * script that passes a variable defaulting to `-` expects stdout; writing a regular
+ * file literally named `-` into the working directory surprised everyone.
+ */
+export function outputFile(global: GlobalOptions): string | undefined {
+  return global.output === undefined || global.output === STDOUT_PATH ? undefined : global.output;
+}
+
 /**
  * Render a JSON value, pretty by default and compact with --compact. Honors
  * --output by writing the JSON (UTF-8) to that file instead of stdout, so the
- * flag is not silently ignored on JSON commands; otherwise prints to stdout.
+ * flag is not silently ignored on JSON commands; otherwise (and for `-o -`) prints
+ * to stdout.
  */
 export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown): void {
   const text = escapeControlChars(stringifyJson(value, global.compact === true));
-  if (global.output) {
+  const file = outputFile(global);
+  if (file !== undefined) {
     const data = Buffer.from(text + "\n", "utf8");
     try {
-      deps.io.writeFile(global.output, data);
+      deps.io.writeFile(file, data);
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      throw new FimError(`could not write ${global.output}: ${reason}`, { cause: err });
+      throw new FimError(`could not write ${file}: ${reason}`, { cause: err });
     }
-    deps.io.err(`Wrote ${data.length} bytes to ${global.output}`);
+    deps.io.err(`Wrote ${data.length} bytes to ${file}`);
   } else {
     deps.io.out(text);
   }
@@ -223,7 +237,7 @@ export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown)
 
 /**
  * Render a raw (binary/text) download. Writes to the file given by --output, or
- * to stdout otherwise. Prints a short confirmation to stderr when writing a file
+ * to stdout otherwise (also for `-o -`). Prints a short confirmation to stderr when writing a file
  * so stdout stays clean for piping.
  *
  * The confirmation reports the server's Content-Type so the user can tell what
@@ -246,14 +260,15 @@ export function renderRaw(
   const typeNote = response.contentType
     ? ` (Content-Type: ${sanitizeServerText(response.contentType)})`
     : "";
-  if (global.output) {
+  const file = outputFile(global);
+  if (file !== undefined) {
     try {
-      deps.io.writeFile(global.output, response.data);
+      deps.io.writeFile(file, response.data);
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      throw new FimError(`could not write ${global.output}: ${reason}`, { cause: err });
+      throw new FimError(`could not write ${file}: ${reason}`, { cause: err });
     }
-    deps.io.err(`Wrote ${response.data.length} bytes to ${global.output}${typeNote}`);
+    deps.io.err(`Wrote ${response.data.length} bytes to ${file}${typeNote}`);
   } else {
     deps.io.outBinary(response.data);
     deps.io.err(`Wrote ${response.data.length} bytes to stdout${typeNote}`);

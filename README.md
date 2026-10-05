@@ -247,7 +247,8 @@ fim-portal organizational-units list --cursor "$cursor" --limit 50
 
 Every JSON command prints **pretty JSON to stdout**. Download commands (`xdf`,
 `xzufi`, `xprozess`, `pdf`, `report`, `visualization`, `visualization-display`,
-`search-csv`) stream raw bytes to stdout or to a file with `-o/--output`. Errors
+`search-csv`) stream raw bytes to stdout or to a file with `-o/--output` (`-o -` is
+stdout, as in other Unix tools, so a script can pass a variable that defaults to `-`). Errors
 and diagnostics go to stderr, so piping stdout into `jq` stays clean.
 
 > **`-o` overwrites without asking.** If the target file already exists it is
@@ -324,7 +325,7 @@ These apply to every command and may be given **before or after** it:
 | `-V, --version` | Print the version number |
 | `-h, --help` | Show help for the program or a command |
 | `--compact` | Print JSON on a single line instead of pretty-printed |
-| `-o, --output <file>` | For downloads: write bytes to a file instead of stdout |
+| `-o, --output <file>` | For downloads: write bytes to a file instead of stdout; `-o -` means stdout |
 | `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works). Must be an `http:`/`https:` URL without a query, a fragment, whitespace or control characters, and a `%` in a user name or password must be an escape (write a literal `%` as `%25`) — anything else is rejected at parse time (exit `1`) before any request is made |
 | `--timeout <ms>` | Per-request timeout (default `30000`; at most `2147483647`) |
 | `--user-agent <ua>` | `User-Agent` header value |

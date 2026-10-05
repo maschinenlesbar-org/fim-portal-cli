@@ -7,7 +7,7 @@ data fields, document/service profiles and process models of the German federal
 
 JSON commands print to stdout (pretty by default); download commands (`xdf`,
 `xzufi`, `xprozess`, `pdf`, `report`, `visualization*`, `search-csv`) stream raw bytes to
-stdout or to a file via `-o/--output`.
+stdout or to a file via `-o/--output` (`-o -` means stdout).
 
 > The identifiers in the examples (e.g. `S07000009`, `L100001`, `99050048262000`)
 > are **illustrative** — substitute real ones from a search/list result.
@@ -273,7 +273,7 @@ These go **before** the command, e.g. `fim-portal --compact schemas get S0700000
 | `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB) |
 | `--user-agent <ua>` | `User-Agent` header value |
 | `--compact` | Print JSON on a single line instead of pretty-printed |
-| `-o, --output <file>` | For downloads: write bytes to this file instead of stdout (an existing file is overwritten without a prompt) |
+| `-o, --output <file>` | For downloads: write bytes to this file instead of stdout (an existing file is overwritten without a prompt); `-o -` means stdout |
 | `-V, --version` / `-h, --help` | Version / help |
 
 Examples:
