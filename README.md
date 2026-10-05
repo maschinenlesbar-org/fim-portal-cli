@@ -286,6 +286,9 @@ do the same thing.
 | `4` | resource not found (`404`) |
 | `1` | any other error (bad usage / invalid arguments, network failure, server error, unexpected) |
 
+A reader that stops early (`fim-portal … | head`) ends the run quietly with `0`. When
+stderr's reader is gone (`2>&1 | true`), a failed run still exits with its own code.
+
 ## Troubleshooting
 
 - **`command not found: fim-portal`** — the global npm bin directory isn't on your
