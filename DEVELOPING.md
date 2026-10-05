@@ -203,7 +203,9 @@ serialiser: omits `undefined`/`null`, repeats keys for arrays, renders booleans 
 mocked client and captured output — no subprocess.
 
 **Error types.** [`errors.ts`](src/client/errors.ts): `FimApiError` (non-2xx,
-carries `status`/`detail`), `FimNetworkError` (transport failure/timeout),
+carries `status`/`detail`; the `detail` and a redirect target are cut at 500 characters,
+`MAX_DETAIL_LENGTH`, and the URL in the message at 500, `cutForMessage`, while `body`
+and `url` keep the full text), `FimNetworkError` (transport failure/timeout),
 `FimParseError` (bad JSON), `FimValidationError` (an input refused before any
 request, including a bad client option such as the base URL), all extending
 `FimError`. The CLI maps a `404` to exit code `4`, a
@@ -224,7 +226,8 @@ input through `run()` and through the library on one recording mock transport.
 What the library rejects with `FimValidationError`, before any request:
 
 - **Blank query values.** A blank string (`""` or whitespace only), a blank
-  element of an array filter, an empty array or a blank parameter name, in any
+  element of an array filter, an empty array, a blank parameter name or an invalid
+  `Date` (`new Date("garbage")`, which used to throw a raw `RangeError`), in any
   search, list or `tools.searchCsvDownload` call (`assertNonBlankParams`, run by
   `RequestEngine.buildUrl`). The API treats an empty parameter as no filter and
   would answer with the unfiltered result. `undefined`/`null` still mean "omitted".

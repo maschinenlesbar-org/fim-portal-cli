@@ -12,7 +12,7 @@ export {
   parseRetryAfter,
   validateBaseUrl,
 } from "./engine.js";
-export { decodeBody, responseShapeProblem } from "./engine.js";
+export { MAX_DETAIL_LENGTH, cleanDetail, decodeBody, responseShapeProblem } from "./engine.js";
 export type { EngineOptions, RawResponse, ResponseShape } from "./engine.js";
 export { MAX_TIMEOUT_MS, nodeHttpTransport, sizeLimitMessage } from "./http.js";
 export type { Transport, HttpRequest, HttpResponse } from "./http.js";
@@ -24,7 +24,9 @@ export {
   FimNetworkError,
   FimParseError,
   FimValidationError,
+  MAX_MESSAGE_VALUE_LENGTH,
   credentialsIn,
+  cutForMessage,
   redactCredentials,
   redactUrl,
 } from "./errors.js";

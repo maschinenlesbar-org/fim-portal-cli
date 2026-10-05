@@ -375,3 +375,27 @@ test("a JSON body is decoded by its declared charset, BOM dropped; an unknown ch
   const engine = new RequestEngine({ transport: async () => rawResponse("{}", "application/json; charset=x-klingon") });
   await assert.rejects(engine.getJson("/x"), (e: unknown) => e instanceof FimParseError && /Unsupported response charset "x-klingon"/.test((e as Error).message));
 });
+
+test("server text in an error message is cut at 500 characters; the body keeps it all", async () => {
+  const detail = "x".repeat(200_000);
+  const engine = new RequestEngine({ transport: async () => jsonResponse({ detail }, 500), maxRetries: 0 });
+  await assert.rejects(engine.getJson("/x"), (e: unknown) => {
+    assert.ok(e instanceof FimApiError);
+    assert.equal(e.detail, `${"x".repeat(500)}…`);
+    assert.ok(e.message.length < 700, String(e.message.length));
+    assert.equal(e.body.length, JSON.stringify({ detail }).length);
+    return true;
+  });
+});
+
+test("an invalid Date in a filter is a FimValidationError, not a raw RangeError", async () => {
+  const mt = makeMockTransport(() => jsonResponse({ items: [], total_count: 0 }));
+  const engine = new RequestEngine({ transport: mt.transport });
+  for (const query of [{ updated_since: new Date("garbage") }, { updated_since: [new Date(NaN)] }]) {
+    assert.throws(
+      () => engine.buildUrl("/x", query),
+      (e: unknown) => e instanceof FimValidationError && e.message === "Invalid updated_since: Expected a valid date.",
+    );
+  }
+  assert.equal(mt.calls.length, 0);
+});

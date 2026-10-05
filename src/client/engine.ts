@@ -19,6 +19,7 @@ import {
   FimParseError,
   FimValidationError,
   credentialsIn,
+  cutForMessage,
   redactCredentials,
   redactUrl,
 } from "./errors.js";
@@ -285,6 +286,9 @@ export class RequestEngine {
   private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(options: EngineOptions = {}) {
+    // A JavaScript caller may pass null for "no options"; treat it like undefined rather
+    // than failing with a raw TypeError on the first property read.
+    options = options ?? {};
     // Checked on the raw value, before the slash strip: buildUrl concatenates it.
     // Only undefined selects the default.
     this.#baseUrl = options.baseUrl === undefined ? DEFAULT_BASE_URL : validateBaseUrl(options.baseUrl);
@@ -364,7 +368,7 @@ export class RequestEngine {
    * Every search, list and CSV method goes through here, so all are covered.
    */
   buildUrl(path: string, query?: QueryParams): string {
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    const normalizedPath = path.startsWith("/") ? path : `/${cutForMessage(path)}`;
     const segments = normalizedPath.split("/").slice(1);
     const dotSegment = segments.find((s) => s === "." || s === "..");
     if (dotSegment !== undefined) {
@@ -532,11 +536,11 @@ export class RequestEngine {
       // so it reads as an upstream problem rather than a client bug.
       const type = res.contentType.split(";")[0]?.trim() ?? "";
       const hint = type !== "" && !/json/i.test(type) ? `: expected JSON, got Content-Type "${cleanDetail(type)}"` : "";
-      throw new FimParseError(`Failed to parse JSON response from ${path}${hint}`, { cause });
+      throw new FimParseError(`Failed to parse JSON response from ${cutForMessage(path)}${hint}`, { cause });
     }
     const problem = shape === undefined ? undefined : responseShapeProblem(value, shape);
     if (problem !== undefined) {
-      throw new FimParseError(`Unexpected response from ${path} (HTTP ${res.status}): ${problem}`);
+      throw new FimParseError(`Unexpected response from ${cutForMessage(path)} (HTTP ${res.status}): ${problem}`);
     }
     return value as T;
   }
@@ -551,7 +555,7 @@ export class RequestEngine {
     const res = await this.request("GET", path, { query, accept });
     if (isHtml(res)) {
       throw new FimParseError(
-        `Unexpected response from ${path} (HTTP ${res.status}): expected ${accept}, got an HTML page` +
+        `Unexpected response from ${cutForMessage(path)} (HTTP ${res.status}): expected ${accept}, got an HTML page` +
           (res.contentType === "" ? "" : ` (Content-Type "${cleanDetail(res.contentType)}")`),
       );
     }
@@ -576,7 +580,9 @@ export class RequestEngine {
     }
     // `detail` came from the response body; strip control characters so a hostile
     // endpoint cannot inject terminal escape sequences via the stderr error message.
-    if (detail !== undefined) detail = sanitizeServerText(detail);
+    // ... and cap its length, so a hostile or buggy body cannot flood stderr with one huge
+    // line (FimApiError.body keeps the full text).
+    if (detail !== undefined) detail = cleanDetail(detail);
     // Redirects are not followed; name the target so the user can fix --base-url.
     const location =
       status >= 300 && status < 400 && locationHeader ? redirectTarget(url, locationHeader) : undefined;
@@ -658,7 +664,7 @@ export function decodeBody(body: Buffer, contentType: string, path: string): str
   try {
     decoder = new TextDecoder(charset);
   } catch {
-    throw new FimParseError(`Unsupported response charset "${sanitizeServerText(charset)}" from ${path}.`);
+    throw new FimParseError(`Unsupported response charset "${sanitizeServerText(charset)}" from ${cutForMessage(path)}.`);
   }
   return decoder.decode(body);
 }
@@ -675,7 +681,7 @@ function redirectTarget(requestUrl: string, location: string): string | undefine
   } catch {
     target = location;
   }
-  const clean = sanitizeServerText(target);
+  const clean = cleanDetail(target);
   return clean === "" ? undefined : clean;
 }
 

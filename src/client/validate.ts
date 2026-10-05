@@ -40,7 +40,8 @@ export const nonEmptyProblem: Problem<string> = (value) =>
 
 /**
  * Reject query parameters that would silently widen a search: a blank parameter
- * name, a blank string value, an empty array, or a blank string inside an array.
+ * name, a blank string value, an empty array, or a blank string inside an array; and
+ * an invalid `Date` (which would otherwise throw a raw RangeError).
  * `undefined` and `null` still mean "omitted"; numbers, booleans and dates are left
  * to their own rules. Throws `FimValidationError` naming the parameter
  * (`Invalid fts_query: Expected a non-empty value.`).
@@ -51,12 +52,22 @@ export function assertNonBlankParams(params: QueryParams): void {
     if (raw === undefined || raw === null) continue;
     if (Array.isArray(raw)) {
       if (raw.length === 0) throw new FimValidationError(`Invalid ${key}: Expected at least one value.`);
-      for (const value of raw) if (typeof value === "string") assertValid(key, value, nonEmptyProblem);
-    } else if (typeof raw === "string") {
-      assertValid(key, raw, nonEmptyProblem);
+      for (const value of raw) assertValid(key, value, queryScalarProblem);
+    } else {
+      assertValid(key, raw, queryScalarProblem);
     }
   }
 }
+
+/**
+ * A blank string is invalid (nonEmptyProblem), and so is a `Date` that holds no time
+ * (`new Date("garbage")`): serialising it threw a raw `RangeError: Invalid time value`.
+ */
+const queryScalarProblem: Problem<unknown> = (value) => {
+  if (typeof value === "string") return nonEmptyProblem(value);
+  if (value instanceof Date && Number.isNaN(value.getTime())) return "Expected a valid date.";
+  return undefined;
+};
 
 /**
  * A path id (a FIM id, version, namespace, Leistungsschlüssel, language code, …)
