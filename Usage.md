@@ -274,7 +274,7 @@ These go **before** the command, e.g. `fim-portal --compact schemas get S0700000
 
 | Flag | Purpose |
 | --- | --- |
-| `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works) |
+| `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works). A plain `http:` URL to a non-loopback host gets one `warning: … sent unencrypted (http:, not https:)` line on stderr; stdout and the exit code are unchanged |
 | `--timeout <ms>` | Per-request timeout in milliseconds |
 | `--max-retries <n>` | Retries for transient `429`/`503` responses and reset connections (`0`–`10`; each backs off linearly or waits the server's longer `Retry-After`, up to 30 s; a longer one is not retried) |
 | `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB) |

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MAX_RETRIES, MAX_RETRY_AFTER_MS, RequestEngine, parseRetryAfter, sanitizeServerText } from "../src/client/engine.js";
+import { MAX_RETRIES, MAX_RETRY_AFTER_MS, RequestEngine, cleartextProblem, parseRetryAfter, sanitizeServerText } from "../src/client/engine.js";
 import { MAX_TIMEOUT_MS } from "../src/client/http.js";
 import { FimApiError, FimNetworkError, FimParseError, FimValidationError, redactUrl } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
@@ -398,4 +398,21 @@ test("an invalid Date in a filter is a FimValidationError, not a raw RangeError"
     );
   }
   assert.equal(mt.calls.length, 0);
+});
+
+test("cleartextProblem: exact wording, host with port, loopback range, never the secret", () => {
+  assert.equal(cleartextProblem("http://mirror.example:8080/api"), "requests to mirror.example:8080 are sent unencrypted (http:, not https:)");
+  assert.equal(
+    cleartextProblem("http://alice:pw@mirror.example"),
+    "the base URL's credentials are sent unencrypted to mirror.example (http:, not https:)",
+  );
+  assert.equal(
+    cleartextProblem("http://alice:pw@mirror.example", ["the API key"]),
+    "the API key and the base URL's credentials are sent unencrypted to mirror.example (http:, not https:)",
+  );
+  assert.equal(cleartextProblem("http://mirror.example", ["the login"]), "the login is sent unencrypted to mirror.example (http:, not https:)");
+  for (const url of ["https://alice:pw@mirror.example", "http://127.8.9.10", "http://localhost:1", "http://[::1]/", "not a url"]) {
+    assert.equal(cleartextProblem(url), undefined, url);
+  }
+  assert.notEqual(cleartextProblem("http://128.0.0.1"), undefined);
 });
