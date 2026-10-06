@@ -376,7 +376,10 @@ npm test          # builds, then runs `node --test` over dist/test
   2026-10-06), copied from autobahn-cli with a per-repo adapter block; P12 (`-o -`) was piloted here.
   The follow-up round of 2026-10-06 added P20 (`conformance-p20-cleartext-warning`: a remote plain
   `http:` base URL gets one `warning:` line on stderr from `cleartextProblem`; this CLI has no
-  base-URL variable and no secret, so those two cases are skipped).
+  base-URL variable and no secret, so those two cases are skipped) and P21
+  (`conformance-p21-readme-links`: README.md ships in the npm tarball, so a relative link in it
+  must point to a file `package.json` `files` ships; any other document is linked by its absolute
+  `https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/<path>` URL).
 - **`parity.test.ts`** — the same input through the CLI and the library (`parity()`): both reject
   without a request, or both send the identical request.
 - **`cli.test.ts`** — end-to-end command parsing, rendering, file output and exit codes — mocked client.

@@ -25,7 +25,7 @@ straight into [`jq`](https://jqlang.github.io/jq/) or save to a file.
   output with `-o`.
 
 > Want to use this as a TypeScript library or understand how it's built?
-> See **[DEVELOPING.md](DEVELOPING.md)**.
+> See **[DEVELOPING.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/DEVELOPING.md)**.
 
 ## Install
 
@@ -206,7 +206,7 @@ Every option that takes one value is a usage error when given twice
 
 ## Common tasks
 
-A few recipes to get going — see **[Usage.md](Usage.md)** for the full,
+A few recipes to get going — see **[Usage.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/Usage.md)** for the full,
 use-case-driven set.
 
 ```bash
@@ -341,10 +341,10 @@ These apply to every command and may be given **before or after** it:
 
 ## Learn more
 
-- **[SKILLS.md](SKILLS.md)** — Claude Code Agent Skills that drive this CLI for real-world tasks.
-- **[Usage.md](Usage.md)** — full use-case-driven cookbook.
-- **[GLOSSARY.md](GLOSSARY.md)** — every domain term and flag explained.
-- **[DEVELOPING.md](DEVELOPING.md)** — TypeScript library usage, architecture, testing, CI.
+- **[SKILLS.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/SKILLS.md)** — Claude Code Agent Skills that drive this CLI for real-world tasks.
+- **[Usage.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/Usage.md)** — full use-case-driven cookbook.
+- **[GLOSSARY.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/GLOSSARY.md)** — every domain term and flag explained.
+- **[DEVELOPING.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/DEVELOPING.md)** — TypeScript library usage, architecture, testing, CI.
 
 ## Data license
 
