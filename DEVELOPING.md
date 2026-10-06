@@ -266,8 +266,12 @@ What the library rejects with `FimValidationError`, before any request:
   confirmed live for `xdf_version` and `datentyp` on 2026-10-06 — except `sdg_relevant`,
   which the export reads as `Ja`/`Nein` (`CSV_SDG_RELEVANT_VALUES`, from the portal's
   source and confirmed live: `true` is ignored, `Nein` filters)) and an `order_by`
-  outside the resource's JSON sort orders (`CSV_ORDER_VALUES`; unchecked for the
-  process resources, whose JSON searches have none). `allowUnknownFilters` lets all of
+  outside the resource's JSON sort orders (`CSV_ORDER_VALUES`; refused for `process` and
+  `processclass`, which the portal never sorts by it). `abstraktionsstufe` filters
+  `document-profile` only, as `Abstrakt`/`Konkret` (`CSV_ABSTRAKTIONSSTUFE_VALUES`). These
+  three domains come from the portal's source (gitlab.opencode.de/fitko/fim/portal,
+  `fimportal/routers/ui_search.py`, `get_ui_filters`), as the OpenAPI spec types every
+  parameter as a free string. `allowUnknownFilters` lets all of
   these through. The CLI's `search-csv` offers the domains as choices.
 - **A single-value CLI option given twice** (`forbidRepeatedOptions` in
   `cli/shared.ts`): commander kept the last value silently, so `--name A --name B`

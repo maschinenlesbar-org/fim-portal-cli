@@ -249,7 +249,7 @@ plural `schemas`, say) silently exports Leistungen. Additional filters:
 `--xdf-version` (`2.0`, `3.0.0`; the four XDatenfelder resources), `--feldart` and
 `--datentyp` (`field`), `--dokumentart` (`document-profile`), `--sprache`
 (`leistung-steckbriefe`), and `--order-by` (the sort orders of the resource's JSON
-search). The server ignores a value it doesn't know and a filter for another resource,
+search; `process` and `processclass` have none, so it is refused there). The server ignores a value it doesn't know and a filter for another resource,
 and exports the unfiltered result; the CLI rejects both before the request, as a usage
 error naming the allowed values or resources.
 

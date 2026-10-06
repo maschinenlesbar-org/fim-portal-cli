@@ -190,7 +190,7 @@ across `document-profiles search`, `fields search` and `groups search`.
 | `--datentyp <type>` | data type, e.g. `text` (`field`) |
 | `--dokumentart <code>` | document kind, e.g. `001` (`document-profile`) |
 | `--sprache <lang>` | language, e.g. `Englisch` (`leistung-steckbriefe`) |
-| `--order-by <field>` | sort order of the resource's JSON search (`name_asc`, `titel_asc`, …) |
+| `--order-by <field>` | sort order of the resource's JSON search (`name_asc`, `titel_asc`, …); not for `process` or `processclass`, which have none |
 
 `search-csv` wraps `tools/search-csv-download`, whose server rejects nothing: an
 unknown `--resource` (such as the plural `schemas`) silently exports Leistungen, and a
@@ -198,7 +198,8 @@ filter value it doesn't know (`--feldart SELECT`, `--dokumentart 1`) or a filter
 another resource (`--feldart` with `--resource schema`) is ignored, exporting the
 **unfiltered** result. So the CLI checks all of it before any request: the filters
 with a known domain take only its values (the error lists them), each filter only the
-resources in brackets above, and `--order-by` only the resource's sort orders. A
+resources in brackets above, and `--order-by` only the resource's sort orders (the
+process resources have none, so it is refused there). A
 rejected value or filter is a usage error (exit `1`).
 
 Every option that takes one value is a usage error when given twice

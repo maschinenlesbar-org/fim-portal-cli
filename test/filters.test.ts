@@ -110,6 +110,12 @@ test("P10: the CSV export refuses unknown keys, inapplicable filters and unknown
     [{ resource: "leistung-steckbriefe", sdg_relevant: "true" }, /Invalid sdg_relevant: Expected one of: Ja, Nein\./],
     [{ resource: "leistung-steckbriefe", sdg_relevant: "ja" }, /Invalid sdg_relevant: Expected one of: Ja, Nein\./],
     [{ resource: "schema", sdg_relevant: "Ja" }, /Invalid sdg_relevant: it filters resource leistung-steckbriefe only, not schema/],
+    // abstraktionsstufe filters document profiles only, as Abstrakt/Konkret (portal source; live 2026-10-06).
+    [{ resource: "document-profile", abstraktionsstufe: "konkret" }, /Invalid abstraktionsstufe: Expected one of: Abstrakt, Konkret\./],
+    [{ resource: "process", abstraktionsstufe: "Abstrakt" }, /Invalid abstraktionsstufe: it filters resource document-profile only, not process/],
+    // The process exports have no sort order: the portal never reads order_by for them.
+    [{ resource: "process", order_by: "name_asc" }, /Invalid order_by: the CSV export of process has no sort order/],
+    [{ resource: "processclass", order_by: "relevance" }, /Invalid order_by: the CSV export of processclass has no sort order/],
     [{ resource: "field", feldartt: "select" }, /parameter "feldartt": tools\.searchCsvDownload has no such parameter \(did you mean feldart\?\)/],
     [{ resource: "field", feldart: ["input", "select"] }, /Invalid feldart: Expected a single value, not a list/],
     [{ resource: "field", term: 5 }, /Invalid term: Expected a string\./],
@@ -126,7 +132,7 @@ test("P10: the CSV export sends filters that apply, and allowUnknownFilters send
     { resource: "process", term: "Feuerbestattung", detaillierungsstufe: "105" },
     { resource: "field", term: "Familienname", feldart: "select", datentyp: "text", xdf_version: "3.0.0", order_by: "name_asc" },
     { resource: "leistung-steckbriefe", sprache: "Englisch", order_by: "titel_asc", sdg_relevant: "Nein" },
-    { resource: "processclass", order_by: "anything", abstraktionsstufe: "x" },
+    { resource: "document-profile", abstraktionsstufe: "Konkret", order_by: "name_asc" },
   ] as const) {
     await client.tools.searchCsvDownload(params as unknown as SearchCsvParams);
   }

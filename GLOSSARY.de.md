@@ -75,7 +75,8 @@ einzelne Eingabe, z. B. „Familienname“. Hat eine **Feldart** und einen **Dat
 **Dokumentsteckbrief (document profile).** Ein Steckbrief, der ein *Dokument* in einem
 Prozess beschreibt – welche Rolle es spielt (Auslöser, Ergebnis, eingehende/ausgehende
 Daten) und welches Datenschema es umsetzt. Hat eine **Dokumentart**. Kann *abstrakt* sein
-(`ist_abstrakt`). CLI: `document-profiles`.
+(`ist_abstrakt`); der CSV-Export filtert danach mit `abstraktionsstufe` `Abstrakt` oder
+`Konkret` (nur in der Bibliothek). CLI: `document-profiles`.
 
 **Feldart.** Die *Art* eines Datenfelds: `input`, `select`, `label`, `hidden`,
 `locked`. (Filter: `fields search --feldart`.)
@@ -248,7 +249,8 @@ die Versionsliste machen.
 **order_by.** Sortierung der Ergebnisse. Die zulässigen Werte hängen von der Ressource ab –
 die Datenfelder-Ressourcen teilen sich einen Satz (`relevance`, `id_asc`, `name_asc`, …);
 Leistungen haben eigene Sätze (u. a. `relevance`, `titel_asc`). `relevance` ordnet die
-Treffer einer Suche mit `--fts-query`.
+Treffer einer Suche mit `--fts-query`. Prozesse und Prozessklassen haben keine Sortierung,
+deshalb weist `search-csv` `--order-by` für sie zurück.
 
 **Offset-Paginierung.** Die v1-/XDatenfelder-Endpoints und die meisten v0-Such-Endpoints
 blättern mit `offset` + `limit` (limit `1`–`200`, Standard `200`) und liefern eine

@@ -223,16 +223,38 @@ export interface CsvFilter {
 export const CSV_SDG_RELEVANT_VALUES = ["Ja", "Nein"] as const;
 
 /**
+ * The values `abstraktionsstufe` takes on the CSV export, which applies it to document
+ * profiles only (`Abstraktionsstufe` and `UiFilters.to_steckbrief_search_options` in the
+ * portal's source). The OpenAPI spec types it as a free string; the export ignores any
+ * other value and any other resource. Live (2026-10-06): `Abstrakt` filtered a
+ * document-profile export of 2423 rows down to 0.
+ */
+export const CSV_ABSTRAKTIONSSTUFE_VALUES = ["Abstrakt", "Konkret"] as const;
+
+/**
+ * The `order_by` values of the CSV export per resource: the sort orders of the resource's
+ * JSON search. The process resources (`process`, `processclass`) have none — the portal
+ * never reads `order_by` for them — so `order_by` is refused there.
+ */
+export const CSV_ORDER_VALUES: Readonly<Partial<Record<SearchCsvResource, readonly string[]>>> = {
+  schema: DatenfelderSearchOrderValues,
+  "document-profile": DatenfelderSearchOrderValues,
+  field: DatenfelderSearchOrderValues,
+  group: DatenfelderSearchOrderValues,
+  "leistung-steckbriefe": LeistungSteckbriefSearchOrderValues,
+};
+
+/**
  * The parameters of GET /tools/search-csv-download besides `resource`. `order_by` takes
  * the sort orders of the resource's JSON search (CSV_ORDER_VALUES), `sdg_relevant`
- * CSV_SDG_RELEVANT_VALUES; `abstraktionsstufe`, `leistung_quelle`, `leistung_redaktion_id`
- * and `leistung_einheitlicher_ansprechpartner` have no documented domain and pass as
- * non-blank strings.
+ * CSV_SDG_RELEVANT_VALUES, `abstraktionsstufe` CSV_ABSTRAKTIONSSTUFE_VALUES;
+ * `leistung_quelle`, `leistung_redaktion_id` and `leistung_einheitlicher_ansprechpartner`
+ * have no documented domain and pass as non-blank strings.
  */
 export const SEARCH_CSV_FILTERS: Readonly<Record<string, CsvFilter>> = {
   term: {},
-  order_by: {},
-  abstraktionsstufe: {},
+  order_by: { resources: Object.keys(CSV_ORDER_VALUES) as SearchCsvResource[] },
+  abstraktionsstufe: { values: CSV_ABSTRAKTIONSSTUFE_VALUES, resources: ["document-profile"] },
   xdf_version: { values: XdfVersionValues, resources: DATENFELDER_RESOURCES },
   schema_suche_in: { values: SchemaSucheInValues, resources: ["schema"] },
   steckbrief_suche_in: { values: SteckbriefSucheInValues, resources: ["document-profile"] },
@@ -254,15 +276,6 @@ export const SEARCH_CSV_FILTERS: Readonly<Record<string, CsvFilter>> = {
   handlungsform: { values: HandlungsformValues, resources: ["processclass"] },
   detaillierungsstufe: { values: DetaillierungsstufeValues, resources: ["process"] },
   anwendungsgebiet: { values: AnwendungsgebietValues, resources: ["process"] },
-};
-
-/** The `order_by` values of the CSV export per resource, where its JSON search documents them. */
-export const CSV_ORDER_VALUES: Readonly<Partial<Record<SearchCsvResource, readonly string[]>>> = {
-  schema: DatenfelderSearchOrderValues,
-  "document-profile": DatenfelderSearchOrderValues,
-  field: DatenfelderSearchOrderValues,
-  group: DatenfelderSearchOrderValues,
-  "leistung-steckbriefe": LeistungSteckbriefSearchOrderValues,
 };
 
 /** Why `value` is not what `kind` takes, or undefined. `undefined`/`null` never get here. */
@@ -388,7 +401,8 @@ export function assertParams(params: unknown, spec: ParamSpec, call: string, opt
  * know rather than rejecting it: `resource` is required and one of
  * SearchCsvResourceValues; every other key must be one of SEARCH_CSV_FILTERS, take a
  * non-list string, apply to the chosen resource and, where a domain is known, be one of its
- * values (`order_by` per resource, CSV_ORDER_VALUES). With `options.allowUnknownFilters`
+ * values (`order_by` per resource, CSV_ORDER_VALUES; refused for the process resources,
+ * which have no sort order). With `options.allowUnknownFilters`
  * only `resource` and the value types are checked.
  */
 export function assertSearchCsvParams(params: unknown, options: FilterOptions = {}): SearchCsvResource {
@@ -402,6 +416,12 @@ export function assertSearchCsvParams(params: unknown, options: FilterOptions = 
     if (options.allowUnknownFilters === true) continue;
     if (!Object.hasOwn(SEARCH_CSV_FILTERS, key)) throw unknownKey(key, call, known);
     const filter = SEARCH_CSV_FILTERS[key]!;
+    if (key === "order_by" && filter.resources !== undefined && !filter.resources.includes(resource)) {
+      throw new FimValidationError(
+        `Invalid order_by: the CSV export of ${resource} has no sort order (only ${filter.resources.join(", ")} have one); ` +
+          "it would ignore order_by.",
+      );
+    }
     if (filter.resources !== undefined && !filter.resources.includes(resource)) {
       throw new FimValidationError(
         `Invalid ${key}: it filters resource ${filter.resources.join(", ")} only, not ${resource}; ` +

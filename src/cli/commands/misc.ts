@@ -49,7 +49,7 @@ export function registerMiscCommands(program: Command, deps: CliDeps): void {
     )
     .option("--term <text>", "search term", parseNonEmpty)
     .addOption(choiceOption("--xdf-version <v>", "XDatenfelder version (schema, document-profile, field, group)", XdfVersionValues))
-    .option("--order-by <order>", "result order (the sort orders of the resource's JSON search)", parseNonEmpty)
+    .option("--order-by <order>", "result order (the sort orders of the resource's JSON search; none for process, processclass)", parseNonEmpty)
     .addOption(choiceOption("--feldart <art>", "filter by Feldart (field)", FeldartValues))
     .addOption(choiceOption("--datentyp <typ>", "filter by Datentyp (field)", DatentypValues))
     .addOption(choiceOption("--dokumentart <code>", "filter by Dokumentart (document-profile)", DokumentartValues))

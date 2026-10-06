@@ -74,8 +74,9 @@ may reference a **code list**. CLI: `fields`.
 
 **Dokumentsteckbrief (document profile).** A profile describing a *document* in a
 process — what role it plays (trigger, result, incoming/outgoing data) and which
-schema realises it. Carries a **Dokumentart**. Can be *abstract* (`ist_abstrakt`).
-CLI: `document-profiles`.
+schema realises it. Carries a **Dokumentart**. Can be *abstract* (`ist_abstrakt`); the
+CSV export filters on that with `abstraktionsstufe` `Abstrakt` or `Konkret` (library
+only). CLI: `document-profiles`.
 
 **Feldart.** The *kind* of a data field: `input`, `select`, `label`, `hidden`,
 `locked`. (Filter: `fields search --feldart`.)
@@ -247,7 +248,8 @@ versions list.
 **order_by.** Result ordering. The allowed values differ by resource —
 Datenfelder resources share one set (`relevance`, `id_asc`, `name_asc`, …); services
 have their own sets (including `relevance`, `titel_asc`). `relevance` ranks the hits of
-an `--fts-query` search.
+an `--fts-query` search. Processes and process classes have no sort order, so
+`search-csv` refuses `--order-by` for them.
 
 **Offset pagination.** The v1/XDatenfelder and most v0 search endpoints page with
 `offset` + `limit` (limit `1`–`200`, default `200`) and return a

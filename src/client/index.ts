@@ -54,6 +54,7 @@ export {
 export type { EnumSpec, Problem } from "./validate.js";
 export {
   CODE_LIST_PARAMS,
+  CSV_ABSTRAKTIONSSTUFE_VALUES,
   CSV_ORDER_VALUES,
   CSV_SDG_RELEVANT_VALUES,
   DOCUMENT_PROFILE_SEARCH_PARAMS,

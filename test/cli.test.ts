@@ -588,6 +588,7 @@ test("search-csv refuses a filter value or a filter the export would ignore, bef
     [["--resource", "schema", "--sprache", "Englisch"], /Invalid sprache: it filters resource leistung-steckbriefe only, not schema/],
     [["--resource", "process", "--xdf-version", "2.0"], /Invalid xdf_version: it filters resource schema, document-profile, field, group only, not process/],
     [["--resource", "field", "--order-by", "titel_asc"], /Invalid order_by: Expected one of: relevance/],
+    [["--resource", "process", "--order-by", "name_asc"], /Invalid order_by: the CSV export of process has no sort order/],
   ] as const) {
     const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
     const code = await run(["search-csv", ...argv], cli.deps);
