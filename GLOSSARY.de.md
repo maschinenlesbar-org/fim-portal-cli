@@ -136,6 +136,9 @@ Leistungen sind als EA-relevant gekennzeichnet
 
 **SDG – Single Digital Gateway.** EU-Verordnung; Leistungen können als SDG-relevant
 gekennzeichnet und einem SDG-Informationsbereich zugeordnet werden (`--sdg`, `--sdg-relevant`).
+Die JSON-Suche nimmt `sdg_relevant` als `true`/`false`; der CSV-Export
+(`tools.searchCsvDownload`) nimmt stattdessen `Ja`/`Nein` und ignoriert `true`, deshalb
+akzeptiert die Bibliothek dort nur `Ja` oder `Nein`.
 
 **OZG – Onlinezugangsgesetz.** Das Gesetz zur Verbesserung des Onlinezugangs zu
 Verwaltungsleistungen. Leistungen haben eine `ozg_id` und ein **OZG-Themenfeld**

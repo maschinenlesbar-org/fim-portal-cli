@@ -214,10 +214,20 @@ export interface CsvFilter {
 }
 
 /**
+ * The values `sdg_relevant` takes on the CSV export: `Ja` or `Nein`. The export reads the
+ * parameter of the portal's search page (`UiSDGRelevant` in the portal's source,
+ * fimportal/routers/ui_search.py), not the JSON search's boolean, and ignores anything
+ * else: `sdg_relevant=true` exported the unfiltered result live (2026-10-05), `Nein`
+ * filtered it (2026-10-06).
+ */
+export const CSV_SDG_RELEVANT_VALUES = ["Ja", "Nein"] as const;
+
+/**
  * The parameters of GET /tools/search-csv-download besides `resource`. `order_by` takes
- * the sort orders of the resource's JSON search (CSV_ORDER_VALUES); `abstraktionsstufe`,
- * `leistung_quelle`, `leistung_redaktion_id`, `leistung_einheitlicher_ansprechpartner`
- * and `sdg_relevant` have no documented domain and pass as non-blank strings.
+ * the sort orders of the resource's JSON search (CSV_ORDER_VALUES), `sdg_relevant`
+ * CSV_SDG_RELEVANT_VALUES; `abstraktionsstufe`, `leistung_quelle`, `leistung_redaktion_id`
+ * and `leistung_einheitlicher_ansprechpartner` have no documented domain and pass as
+ * non-blank strings.
  */
 export const SEARCH_CSV_FILTERS: Readonly<Record<string, CsvFilter>> = {
   term: {},
@@ -236,7 +246,7 @@ export const SEARCH_CSV_FILTERS: Readonly<Record<string, CsvFilter>> = {
   leistung_suche_in: { values: LeistungSucheInValues, resources: SERVICE_RESOURCES },
   leistung_geaendert_seit: { resources: SERVICE_RESOURCES },
   leistung_quelle: { resources: SERVICE_RESOURCES },
-  sdg_relevant: { resources: SERVICE_RESOURCES },
+  sdg_relevant: { values: CSV_SDG_RELEVANT_VALUES, resources: SERVICE_RESOURCES },
   vollzugsbehoerde: { values: BehoerdeValues, resources: SERVICE_RESOURCES },
   sprache: { values: SpracheValues, resources: SERVICE_RESOURCES },
   operatives_ziel: { values: OperativesZielValues, resources: ["processclass"] },

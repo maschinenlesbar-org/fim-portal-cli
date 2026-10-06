@@ -263,7 +263,9 @@ What the library rejects with `FimValidationError`, before any request:
   resource (`feldart` on `schema`, `sprache` on anything but `leistung-steckbriefe`),
   a value outside a filter's domain (`feldart: "SELECT"`, `dokumentart: "1"`,
   `detaillierungsstufe: "999"`; the domains are those of the matching JSON search,
-  confirmed live for `xdf_version` and `datentyp` on 2026-10-06) and an `order_by`
+  confirmed live for `xdf_version` and `datentyp` on 2026-10-06 — except `sdg_relevant`,
+  which the export reads as `Ja`/`Nein` (`CSV_SDG_RELEVANT_VALUES`, from the portal's
+  source and confirmed live: `true` is ignored, `Nein` filters)) and an `order_by`
   outside the resource's JSON sort orders (`CSV_ORDER_VALUES`; unchecked for the
   process resources, whose JSON searches have none). `allowUnknownFilters` lets all of
   these through. The CLI's `search-csv` offers the domains as choices.

@@ -136,6 +136,9 @@ concept; some services are flagged as EA-relevant
 
 **SDG — Single Digital Gateway.** EU regulation; services can be flagged
 SDG-relevant and tagged with an SDG information area (`--sdg`, `--sdg-relevant`).
+The JSON search takes `sdg_relevant` as `true`/`false`; the CSV export
+(`tools.searchCsvDownload`) takes `Ja`/`Nein` instead and ignores `true`, so the library
+accepts only `Ja` or `Nein` there.
 
 **OZG — Onlinezugangsgesetz.** The German Online Access Act. Services carry an
 `ozg_id` and an **OZG-Themenfeld** (thematic field, e.g. `familie_kind`).

@@ -106,6 +106,10 @@ test("P10: the CSV export refuses unknown keys, inapplicable filters and unknown
     [{ resource: "schema", sprache: "Englisch" }, /Invalid sprache: it filters resource leistung-steckbriefe only, not schema/],
     [{ resource: "processclass", detaillierungsstufe: "101" }, /it filters resource process only, not processclass/],
     [{ resource: "field", order_by: "titel_asc" }, /Invalid order_by: Expected one of: relevance/],
+    // The CSV export reads sdg_relevant as Ja/Nein (the JSON search's true/false is ignored, live 2026-10-05).
+    [{ resource: "leistung-steckbriefe", sdg_relevant: "true" }, /Invalid sdg_relevant: Expected one of: Ja, Nein\./],
+    [{ resource: "leistung-steckbriefe", sdg_relevant: "ja" }, /Invalid sdg_relevant: Expected one of: Ja, Nein\./],
+    [{ resource: "schema", sdg_relevant: "Ja" }, /Invalid sdg_relevant: it filters resource leistung-steckbriefe only, not schema/],
     [{ resource: "field", feldartt: "select" }, /parameter "feldartt": tools\.searchCsvDownload has no such parameter \(did you mean feldart\?\)/],
     [{ resource: "field", feldart: ["input", "select"] }, /Invalid feldart: Expected a single value, not a list/],
     [{ resource: "field", term: 5 }, /Invalid term: Expected a string\./],
@@ -121,7 +125,7 @@ test("P10: the CSV export sends filters that apply, and allowUnknownFilters send
   for (const params of [
     { resource: "process", term: "Feuerbestattung", detaillierungsstufe: "105" },
     { resource: "field", term: "Familienname", feldart: "select", datentyp: "text", xdf_version: "3.0.0", order_by: "name_asc" },
-    { resource: "leistung-steckbriefe", sprache: "Englisch", order_by: "titel_asc", sdg_relevant: "true" },
+    { resource: "leistung-steckbriefe", sprache: "Englisch", order_by: "titel_asc", sdg_relevant: "Nein" },
     { resource: "processclass", order_by: "anything", abstraktionsstufe: "x" },
   ] as const) {
     await client.tools.searchCsvDownload(params as unknown as SearchCsvParams);
