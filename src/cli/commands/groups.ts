@@ -70,7 +70,7 @@ export function registerGroupCommands(program: Command, deps: CliDeps): void {
     .description("Download the XDatenfelder XML for a data group")
     .action(
       action(deps, async ({ client, global }, [namespace, fimId, fimVersion]) => {
-        renderRaw(
+        await renderRaw(
           deps,
           global,
           await client.groups.downloadXdf(namespace!, fimId!, fimVersion ?? "latest"),

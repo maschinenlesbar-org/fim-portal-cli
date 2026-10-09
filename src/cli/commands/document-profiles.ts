@@ -107,7 +107,7 @@ export function registerDocumentProfileCommands(program: Command, deps: CliDeps)
     .description("Download the XDatenfelder XML for a document profile")
     .action(
       action(deps, async ({ client, global }, [fimId, fimVersion]) => {
-        renderRaw(
+        await renderRaw(
           deps,
           global,
           await client.documentProfiles.downloadXdf(fimId!, fimVersion ?? "latest"),

@@ -66,7 +66,7 @@ export function registerMiscCommands(program: Command, deps: CliDeps): void {
           dokumentart: opts["dokumentart"],
           sprache: opts["sprache"],
         }) as SearchCsvParams;
-        renderRaw(deps, global, await client.tools.searchCsvDownload(params));
+        await renderRaw(deps, global, await client.tools.searchCsvDownload(params));
       }),
     );
 }

@@ -55,7 +55,7 @@ function registerEntity(
     .description(`Download the XZuFi XML for a ${name} entity`)
     .action(
       action(deps, async ({ client, global }, [redaktionId, id]) => {
-        renderRaw(deps, global, await pick(client).downloadXzufi(redaktionId!, id!));
+        await renderRaw(deps, global, await pick(client).downloadXzufi(redaktionId!, id!));
       }),
     );
 }

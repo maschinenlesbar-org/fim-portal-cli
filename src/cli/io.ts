@@ -18,8 +18,13 @@ export interface CliIO {
   err(text: string): void;
   /** Persist raw bytes to a file. */
   writeFile(path: string, data: Buffer): void;
-  /** Write raw bytes to stdout (binary-safe). */
-  outBinary(data: Buffer): void;
+  /**
+   * Write raw bytes to stdout (binary-safe). It may return a promise that settles once
+   * the write is done: `true` when it succeeded, `false` when it failed (the failure
+   * itself is reported by `handleOutputErrors`). The "Wrote N bytes to stdout" note waits
+   * for it and is left out after a failed write.
+   */
+  outBinary(data: Buffer): void | Promise<boolean>;
 }
 
 export interface CliDeps {
@@ -88,5 +93,7 @@ export const defaultIO: CliIO = {
   out: (text) => process.stdout.write(text + "\n"),
   err: (text) => process.stderr.write(text + "\n"),
   writeFile: (path, data) => writeFileSync(path, data),
-  outBinary: (data) => process.stdout.write(data),
+  // Settles when the write callback fires: after the bytes are handed to the OS, or with
+  // the error (EBADF, EPIPE) that the stream then also emits to handleOutputErrors.
+  outBinary: (data) => new Promise<boolean>((resolve) => process.stdout.write(data, (err) => resolve(err == null))),
 };

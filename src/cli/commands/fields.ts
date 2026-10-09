@@ -74,7 +74,7 @@ export function registerFieldCommands(program: Command, deps: CliDeps): void {
     .description("Download the XDatenfelder XML for a data field")
     .action(
       action(deps, async ({ client, global }, [namespace, fimId, fimVersion]) => {
-        renderRaw(
+        await renderRaw(
           deps,
           global,
           await client.fields.downloadXdf(namespace!, fimId!, fimVersion ?? "latest"),

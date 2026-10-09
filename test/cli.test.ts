@@ -19,7 +19,7 @@ function makeCli(responder: (req: HttpRequest) => HttpResponse) {
       out: (s) => out.push(s),
       err: (s) => err.push(s),
       writeFile: (p, d) => files.set(p, d),
-      outBinary: (d) => out.push(d.toString("utf8")),
+      outBinary: (d) => void out.push(d.toString("utf8")),
     },
     createClient: (opts) => new FimPortalClient({ ...opts, transport: mt.transport }),
   };
@@ -643,7 +643,7 @@ test("a transport-level network error maps to exit 1 with a clean Error message"
       out: (s) => out.push(s),
       err: (s) => err.push(s),
       writeFile: () => {},
-      outBinary: (d) => out.push(d.toString("utf8")),
+      outBinary: (d) => void out.push(d.toString("utf8")),
     },
     createClient: (opts) =>
       new FimPortalClient({
@@ -669,7 +669,7 @@ test("a failed -o write degrades to exit 1 with a clean ERROR record (not Unexpe
         const e = new Error("ENOENT: no such file or directory, open '/nope/out.xml'");
         throw e;
       },
-      outBinary: (d) => out.push(d.toString("utf8")),
+      outBinary: (d) => void out.push(d.toString("utf8")),
     },
     createClient: (opts) => new FimPortalClient({ ...opts, transport: mt.transport }),
   };
@@ -815,4 +815,28 @@ test("every -o failure is an ERROR record of fim-portal.output, exit 1 (B04-1, L
       assert.doesNotMatch(cli.err.join("\n"), /Unexpected error/);
     }
   }
+});
+
+test("a raw download to stdout logs \"Wrote N bytes to stdout\" only once the write has succeeded (B04-3)", async () => {
+  // The write fails (EBADF: stdout opened read-only): no success note; handleOutputErrors reports the failure.
+  const failed = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
+  failed.deps.io.outBinary = async () => false;
+  assert.equal(await run(["schemas", "xdf", "S1", "1.0"], failed.deps), 0);
+  assert.deepEqual(failed.err, []);
+
+  // The write completes later: the note comes after it, still within the run.
+  const slow = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
+  const order: string[] = [];
+  slow.deps.io.outBinary = (data) =>
+    new Promise<boolean>((resolve) =>
+      setImmediate(() => {
+        order.push(`wrote ${data.length}`);
+        resolve(true);
+      }),
+    );
+  slow.deps.io.err = (line) => order.push(untimed(line));
+  assert.equal(await run(["schemas", "xdf", "S1", "1.0"], slow.deps), 0);
+  assert.equal(order.length, 2, order.join("\n"));
+  assert.match(order[0] ?? "", /^wrote \d+$/);
+  assert.match(order[1] ?? "", /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to stdout \(Content-Type: application\/xml\)$/);
 });

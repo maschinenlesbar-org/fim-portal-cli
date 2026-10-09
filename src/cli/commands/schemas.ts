@@ -69,7 +69,7 @@ export function registerSchemaCommands(program: Command, deps: CliDeps): void {
     .description("Download the XDatenfelder XML for a schema")
     .action(
       action(deps, async ({ client, global }, [fimId, fimVersion]) => {
-        renderRaw(deps, global, await client.schemas.downloadXdf(fimId!, fimVersion ?? "latest"));
+        await renderRaw(deps, global, await client.schemas.downloadXdf(fimId!, fimVersion ?? "latest"));
       }),
     );
 

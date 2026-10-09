@@ -120,7 +120,7 @@ export async function parity(
       ...defaultDeps.io,
       out: (s) => out.push(s),
       err: (s) => err.push(s),
-      outBinary: (d) => out.push(d.toString("utf8")),
+      outBinary: (d) => void out.push(d.toString("utf8")),
       writeFile: () => {
         throw new Error("parity(): the CLI must not write files here");
       },

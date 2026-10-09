@@ -77,7 +77,7 @@ function registerProcessClasses(program: Command, deps: CliDeps): void {
     .description("Download the XProzess XML for a process class")
     .action(
       action(deps, async ({ client, global }, [id, version]) => {
-        renderRaw(deps, global, await client.processClasses.downloadXprozess(id!, version!));
+        await renderRaw(deps, global, await client.processClasses.downloadXprozess(id!, version!));
       }),
     );
 }
@@ -154,7 +154,7 @@ function registerProcesses(program: Command, deps: CliDeps): void {
         action(deps, async ({ client, global }, [id, version, stufe, kodierung]) => {
           const s = stufe as Detaillierungsstufe;
           const res = await client.processes[method](id!, version!, s, kodierung!);
-          renderRaw(deps, global, res);
+          await renderRaw(deps, global, res);
         }),
       );
   }

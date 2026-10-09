@@ -277,7 +277,7 @@ export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown)
 /**
  * Render a raw (binary/text) download. Writes to the file given by --output, or
  * to stdout otherwise (also for `-o -`). Prints a short confirmation to stderr when writing a file
- * so stdout stays clean for piping.
+ * so stdout stays clean for piping; for stdout, only once the write has succeeded.
  *
  * The confirmation reports the server's Content-Type so the user can tell what
  * the bytes actually are (e.g. a PDF returned where XML was requested, or an
@@ -289,11 +289,11 @@ export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown)
  * exits 1 with a clean `could not write ...` error (an ERROR record of `fim-portal.output`) rather than falling
  * through to the generic "Unexpected error" handler.
  */
-export function renderRaw(
+export async function renderRaw(
   deps: CliDeps,
   global: GlobalOptions,
   response: RawResponse,
-): void {
+): Promise<void> {
   // The Content-Type is server-derived and printed to stderr; strip control
   // characters so a hostile endpoint cannot inject terminal escape sequences, and cut it
   // at 500 characters (cleanDetail) like any other server text a message quotes.
@@ -305,7 +305,9 @@ export function renderRaw(
     writeOutputFile(deps, file, response.data);
     logOf(deps).info("output", `Wrote ${response.data.length} bytes to ${file}${typeNote}`);
   } else {
-    deps.io.outBinary(response.data);
+    // The note only once the bytes are written: a write that fails (stdout opened
+    // read-only, EBADF) is reported by handleOutputErrors, never preceded by "Wrote".
+    if ((await deps.io.outBinary(response.data)) === false) return;
     logOf(deps).info("output", `Wrote ${response.data.length} bytes to stdout${typeNote}`);
   }
 }

@@ -464,7 +464,9 @@ character, which jq rejects, stopping the whole stream) becomes U+FFFD (`toWellF
 and a message longer than `MAX_RECORD_MESSAGE` (4000 characters, exported) is cut at a
 code point and ends in `… (N more characters)`. The areas are `cli` (usage errors, commander's messages, unexpected errors),
 `api` (the API's answers), `http` (the connection: network errors, the cleartext warning)
-and `output` (the `Wrote N bytes to … (Content-Type: …)` confirmations, and any failure
+and `output` (the `Wrote N bytes to … (Content-Type: …)` confirmations — for stdout only
+once the write has succeeded: `CliIO.outBinary` may return a promise that settles then,
+`false` after a failed write, which leaves the note out — and any failure
 to write the output: an `OutputError` for the `-o` file, a stdout write error). Code logs through
 `logOf(deps)` and never writes diagnostics with `io.err` directly. `run()` builds the
 logger from argv before commander parses it (`logFormatFromArgv`, used only for the

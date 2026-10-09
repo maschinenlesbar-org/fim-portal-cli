@@ -110,7 +110,7 @@ function registerServiceProfiles(program: Command, deps: CliDeps): void {
     .description("Download the XZuFi XML for a Leistungsteckbrief")
     .action(
       action(deps, async ({ client, global }, [key]) => {
-        renderRaw(deps, global, await client.serviceProfiles.downloadXzufi(key!));
+        await renderRaw(deps, global, await client.serviceProfiles.downloadXzufi(key!));
       }),
     );
 
@@ -120,7 +120,7 @@ function registerServiceProfiles(program: Command, deps: CliDeps): void {
     .description("Export a Leistungsteckbrief as PDF")
     .action(
       action(deps, async ({ client, global }, [key, lang]) => {
-        renderRaw(deps, global, await client.serviceProfiles.exportPdf(key!, lang!));
+        await renderRaw(deps, global, await client.serviceProfiles.exportPdf(key!, lang!));
       }),
     );
 }
@@ -203,7 +203,7 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source]) => {
         const src = source as XzufiSource; // checked by the library before any request
-        renderRaw(deps, global, await client.serviceTexts.downloadXzufi(redaktionId!, leistungId!, src));
+        await renderRaw(deps, global, await client.serviceTexts.downloadXzufi(redaktionId!, leistungId!, src));
       }),
     );
 
@@ -220,7 +220,7 @@ function registerServiceTexts(program: Command, deps: CliDeps): void {
     .action(
       action(deps, async ({ client, global }, [redaktionId, leistungId, source, lang]) => {
         const src = source as XzufiSource; // checked by the library before any request
-        renderRaw(
+        await renderRaw(
           deps,
           global,
           await client.serviceTexts.exportPdf(redaktionId!, leistungId!, src, lang!),
