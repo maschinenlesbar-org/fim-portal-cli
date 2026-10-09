@@ -145,6 +145,21 @@ test("xdf download writes to --output file and reports bytes on stderr", async (
   assert.match(untimed(cli.err.join("\n")), /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to \/tmp\/out\.xml/);
 });
 
+test("an -o path with a line break, ESC or a bidi control stays inside one escaped record", async () => {
+  const path = "/tmp/m\n2026-10-09T00:00:00.000Z WARN  [fim-portal.http] forged\u001b[31m\u202e.xml";
+  for (const format of ["text", "jsonl"]) {
+    const cli = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
+    const code = await run(["--log-format", format, "-o", path, "schemas", "xdf", "S1", "1.0"], cli.deps);
+    assert.equal(code, 0);
+    assert.equal(cli.files.get(path)?.toString("utf8"), fx.xmlBody);
+    assert.equal(cli.err.length, 1, cli.err.join("\n"));
+    const line = cli.err[0] as string;
+    assert.ok(!/[\n\u001b\u202e]/.test(line), JSON.stringify(line));
+    if (format === "jsonl") assert.match((JSON.parse(line) as { msg: string }).msg, /^Wrote \d+ bytes to \/tmp\/m\n2026/);
+    else assert.match(untimed(line), /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to \/tmp\/m\\n2026-10-09T00:00:00\.000Z WARN  \[fim-portal\.http\] forged\\u001b\[31m\\u202e\.xml/);
+  }
+});
+
 test("xdf download without --output streams to stdout", async () => {
   const cli = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
   await run(["schemas", "xdf", "S1", "1.0"], cli.deps);

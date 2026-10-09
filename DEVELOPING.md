@@ -390,6 +390,8 @@ npm test          # builds, then runs `node --test` over dist/test
 - **`parity.test.ts`** — the same input through the CLI and the library (`parity()`): both reject
   without a request, or both send the identical request.
 - **`cli.test.ts`** — end-to-end command parsing, rendering, file output and exit codes — mocked client.
+- **`log.test.ts`** — the record helpers of `src/cli/log.ts` on their own
+  (`escapeForRecord`, `formatLogRecord`); the CLI-level checks are P23's.
 
 All HTTP is mocked with Node's built-in `node:test` `mock` facility (`test/helpers.ts`);
 only `http.test.ts` touches a socket, and only on localhost.
@@ -439,7 +441,11 @@ Every diagnostic line on stderr is a log record (`src/cli/log.ts`): a timestamp,
 (`ERROR`, `WARN`, `INFO`) and a topic, `fim-portal.<area>`. `--log-format text` (the
 default) writes it log4j style, `<ISO 8601 UTC> <LEVEL padded to 5> [<topic>] <message>`;
 `--log-format jsonl` writes one JSON object per line with exactly `ts`, `level`, `topic`
-and `msg`. The areas are `cli` (usage errors, commander's messages, unexpected errors),
+and `msg`. A record is always one line: `formatLogRecord` runs `escapeForRecord` over
+the message (text) or the whole JSON object (jsonl), which writes CR and LF as `\r`/`\n`,
+every other C0 control but TAB, DEL and C1 as `\u00XX`, and U+2028, U+2029 and the bidi
+controls as `\uXXXX`, so no text that reaches a record, by whatever path, can split it,
+forge another one or steer the terminal. The areas are `cli` (usage errors, commander's messages, unexpected errors),
 `api` (the API's answers), `http` (the connection: network errors, the cleartext warning)
 and `output` (the `Wrote N bytes to … (Content-Type: …)` confirmations). Code logs through
 `logOf(deps)` and never writes diagnostics with `io.err` directly. `run()` builds the
