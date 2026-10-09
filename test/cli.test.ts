@@ -847,3 +847,11 @@ test("a malformed answer to a download is an ERROR record of fim-portal.api too 
   assert.match(untimed(cli.err.join("\n")), /^ERROR \[fim-portal\.api\] Unexpected response from /);
   assert.equal(cli.files.size, 0);
 });
+
+test("a subcommand's value option does not swallow the program's --log-format, in a parse error too (L6)", async () => {
+  // commander takes the program's --log-format out of argv first; --limit is left without its value.
+  const cli = makeCli(() => jsonResponse({}));
+  assert.equal(await run(["code-lists", "--limit", "--log-format", "jsonl"], cli.deps), 1);
+  assert.ok(cli.err.length > 0 && cli.err.every((line) => line.startsWith("{")), cli.err.join("\n"));
+  assert.match((JSON.parse(cli.err[0] ?? "") as Record<string, unknown>)["msg"] as string, /--limit <n>' argument missing/);
+});
