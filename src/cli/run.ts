@@ -4,7 +4,7 @@
 
 import { CommanderError, type Command } from "commander";
 import { buildProgram, defaultDeps } from "./program.js";
-import { logOf, type CliDeps } from "./io.js";
+import { OutputError, logOf, type CliDeps } from "./io.js";
 import { DEFAULT_LOG_FORMAT, createLogger, logFormatFromArgv, type LogFormat, type Logger } from "./log.js";
 import {
   FimApiError,
@@ -232,7 +232,7 @@ export async function run(argv: string[], deps: CliDeps = defaultDeps): Promise<
       return USAGE_EXIT_CODE;
     }
     if (err instanceof FimError) {
-      log.error(err instanceof FimNetworkError ? "http" : "cli", err.message);
+      log.error(err instanceof FimNetworkError ? "http" : err instanceof OutputError ? "output" : "cli", err.message);
       return 1;
     }
     log.error("cli", `Unexpected error: ${err instanceof Error ? err.message : String(err)}`);

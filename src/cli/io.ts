@@ -4,7 +4,14 @@
 import { writeFileSync } from "node:fs";
 import type { FimPortalClient } from "../client/client.js";
 import type { EngineOptions } from "../client/engine.js";
+import { FimError } from "../client/errors.js";
 import { createLogger, type Logger } from "./log.js";
+
+/**
+ * Writing the output to the `-o` file failed (a missing directory, a directory, EACCES,
+ * …). Logged as an ERROR of `fim-portal.output`, exit 1.
+ */
+export class OutputError extends FimError {}
 
 export interface CliIO {
   out(text: string): void;

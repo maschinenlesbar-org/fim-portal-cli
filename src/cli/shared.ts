@@ -2,7 +2,7 @@
 // option resolver, and the two result-rendering paths (JSON and raw download).
 
 import { Command, InvalidArgumentError, Option } from "commander";
-import { logOf, type CliDeps } from "./io.js";
+import { OutputError, logOf, type CliDeps } from "./io.js";
 import { FimError } from "../client/errors.js";
 import {
   DEFAULT_BASE_URL,
@@ -230,6 +230,20 @@ function stringifyJson(value: unknown, compact: boolean): string {
   }
 }
 
+/**
+ * `deps.io.writeFile`, with any failure an `OutputError` (`could not write <file>:
+ * <reason>`, cause kept), so every `-o` failure is logged under `fim-portal.output`,
+ * whatever the `CliIO` threw.
+ */
+function writeOutputFile(deps: CliDeps, file: string, data: Buffer): void {
+  try {
+    deps.io.writeFile(file, data);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new OutputError(`could not write ${file}: ${reason}`, { cause: err });
+  }
+}
+
 /** The `-o` value that means stdout, as in other Unix tools (`-o -`). */
 export const STDOUT_PATH = "-";
 
@@ -253,12 +267,7 @@ export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown)
   const file = outputFile(global);
   if (file !== undefined) {
     const data = Buffer.from(text + "\n", "utf8");
-    try {
-      deps.io.writeFile(file, data);
-    } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
-      throw new FimError(`could not write ${file}: ${reason}`, { cause: err });
-    }
+    writeOutputFile(deps, file, data);
     logOf(deps).info("output", `Wrote ${data.length} bytes to ${file}`);
   } else {
     deps.io.out(text);
@@ -276,8 +285,8 @@ export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown)
  * Content-Type note goes to stderr, keeping stdout byte-clean for piping.
  *
  * The --output path is trusted input (the user owns their shell). A failed write
- * (missing directory, permissions, read-only FS) is wrapped in a FimError so it
- * exits 1 with a clean `could not write ...` error (an ERROR record of `fim-portal.cli`) rather than falling
+ * (missing directory, permissions, read-only FS) is wrapped in an OutputError so it
+ * exits 1 with a clean `could not write ...` error (an ERROR record of `fim-portal.output`) rather than falling
  * through to the generic "Unexpected error" handler.
  */
 export function renderRaw(
@@ -293,12 +302,7 @@ export function renderRaw(
     : "";
   const file = outputFile(global);
   if (file !== undefined) {
-    try {
-      deps.io.writeFile(file, response.data);
-    } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
-      throw new FimError(`could not write ${file}: ${reason}`, { cause: err });
-    }
+    writeOutputFile(deps, file, response.data);
     logOf(deps).info("output", `Wrote ${response.data.length} bytes to ${file}${typeNote}`);
   } else {
     deps.io.outBinary(response.data);

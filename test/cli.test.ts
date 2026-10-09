@@ -676,7 +676,7 @@ test("a failed -o write degrades to exit 1 with a clean ERROR record (not Unexpe
   const code = await run(["--output", "/nope/out.xml", "schemas", "xdf", "S1", "1.0"], deps);
   assert.equal(code, 1);
   const errText = err.join("\n");
-  assert.match(untimed(errText), /^ERROR \[fim-portal\.cli\] could not write \/nope\/out\.xml/);
+  assert.match(untimed(errText), /^ERROR \[fim-portal\.output\] could not write \/nope\/out\.xml/);
   assert.doesNotMatch(errText, /Unexpected error/);
 });
 
@@ -801,4 +801,18 @@ test("an option's value that looks like --log-format sets no format, in a parse 
   assert.equal(await run(["--user-agent", "--log-format=jsonl", "code-lists"], ua.deps), 1);
   assert.equal(ua.mt.last().headers?.["User-Agent"], "--log-format=jsonl");
   assert.match(untimed(ua.err[0] ?? ""), /^ERROR \[fim-portal\.api\] /);
+});
+
+test("every -o failure is an ERROR record of fim-portal.output, exit 1 (B04-1, L8)", async () => {
+  for (const argv of [["-o", "out.json", "code-lists"], ["-o", "out.xml", "schemas", "xdf", "S1", "1.0"]]) {
+    for (const thrown of [new Error("EACCES: permission denied, open 'out.json'"), new Error("EISDIR: illegal operation on a directory, open 'out'")]) {
+      const cli = makeCli(() => (argv.includes("xdf") ? rawResponse(fx.xmlBody, "application/xml") : jsonResponse({ items: [], offset: 0, limit: 200, count: 0, total_count: 0 })));
+      cli.deps.io.writeFile = () => {
+        throw thrown;
+      };
+      assert.equal(await run(argv, cli.deps), 1);
+      assert.match(untimed(cli.err.join("\n")), /^ERROR \[fim-portal\.output\] could not write /);
+      assert.doesNotMatch(cli.err.join("\n"), /Unexpected error/);
+    }
+  }
 });
