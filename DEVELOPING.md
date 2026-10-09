@@ -476,8 +476,11 @@ subcommand (or `help` with an unknown topic) an ERROR "missing command: `fim-por
 schemas <subcommand>`" before that help, so every failed run has an ERROR record
 (`writeCommanderErr`). The log is built with the run's redaction, which replaces a secret in the message before the
 record is formatted, so a secret is kept out of the log in either format and the frame
-is never touched. `CliDeps.now` makes the timestamps testable. stdout carries data only. The one
-line that is not a record is `handleOutputErrors`' `Output error: …` (stdout itself
-failed; it writes to `process.stderr` directly, outside any run). Conformance test P23
+is never touched. `CliDeps.now` makes the timestamps testable. stdout carries data only. A stdout
+write error other than a closed pipe (EBADF, EIO) is an ERROR record of `fim-portal.output`
+too, `Could not write to stdout: …` (`handleOutputErrors`, which the bin shim installs
+outside any run with `processLogger(argv)`: the format argv asks for, the run's
+redaction), and exits 1; a reader that stops early (EPIPE, ENOTCONN) exits 0 quietly.
+Conformance test P23
 checks all of this, and its body is shared across the *-cli repos; its adapter carries
 `USAGE_EXIT = 1`, this CLI's usage-error code.
