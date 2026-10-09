@@ -280,7 +280,7 @@ public CSV export.
 `--log-format jsonl` as one JSON object per line. The areas: `cli` (usage errors,
 commander's messages, unexpected errors), `api` (the API's answers: an error status, and
 a malformed answer — bad JSON, the wrong shape, an HTML page, an unknown charset), `http`
-(the connection, the cleartext warning) and `output` (the `Wrote N bytes` notes, a failure
+(the connection, the cleartext warning, and one WARN per retry before it waits) and `output` (the `Wrote N bytes` notes, a failure
 to write the `-o` file or stdout). A record is always one line; control characters in it
 are escaped.
 

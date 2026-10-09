@@ -185,6 +185,12 @@ exhausted; its `retries` field and the message's `(after N retries)` say how man
 (`ECONNRESET`, `EPIPE`, `ECONNABORTED`, undici's `UND_ERR_SOCKET`, anywhere in the
 error's `cause` chain, from any transport) is retried the same way, with the linear
 backoff; a timeout, a refused connection or a DNS failure is not.
+Each retry is announced: the engine option `onRetry(event: RetryEvent)` (exported type:
+`{ retry` (1-based), `maxRetries`, `delayMs`, `status?` (absent for a reset), `url` (userinfo
+redacted) `}`) is called once per retry right before the sleep, never when there is none, and
+a throw in it is swallowed. The CLI's `action()` sets it to log one `WARN` record of
+`fim-portal.http`, `HTTP 503 from <host>: retry 1 of 3 in 2 s` (`retryMessage`; host only,
+whole seconds, ms under 1 s). Tests: `test/engine.test.ts`, `test/retry-log.test.ts`.
 
 **Redirects.** Not followed, by design. A 3xx surfaces as a `FimApiError` (exit `1`)
 whose message and `location` field name the redirect target (resolved, userinfo
