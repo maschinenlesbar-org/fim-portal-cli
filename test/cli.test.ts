@@ -6,7 +6,7 @@ import type { CliDeps } from "../src/cli/io.js";
 import type { HttpRequest, HttpResponse } from "../src/client/http.js";
 import { makeMockTransport, jsonResponse, rawResponse, untimed } from "./helpers.js";
 import * as fx from "./fixtures.js";
-import { FimNetworkError } from "../src/client/errors.js";
+import { FimNetworkError, credentialsIn } from "../src/client/errors.js";
 
 function makeCli(responder: (req: HttpRequest) => HttpResponse) {
   const out: string[] = [];
@@ -750,4 +750,12 @@ test("a download answered with an HTML page fails and writes no file", async () 
   assert.equal(code, 1);
   assert.equal(cli.files.size, 0);
   assert.match(cli.err.join("\n"), /expected application\/pdf, got an HTML page \(Content-Type "text\/html"\)/);
+});
+
+test("an a:b@c argument (here a User-Agent) is neither a credential in the log nor rewritten in the JSON on stdout (L14)", async () => {
+  const cli = makeCli(() => jsonResponse({ items: [{ name: "run:2026-10-09@x" }], offset: 0, limit: 200, count: 1, total_count: 1 }));
+  assert.equal(await run(["--user-agent", "run:2026-10-09@x", "code-lists"], cli.deps), 0);
+  assert.match(cli.out.join("\n"), /"name": "run:2026-10-09@x"/);
+  assert.deepEqual(credentialsIn("run:2026-10-09@x"), []);
+  assert.deepEqual(credentialsIn("https://alice:pw@host"), ["alice:pw"]);
 });
