@@ -494,4 +494,5 @@ outside any run with `processLogger(argv)`: the format argv asks for, the run's
 redaction), and exits 1; a reader that stops early (EPIPE, ENOTCONN) exits 0 quietly.
 Conformance test P23
 checks all of this, and its body is shared across the *-cli repos; its adapter carries
-`USAGE_EXIT = 1`, this CLI's usage-error code.
+`USAGE_EXIT = 1`, this CLI's usage-error code, `OUTPUT_OPTION = "-o"`, and as
+`secretArgv` the password of a base URL (this CLI takes no key).
