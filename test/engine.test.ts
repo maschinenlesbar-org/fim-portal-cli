@@ -409,6 +409,15 @@ test("a server detail cut at 500 characters keeps the message well-formed", asyn
   }
 });
 
+test("own messages quote a server or user value at most 500 characters long (L3)", async () => {
+  const charset = `x${"y".repeat(10_000)}`;
+  const engine = new RequestEngine({ transport: async () => rawResponse("{}", `application/json; charset=${charset}`) });
+  await assert.rejects(engine.getJson("/x"), (e: unknown) => e instanceof FimParseError && e.message.length < 700 && /charset "xy+…"/.test(e.message));
+  const id = "i".repeat(10_000);
+  assert.throws(() => engine.buildUrl(`/api/v1/fields/${id}/..`), (e: unknown) => e instanceof FimValidationError && e.message.length < 700);
+  assert.throws(() => engine.buildUrl(`/api/v1/fields/${id}//x`), (e: unknown) => e instanceof FimValidationError && e.message.length < 700);
+});
+
 test("an invalid Date in a filter is a FimValidationError, not a raw RangeError", async () => {
   const mt = makeMockTransport(() => jsonResponse({ items: [], total_count: 0 }));
   const engine = new RequestEngine({ transport: mt.transport });

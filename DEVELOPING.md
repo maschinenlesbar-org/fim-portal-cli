@@ -209,8 +209,10 @@ mocked client and captured output — no subprocess.
 
 **Error types.** [`errors.ts`](src/client/errors.ts): `FimApiError` (non-2xx,
 carries `status`/`detail`; the `detail` and a redirect target are cut at 500 characters,
-`MAX_DETAIL_LENGTH`, and the URL in the message at 500, `cutForMessage`, never inside a
-surrogate pair (`cutText`), so the message stays well-formed, while `body`
+`MAX_DETAIL_LENGTH`, and the URL in the message at 500, `cutForMessage`
+(`MAX_MESSAGE_VALUE_LENGTH`; also a path in a validation message, an unknown charset and
+the Content-Type in the CLI's download note), never inside a surrogate pair (`cutText`),
+so the message stays well-formed and bounded for a library caller too, while `body`
 and `url` keep the full text), `FimNetworkError` (transport failure/timeout),
 `FimParseError` (bad JSON), `FimValidationError` (an input refused before any
 request, including a bad client option such as the base URL), all extending
@@ -447,8 +449,9 @@ the message (text) or the whole JSON object (jsonl), which writes CR and LF as `
 every other C0 control but TAB, DEL and C1 as `\u00XX`, and U+2028, U+2029 and the bidi
 controls as `\uXXXX`, so no text that reaches a record, by whatever path, can split it,
 forge another one or steer the terminal. Before that a lone surrogate (half a
-character, which jq rejects, stopping the whole stream) becomes U+FFFD (`toWellFormed`).
-The areas are `cli` (usage errors, commander's messages, unexpected errors),
+character, which jq rejects, stopping the whole stream) becomes U+FFFD (`toWellFormed`),
+and a message longer than `MAX_RECORD_MESSAGE` (4000 characters, exported) is cut at a
+code point and ends in `… (N more characters)`. The areas are `cli` (usage errors, commander's messages, unexpected errors),
 `api` (the API's answers), `http` (the connection: network errors, the cleartext warning)
 and `output` (the `Wrote N bytes to … (Content-Type: …)` confirmations). Code logs through
 `logOf(deps)` and never writes diagnostics with `io.err` directly. `run()` builds the

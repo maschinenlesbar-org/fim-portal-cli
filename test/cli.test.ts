@@ -160,6 +160,14 @@ test("an -o path with a line break, ESC or a bidi control stays inside one escap
   }
 });
 
+test("the Content-Type in a download's note is quoted at most 500 characters long (L3)", async () => {
+  const cli = makeCli(() => rawResponse(fx.xmlBody, `application/xml; x=${"z".repeat(10_000)}`));
+  assert.equal(await run(["-o", "/tmp/out.xml", "schemas", "xdf", "S1", "1.0"], cli.deps), 0);
+  const record = cli.err.join("\n");
+  assert.match(record, /\(Content-Type: application\/xml; x=z+…\)$/);
+  assert.ok(record.length < 700, `${record.length}`);
+});
+
 test("xdf download without --output streams to stdout", async () => {
   const cli = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
   await run(["schemas", "xdf", "S1", "1.0"], cli.deps);

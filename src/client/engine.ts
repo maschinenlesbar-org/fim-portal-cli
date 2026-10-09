@@ -405,12 +405,12 @@ export class RequestEngine {
     const dotSegment = segments.find((s) => s === "." || s === "..");
     if (dotSegment !== undefined) {
       throw new FimValidationError(
-        `Invalid path segment "${dotSegment}" in ${normalizedPath}: "." and ".." cannot be used as an id.`,
+        `Invalid path segment "${dotSegment}" in ${cutForMessage(normalizedPath)}: "." and ".." cannot be used as an id.`,
       );
     }
     if (segments.includes("")) {
       throw new FimValidationError(
-        `Invalid path ${normalizedPath}: an empty segment cannot be used as an id.`,
+        `Invalid path ${cutForMessage(normalizedPath)}: an empty segment cannot be used as an id.`,
       );
     }
     if (query) assertNonBlankParams(query);
@@ -696,7 +696,7 @@ export function decodeBody(body: Buffer, contentType: string, path: string): str
   try {
     decoder = new TextDecoder(charset);
   } catch {
-    throw new FimParseError(`Unsupported response charset "${sanitizeServerText(charset)}" from ${cutForMessage(path)}.`);
+    throw new FimParseError(`Unsupported response charset "${cleanDetail(charset)}" from ${cutForMessage(path)}.`);
   }
   return decoder.decode(body);
 }

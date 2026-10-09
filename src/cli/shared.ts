@@ -8,7 +8,7 @@ import {
   DEFAULT_BASE_URL,
   cleartextProblem,
   isBidiControl,
-  sanitizeServerText,
+  cleanDetail,
   type EngineOptions,
   type RawResponse,
 } from "../client/engine.js";
@@ -286,9 +286,10 @@ export function renderRaw(
   response: RawResponse,
 ): void {
   // The Content-Type is server-derived and printed to stderr; strip control
-  // characters so a hostile endpoint cannot inject terminal escape sequences.
+  // characters so a hostile endpoint cannot inject terminal escape sequences, and cut it
+  // at 500 characters (cleanDetail) like any other server text a message quotes.
   const typeNote = response.contentType
-    ? ` (Content-Type: ${sanitizeServerText(response.contentType)})`
+    ? ` (Content-Type: ${cleanDetail(response.contentType)})`
     : "";
   const file = outputFile(global);
   if (file !== undefined) {
