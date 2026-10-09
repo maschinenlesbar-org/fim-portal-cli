@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MAX_RETRIES, MAX_RETRY_AFTER_MS, RequestEngine, cleartextProblem, parseRetryAfter, sanitizeServerText } from "../src/client/engine.js";
 import { MAX_TIMEOUT_MS } from "../src/client/http.js";
-import { FimApiError, FimNetworkError, FimParseError, FimValidationError, redactUrl } from "../src/client/errors.js";
+import { FimApiError, FimNetworkError, FimParseError, FimValidationError, cutForMessage, cutText, redactUrl, toWellFormed } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
 const noSleep = async (): Promise<void> => {};
@@ -386,6 +386,27 @@ test("server text in an error message is cut at 500 characters; the body keeps i
     assert.equal(e.body.length, JSON.stringify({ detail }).length);
     return true;
   });
+});
+
+test("cutText never cuts inside a surrogate pair; toWellFormed replaces half a character", () => {
+  assert.equal(cutText("ab\u{1f600}cd", 3), "ab");
+  assert.equal(cutText("ab\u{1f600}cd", 4), "ab\u{1f600}");
+  assert.equal(cutText("short", 10), "short");
+  assert.equal(toWellFormed("a\ud83d b\ude00 \u{1f600}"), "a\ufffd b\ufffd \u{1f600}");
+  // cutForMessage (500) uses it too.
+  assert.equal(toWellFormed(cutForMessage("a" + "\u{1f600}".repeat(400))), cutForMessage("a" + "\u{1f600}".repeat(400)));
+});
+
+test("a server detail cut at 500 characters keeps the message well-formed", async () => {
+  for (const detail of ["\u{1f600}".repeat(400), "a" + "\u{1f600}".repeat(400)]) {
+    const engine = new RequestEngine({ transport: async () => jsonResponse({ detail }, 500), maxRetries: 0 });
+    await assert.rejects(engine.getJson("/x"), (e: unknown) => {
+      assert.ok(e instanceof FimApiError);
+      assert.equal(toWellFormed(e.message), e.message);
+      assert.match(e.detail ?? "", /…$/);
+      return true;
+    });
+  }
 });
 
 test("an invalid Date in a filter is a FimValidationError, not a raw RangeError", async () => {

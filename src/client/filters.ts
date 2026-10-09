@@ -11,7 +11,7 @@
 // portal adds after this table was written can still be sent with
 // `{ allowUnknownFilters: true }` as the call's second argument.
 
-import { FimValidationError } from "./errors.js";
+import { FimValidationError, cutText } from "./errors.js";
 import { assertValid, oneOfProblem, type Problem } from "./validate.js";
 import {
   AnwendungsgebietValues,
@@ -347,7 +347,7 @@ function suggest(key: string, known: readonly string[]): string | undefined {
 
 /** A parameter name as an error message shows it: quoted and escaped, cut at 100 characters. */
 function quoteKey(key: string): string {
-  return JSON.stringify(key.length > 100 ? `${key.slice(0, 100)}…` : key);
+  return JSON.stringify(key.length > 100 ? `${cutText(key, 100)}…` : key);
 }
 
 /** The parameters as a record, or a FimValidationError for anything but an object (a bare string, a list). */
