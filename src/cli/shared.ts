@@ -2,7 +2,7 @@
 // option resolver, and the two result-rendering paths (JSON and raw download).
 
 import { Command, InvalidArgumentError, Option } from "commander";
-import type { CliDeps } from "./io.js";
+import { logOf, type CliDeps } from "./io.js";
 import { FimError } from "../client/errors.js";
 import {
   DEFAULT_BASE_URL,
@@ -259,7 +259,7 @@ export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown)
       const reason = err instanceof Error ? err.message : String(err);
       throw new FimError(`could not write ${file}: ${reason}`, { cause: err });
     }
-    deps.io.err(`Wrote ${data.length} bytes to ${file}`);
+    logOf(deps).info("output", `Wrote ${data.length} bytes to ${file}`);
   } else {
     deps.io.out(text);
   }
@@ -277,7 +277,7 @@ export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown)
  *
  * The --output path is trusted input (the user owns their shell). A failed write
  * (missing directory, permissions, read-only FS) is wrapped in a FimError so it
- * exits 1 with a clean `Error: could not write ...` message rather than falling
+ * exits 1 with a clean `could not write ...` error (an ERROR record of `fim-portal.cli`) rather than falling
  * through to the generic "Unexpected error" handler.
  */
 export function renderRaw(
@@ -298,10 +298,10 @@ export function renderRaw(
       const reason = err instanceof Error ? err.message : String(err);
       throw new FimError(`could not write ${file}: ${reason}`, { cause: err });
     }
-    deps.io.err(`Wrote ${response.data.length} bytes to ${file}${typeNote}`);
+    logOf(deps).info("output", `Wrote ${response.data.length} bytes to ${file}${typeNote}`);
   } else {
     deps.io.outBinary(response.data);
-    deps.io.err(`Wrote ${response.data.length} bytes to stdout${typeNote}`);
+    logOf(deps).info("output", `Wrote ${response.data.length} bytes to stdout${typeNote}`);
   }
 }
 
@@ -317,8 +317,8 @@ export interface ActionContext {
  * client construction. The callback receives a context (client + resolved global
  * options + this command's options) and the command's positional arguments.
  *
- * Before the client is built (so before the first request) it writes one
- * `warning: <sentence>` line to stderr when the base URL is plain `http:` to a host
+ * Before the client is built (so before the first request) it logs one warning (a
+ * WARN record of `fim-portal.http`) to stderr when the base URL is plain `http:` to a host
  * other than loopback (cleartextProblem). Help, version and usage errors never reach
  * an action, so they never warn.
  *
@@ -334,7 +334,7 @@ export function action(
     const positionals = args.slice(0, Math.max(0, args.length - 2)) as string[];
     const global = command.optsWithGlobals() as GlobalOptions;
     const cleartext = cleartextProblem(global.baseUrl ?? DEFAULT_BASE_URL);
-    if (cleartext !== undefined) deps.io.err(`warning: ${cleartext}`);
+    if (cleartext !== undefined) logOf(deps).warn("http", cleartext);
     const client = deps.createClient(toEngineOptions(global));
     await fn({ client, global, opts: command.opts() }, positionals);
   };

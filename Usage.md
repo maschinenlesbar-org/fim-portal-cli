@@ -77,7 +77,7 @@ fim-portal -o geburt.xml schemas xdf S07000009 1.0
 ```
 
 Writes the raw XML to `geburt.xml` and prints a confirmation (with the server's
-`Content-Type`) to stderr, keeping stdout clean. Omit `-o` to stream the XML to
+`Content-Type`) to stderr (an `INFO` record of `fim-portal.output`), keeping stdout clean. Omit `-o` to stream the XML to
 stdout for piping.
 
 The same `xdf` download exists for document profiles, fields and groups:
@@ -274,12 +274,13 @@ These go **before** the command, e.g. `fim-portal --compact schemas get S0700000
 
 | Flag | Purpose |
 | --- | --- |
-| `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works). A plain `http:` URL to a non-loopback host gets one `warning: … sent unencrypted (http:, not https:)` line on stderr; stdout and the exit code are unchanged |
+| `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works). A plain `http:` URL to a non-loopback host gets one warning on stderr, a `WARN` record of `fim-portal.http` (`… sent unencrypted (http:, not https:)`); stdout and the exit code are unchanged |
 | `--timeout <ms>` | Per-request timeout in milliseconds |
 | `--max-retries <n>` | Retries for transient `429`/`503` responses and reset connections (`0`–`10`; each backs off linearly or waits the server's longer `Retry-After`, up to 30 s; a longer one is not retried) |
 | `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB) |
 | `--user-agent <ua>` | `User-Agent` header value |
 | `--compact` | Print JSON on a single line instead of pretty-printed |
+| `--log-format <format>` | How errors, warnings and notes are written to stderr: `text` (default; log4j style, `2026-10-09T14:03:12.481Z WARN  [fim-portal.http] …`) or `jsonl` (one JSON object per line: `ts`, `level`, `topic`, `msg`). stdout is not affected |
 | `-o, --output <file>` | For downloads: write bytes to this file instead of stdout (an existing file is overwritten without a prompt); `-o -` means stdout |
 | `-V, --version` / `-h, --help` | Version / help |
 

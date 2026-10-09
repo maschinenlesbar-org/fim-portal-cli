@@ -4,7 +4,7 @@ import { run } from "../src/cli/run.js";
 import { FimPortalClient } from "../src/client/client.js";
 import type { CliDeps } from "../src/cli/io.js";
 import type { HttpRequest, HttpResponse } from "../src/client/http.js";
-import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
+import { makeMockTransport, jsonResponse, rawResponse, untimed } from "./helpers.js";
 import * as fx from "./fixtures.js";
 import { FimNetworkError } from "../src/client/errors.js";
 
@@ -142,7 +142,7 @@ test("xdf download writes to --output file and reports bytes on stderr", async (
   assert.equal(code, 0);
   assert.equal(cli.files.get("/tmp/out.xml")?.toString("utf8"), fx.xmlBody);
   assert.equal(cli.out.length, 0); // nothing on stdout
-  assert.match(cli.err.join("\n"), /Wrote \d+ bytes to \/tmp\/out\.xml/);
+  assert.match(untimed(cli.err.join("\n")), /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to \/tmp\/out\.xml/);
 });
 
 test("xdf download without --output streams to stdout", async () => {
@@ -233,14 +233,14 @@ test("a deeply nested response fails pretty-printing cleanly and still prints wi
   const pretty = makeCli(deep);
   assert.equal(await run(["schemas", "get", "X"], pretty.deps), 1);
   assert.deepEqual(pretty.out, []);
-  assert.equal(pretty.err.join("\n"), "Error: The response is nested too deeply to pretty-print; try --compact.");
+  assert.equal(untimed(pretty.err.join("\n")), "ERROR [fim-portal.cli] The response is nested too deeply to pretty-print; try --compact.");
 
   // Compact serialisation goes much deeper (it prints this one on current Node);
   // should a runtime's stack still be too small, it must fail just as cleanly.
   const compact = makeCli(deep);
   const code = await run(["--compact", "schemas", "get", "X"], compact.deps);
   if (code === 0) assert.equal(compact.out.join("").length, 2 * depth + 6);
-  else assert.equal(compact.err.join("\n"), "Error: The response is nested too deeply to print.");
+  else assert.equal(untimed(compact.err.join("\n")), "ERROR [fim-portal.cli] The response is nested too deeply to print.");
 });
 
 test("credentials in --base-url are redacted from error messages", async () => {
@@ -250,8 +250,8 @@ test("credentials in --base-url are redacted from error messages", async () => {
   // ...but still sent: the request URL keeps the userinfo (Node turns it into Basic auth).
   assert.equal(cli.mt.last().url, "http://user:secret@127.0.0.1:18113/api/v1/schemas/Y/latest");
   assert.equal(
-    cli.err.join("\n"),
-    "Error: HTTP 404 for GET http://***@127.0.0.1:18113/api/v1/schemas/Y/latest: not here",
+    untimed(cli.err.join("\n")),
+    "ERROR [fim-portal.api] HTTP 404 for GET http://***@127.0.0.1:18113/api/v1/schemas/Y/latest: not here",
   );
 });
 
@@ -313,7 +313,7 @@ test("process-classes xprozess downloads the XML instead of parsing it as JSON",
   assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/processclasses/P1/1.0/xprozess");
   assert.equal(cli.mt.last().headers?.["Accept"], "application/xml");
   assert.equal(cli.files.get("pc.xml")?.toString("utf8"), xml);
-  assert.match(cli.err.join("\n"), /Wrote \d+ bytes to pc\.xml \(Content-Type: application\/xml\)/);
+  assert.match(untimed(cli.err.join("\n")), /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to pc\.xml \(Content-Type: application\/xml\)/);
 });
 
 test("an id of .. exits 1 without a request instead of printing another endpoint's data", async () => {
@@ -322,7 +322,7 @@ test("an id of .. exits 1 without a request instead of printing another endpoint
   assert.equal(code, 1);
   assert.equal(cli.mt.calls.length, 0);
   assert.deepEqual(cli.out, []);
-  assert.match(cli.err.join("\n"), /^Error: Invalid path segment "\.\."/);
+  assert.match(untimed(cli.err.join("\n")), /^ERROR \[fim-portal\.cli\] Invalid path segment "\.\."/);
 });
 
 test("--max-retries is bounded to 0..10", async () => {
@@ -451,7 +451,7 @@ test("processes get rejects an invalid Detaillierungsstufe without an HTTP call"
   const code = await run(["processes", "get", "P1", "1.0", "999", "17"], cli.deps);
   assert.equal(code, 1);
   assert.equal(cli.mt.calls.length, 0);
-  assert.equal(cli.err.join("\n"), "Error: Invalid stufe: Expected one of: 101, 102, 103, 104, 105.");
+  assert.equal(untimed(cli.err.join("\n")), "ERROR [fim-portal.cli] Invalid stufe: Expected one of: 101, 102, 103, 104, 105.");
 });
 
 test("processes get accepts a valid Detaillierungsstufe", async () => {
@@ -466,7 +466,7 @@ test("service-texts get rejects an invalid source without an HTTP call", async (
   const code = await run(["service-texts", "get", "R1", "L1", "bogus"], cli.deps);
   assert.equal(code, 1);
   assert.equal(cli.mt.calls.length, 0);
-  assert.equal(cli.err.join("\n"), "Error: Invalid source: Expected one of: leika, landesredaktion, pvog.");
+  assert.equal(untimed(cli.err.join("\n")), "ERROR [fim-portal.cli] Invalid source: Expected one of: leika, landesredaktion, pvog.");
 });
 
 // ---- M3: choice options reuse the spec enums (incl. schema-only "Stichwort") ----
@@ -607,7 +607,7 @@ test("search-csv writes the CSV to --output and reports bytes on stderr", async 
   assert.equal(code, 0);
   assert.equal(cli.files.get("/tmp/fields.csv")?.toString("utf8"), fx.csvBody);
   assert.equal(cli.out.length, 0);
-  assert.match(cli.err.join("\n"), /Wrote \d+ bytes to \/tmp\/fields\.csv/);
+  assert.match(untimed(cli.err.join("\n")), /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to \/tmp\/fields\.csv/);
 });
 
 // ---- error paths through run() ----
@@ -631,10 +631,10 @@ test("a transport-level network error maps to exit 1 with a clean Error message"
   const code = await run(["--max-retries", "0", "schemas", "search"], deps);
   assert.equal(code, 1);
   assert.equal(out.length, 0);
-  assert.match(err.join("\n"), /^Error: connection reset/);
+  assert.match(untimed(err.join("\n")), /^ERROR \[fim-portal\.http\] connection reset/);
 });
 
-test("a failed -o write degrades to exit 1 with a clean Error (not Unexpected error)", async () => {
+test("a failed -o write degrades to exit 1 with a clean ERROR record (not Unexpected error)", async () => {
   const out: string[] = [];
   const err: string[] = [];
   const mt = makeMockTransport(() => rawResponse(fx.xmlBody, "application/xml"));
@@ -653,7 +653,7 @@ test("a failed -o write degrades to exit 1 with a clean Error (not Unexpected er
   const code = await run(["--output", "/nope/out.xml", "schemas", "xdf", "S1", "1.0"], deps);
   assert.equal(code, 1);
   const errText = err.join("\n");
-  assert.match(errText, /^Error: could not write \/nope\/out\.xml/);
+  assert.match(untimed(errText), /^ERROR \[fim-portal\.cli\] could not write \/nope\/out\.xml/);
   assert.doesNotMatch(errText, /Unexpected error/);
 });
 

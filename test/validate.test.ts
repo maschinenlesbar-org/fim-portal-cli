@@ -25,7 +25,7 @@ import { FimPortalClient } from "../src/client/client.js";
 import type { CliDeps } from "../src/cli/io.js";
 import type { QueryParams } from "../src/client/query.js";
 import { LIMIT_MAX, LIMIT_MIN } from "../src/client/params.js";
-import { jsonResponse, makeMockTransport, parity } from "./helpers.js";
+import { jsonResponse, makeMockTransport, parity, untimed } from "./helpers.js";
 
 const notFoo: Problem<string> = (v) => (v === "foo" ? "Must not be foo." : undefined);
 
@@ -61,7 +61,7 @@ function cliWith(createClient: CliDeps["createClient"]) {
   return { deps, out, err };
 }
 
-test("run() maps a FimValidationError from an action to the usage exit code 1 with 'Error: <message>'", async () => {
+test("run() maps a FimValidationError from an action to the usage exit code 1 with an ERROR record", async () => {
   const mt = makeMockTransport(() => jsonResponse({}));
   const cli = cliWith((opts) => {
     const client = new FimPortalClient({ ...opts, transport: mt.transport });
@@ -73,7 +73,7 @@ test("run() maps a FimValidationError from an action to the usage exit code 1 wi
   const code = await run(["schemas", "versions", "S1"], cli.deps);
   assert.equal(code, 1);
   assert.deepEqual(cli.out, []);
-  assert.equal(cli.err.join("\n"), "Error: Invalid fimId: Expected a non-empty value.");
+  assert.equal(untimed(cli.err.join("\n")), "ERROR [fim-portal.cli] Invalid fimId: Expected a non-empty value.");
   assert.equal(mt.calls.length, 0);
 });
 
@@ -82,7 +82,7 @@ test("run() maps a FimValidationError thrown while building the client the same 
     throw new FimValidationError("Invalid timeoutMs: Must be >= 0.");
   });
   assert.equal(await run(["schemas", "versions", "S1"], cli.deps), 1);
-  assert.equal(cli.err.join("\n"), "Error: Invalid timeoutMs: Must be >= 0.");
+  assert.equal(untimed(cli.err.join("\n")), "ERROR [fim-portal.cli] Invalid timeoutMs: Must be >= 0.");
 });
 
 test("parity() drives the same input through run() and the library on one transport", async () => {

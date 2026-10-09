@@ -259,6 +259,21 @@ Every JSON command prints **pretty JSON to stdout**. Download commands (`xdf`,
 stdout, as in other Unix tools, so a script can pass a variable that defaults to `-`). Errors
 and diagnostics go to stderr, so piping stdout into `jq` stays clean.
 
+Each line on stderr is a **log record**: a timestamp (UTC), a level (`ERROR`, `WARN`,
+`INFO`) and a topic, the program and the area it comes from (`fim-portal.cli` for usage
+errors, `fim-portal.api` for the API's answers, `fim-portal.http` for the connection,
+`fim-portal.output` for the `Wrote N bytes …` confirmations of downloads). By default it
+is written log4j style; `--log-format jsonl` writes one JSON object per line instead:
+
+```text
+2026-10-09T14:03:12.481Z WARN  [fim-portal.http] requests to mirror.test are sent unencrypted (http:, not https:)
+2026-10-09T14:03:12.902Z ERROR [fim-portal.api] HTTP 404 for GET https://fimportal.de/api/v1/schemas/S1/latest: Not Found
+```
+
+```bash
+fim-portal --log-format jsonl -o geburt.xml schemas xdf S07000009 1.0 2>log.jsonl   # {"ts":"…","level":"INFO","topic":"fim-portal.output","msg":"Wrote … bytes to geburt.xml …"}
+```
+
 > **`-o` overwrites without asking.** If the target file already exists it is
 > replaced (the bytes are fully buffered first, so a failed download never leaves
 > a half-written file). Pick a fresh path, or check for the file yourself, if you
@@ -333,8 +348,9 @@ These apply to every command and may be given **before or after** it:
 | `-V, --version` | Print the version number |
 | `-h, --help` | Show help for the program or a command |
 | `--compact` | Print JSON on a single line instead of pretty-printed |
+| `--log-format <format>` | How errors, warnings and notes are written to stderr: `text` (default; log4j style, `2026-10-09T14:03:12.481Z WARN  [fim-portal.http] …`) or `jsonl` (one JSON object per line: `ts`, `level`, `topic`, `msg`). stdout is not affected |
 | `-o, --output <file>` | For downloads: write bytes to a file instead of stdout; `-o -` means stdout |
-| `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works). Must be an `http:`/`https:` URL without a query, a fragment, whitespace or control characters, and a `%` in a user name or password must be an escape (write a literal `%` as `%25`) — anything else is rejected at parse time (exit `1`) before any request is made. A plain `http:` URL to a host other than loopback (`localhost`, `127.0.0.0/8`, `::1`) prints one `warning: requests to <host> are sent unencrypted (http:, not https:)` line on stderr before the first request (naming the URL's credentials instead when it carries any, never printing them); stdout and the exit code are unchanged |
+| `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works). Must be an `http:`/`https:` URL without a query, a fragment, whitespace or control characters, and a `%` in a user name or password must be an escape (write a literal `%` as `%25`) — anything else is rejected at parse time (exit `1`) before any request is made. A plain `http:` URL to a host other than loopback (`localhost`, `127.0.0.0/8`, `::1`) logs one warning on stderr before the first request, a `WARN` record of `fim-portal.http` (`requests to <host> are sent unencrypted (http:, not https:)`) (naming the URL's credentials instead when it carries any, never printing them); stdout and the exit code are unchanged |
 | `--timeout <ms>` | Per-request timeout (default `30000`; at most `2147483647`) |
 | `--user-agent <ua>` | `User-Agent` header value |
 | `--max-retries <n>` | Retries for transient `429`/`503` responses and reset connections (`0`–`10`, default `2`). Each retry backs off linearly (200 ms, 400 ms, …), or waits the server's `Retry-After` when that is longer (up to 30 s; a longer one is not retried, and the error says so). Timeouts and refused connections are not retried |

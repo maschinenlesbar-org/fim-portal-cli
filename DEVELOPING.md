@@ -117,7 +117,8 @@ src/
     errors.ts    # FimError / FimApiError / FimNetworkError / FimParseError / FimValidationError
     client.ts    # FimPortalClient — resource groups over the engine
   cli/
-    io.ts        # injectable I/O seam (stdout/stderr/file)
+    io.ts        # injectable I/O seam (stdout/stderr/file), the logger and the clock
+    log.ts       # the stderr log: records with ts, level, topic; --log-format text|jsonl
     shared.ts    # option parsers, global-option resolver, JSON/raw renderers
     commands/    # one module per resource group
     program.ts   # assembles the commander program from injectable deps
@@ -213,7 +214,7 @@ and `url` keep the full text), `FimNetworkError` (transport failure/timeout),
 `FimParseError` (bad JSON), `FimValidationError` (an input refused before any
 request, including a bad client option such as the base URL), all extending
 `FimError`. The CLI maps a `404` to exit code `4`, a
-`FimValidationError` to the usage-error code `1` (`Error: <message>`), other
+`FimValidationError` to the usage-error code `1` (an `ERROR` record of `fim-portal.cli`), other
 errors to `1`.
 
 **Input validation.** The library owns every rule about what a request may
@@ -381,7 +382,7 @@ npm test          # builds, then runs `node --test` over dist/test
 - **`conformance-*.test.ts`** — the checks shared across the maschinenlesbar.org CLIs (fix plan
   2026-10-06), copied from autobahn-cli with a per-repo adapter block; P12 (`-o -`) was piloted here.
   The follow-up round of 2026-10-06 added P20 (`conformance-p20-cleartext-warning`: a remote plain
-  `http:` base URL gets one `warning:` line on stderr from `cleartextProblem`; this CLI has no
+  `http:` base URL gets one warning on stderr from `cleartextProblem`, a `WARN` record of `fim-portal.http`; this CLI has no
   base-URL variable and no secret, so those two cases are skipped) and P21
   (`conformance-p21-readme-links`: README.md ships in the npm tarball, so a relative link in it
   must point to a file `package.json` `files` ships; any other document is linked by its absolute
@@ -431,3 +432,21 @@ npm run serve                        # http://127.0.0.1:4000/fim-portal-cli/
 Dual-licensed under **[AGPL-3.0-or-later](LICENSE)** or a commercial license — see
 **[LICENSING.md](LICENSING.md)**. This project does **not** accept external code
 contributions; see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
+## The log on stderr
+
+Every diagnostic line on stderr is a log record (`src/cli/log.ts`): a timestamp, a level
+(`ERROR`, `WARN`, `INFO`) and a topic, `fim-portal.<area>`. `--log-format text` (the
+default) writes it log4j style, `<ISO 8601 UTC> <LEVEL padded to 5> [<topic>] <message>`;
+`--log-format jsonl` writes one JSON object per line with exactly `ts`, `level`, `topic`
+and `msg`. The areas are `cli` (usage errors, commander's messages, unexpected errors),
+`api` (the API's answers), `http` (the connection: network errors, the cleartext warning)
+and `output` (the `Wrote N bytes to … (Content-Type: …)` confirmations). Code logs through
+`logOf(deps)` and never writes diagnostics with `io.err` directly. `run()` builds the
+logger from argv before commander parses it, so commander's own usage errors are records
+too, and on top of the redacted `io.err`, so a secret is kept out of the log in either
+format. `CliDeps.now` makes the timestamps testable. stdout carries data only. The one
+line that is not a record is `handleOutputErrors`' `Output error: …` (stdout itself
+failed; it writes to `process.stderr` directly, outside any run). Conformance test P23
+checks all of this, and its body is shared across the *-cli repos; its adapter carries
+`USAGE_EXIT = 1`, this CLI's usage-error code.
