@@ -759,3 +759,17 @@ test("an a:b@c argument (here a User-Agent) is neither a credential in the log n
   assert.deepEqual(credentialsIn("run:2026-10-09@x"), []);
   assert.deepEqual(credentialsIn("https://alice:pw@host"), ["alice:pw"]);
 });
+
+test("a group without its subcommand, and an unknown help topic, log an ERROR before the help (L5)", async () => {
+  for (const [argv, error] of [
+    [["schemas"], /^ERROR \[fim-portal\.cli\] missing command: `fim-portal schemas <subcommand>`$/],
+    [[], /^ERROR \[fim-portal\.cli\] missing command: `fim-portal <subcommand>`$/],
+    [["help", "nosuch"], /^ERROR \[fim-portal\.cli\] /],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse({}));
+    assert.equal(await run([...argv], cli.deps), 1, JSON.stringify(argv));
+    const records = cli.err.map(untimed);
+    assert.match(records[0] ?? "", error, records.join("\n"));
+    assert.ok(records.slice(1).every((line) => line.startsWith("INFO  [fim-portal.cli] ")), records.join("\n"));
+  }
+});
