@@ -218,7 +218,7 @@ and `url` keep the full text), `FimNetworkError` (transport failure/timeout),
 request, including a bad client option such as the base URL), all extending
 `FimError`. The CLI maps a `404` to exit code `4`, a
 `FimValidationError` to the usage-error code `1` (an `ERROR` record of `fim-portal.cli`), other
-errors to `1`.
+errors to `1` (a `FimParseError`, a malformed answer, is an `ERROR` record of `fim-portal.api`).
 
 **Input validation.** The library owns every rule about what a request may
 contain. The rules are pure functions in [`validate.ts`](src/client/validate.ts):
@@ -463,7 +463,9 @@ forge another one or steer the terminal. Before that a lone surrogate (half a
 character, which jq rejects, stopping the whole stream) becomes U+FFFD (`toWellFormed`),
 and a message longer than `MAX_RECORD_MESSAGE` (4000 characters, exported) is cut at a
 code point and ends in `… (N more characters)`. The areas are `cli` (usage errors, commander's messages, unexpected errors),
-`api` (the API's answers), `http` (the connection: network errors, the cleartext warning)
+`api` (the API's answers: an error status, and a malformed answer, a `FimParseError`:
+bad JSON, the wrong shape, an HTML page answered with 200, an unknown charset), `http`
+(the connection: network errors, the cleartext warning)
 and `output` (the `Wrote N bytes to … (Content-Type: …)` confirmations — for stdout only
 once the write has succeeded: `CliIO.outBinary` may return a promise that settles then,
 `false` after a failed write, which leaves the note out — and any failure

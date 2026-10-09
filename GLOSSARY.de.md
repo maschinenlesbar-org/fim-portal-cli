@@ -278,6 +278,16 @@ Qualitätsprüfungen unter `/tools/*` sowie die Token-Introspection erfordern ei
 `Access-Token`. Dieses Tool unterstützt **nur** die offenen Endpoints ohne
 Authentifizierung (lesend, `GET`) sowie den öffentlichen CSV-Export.
 
+**Log-Eintrag (log record).** Jede Diagnosezeile, die die CLI nach stderr schreibt: ein
+Zeitstempel, eine Stufe (`ERROR`, `WARN`, `INFO`) und ein Thema `fim-portal.<Bereich>`, als
+Text (im Stil von log4j) oder mit `--log-format jsonl` als ein JSON-Objekt pro Zeile. Die
+Bereiche: `cli` (Bedienfehler, Meldungen von commander, unerwartete Fehler), `api` (die
+Antworten der API: ein Fehlerstatus und eine fehlerhafte Antwort — ungültiges JSON, die
+falsche Form, eine HTML-Seite, ein unbekannter Zeichensatz), `http` (die Verbindung, die
+Klartext-Warnung) und `output` (die Hinweise `Wrote N bytes`, ein Fehler beim Schreiben
+der `-o`-Datei oder nach stdout). Ein Eintrag ist immer eine Zeile; Steuerzeichen darin
+werden maskiert.
+
 ---
 
 ## Download-Formate

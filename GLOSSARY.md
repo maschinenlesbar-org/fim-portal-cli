@@ -275,6 +275,15 @@ and quality-checks, and token introspection require an `Access-Token`. This tool
 implements **only** the open, no-auth (read-only `GET`) endpoints, plus the
 public CSV export.
 
+**Log record.** Every diagnostic line the CLI writes to stderr: a timestamp, a level
+(`ERROR`, `WARN`, `INFO`) and a topic `fim-portal.<area>`, as text (log4j style) or with
+`--log-format jsonl` as one JSON object per line. The areas: `cli` (usage errors,
+commander's messages, unexpected errors), `api` (the API's answers: an error status, and
+a malformed answer — bad JSON, the wrong shape, an HTML page, an unknown charset), `http`
+(the connection, the cleartext warning) and `output` (the `Wrote N bytes` notes, a failure
+to write the `-o` file or stdout). A record is always one line; control characters in it
+are escaped.
+
 ---
 
 ## Download formats

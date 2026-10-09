@@ -10,6 +10,7 @@ import {
   FimApiError,
   FimError,
   FimNetworkError,
+  FimParseError,
   FimValidationError,
   credentialsIn,
   echoedCredentialForms,
@@ -192,6 +193,19 @@ export function processLogger(argv: readonly string[]): Logger {
   });
 }
 
+/**
+ * The log area of a `FimError` that is neither an API error nor a usage error: the
+ * connection (`http`), a malformed answer (`api`: bad JSON, the wrong shape, an HTML page
+ * answered with 200, an unknown charset — the API's answer as much as an error status
+ * is), the output (`output`), else `cli`.
+ */
+function areaOf(err: FimError): string {
+  if (err instanceof FimNetworkError) return "http";
+  if (err instanceof FimParseError) return "api";
+  if (err instanceof OutputError) return "output";
+  return "cli";
+}
+
 export async function run(argv: string[], deps: CliDeps = defaultDeps): Promise<number> {
   // The log replaces the secrets of the run in every message, in either format.
   deps = withRedactedOutput(deps, argv);
@@ -232,7 +246,7 @@ export async function run(argv: string[], deps: CliDeps = defaultDeps): Promise<
       return USAGE_EXIT_CODE;
     }
     if (err instanceof FimError) {
-      log.error(err instanceof FimNetworkError ? "http" : err instanceof OutputError ? "output" : "cli", err.message);
+      log.error(areaOf(err), err.message);
       return 1;
     }
     log.error("cli", `Unexpected error: ${err instanceof Error ? err.message : String(err)}`);

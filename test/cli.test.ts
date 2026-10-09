@@ -840,3 +840,10 @@ test("a raw download to stdout logs \"Wrote N bytes to stdout\" only once the wr
   assert.match(order[0] ?? "", /^wrote \d+$/);
   assert.match(order[1] ?? "", /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to stdout \(Content-Type: application\/xml\)$/);
 });
+
+test("a malformed answer to a download is an ERROR record of fim-portal.api too (B01-2, L9)", async () => {
+  const cli = makeCli(() => rawResponse("<!doctype html><html>maintenance</html>", "text/html"));
+  assert.equal(await run(["-o", "/tmp/out.xml", "schemas", "xdf", "S1", "1.0"], cli.deps), 1);
+  assert.match(untimed(cli.err.join("\n")), /^ERROR \[fim-portal\.api\] Unexpected response from /);
+  assert.equal(cli.files.size, 0);
+});
