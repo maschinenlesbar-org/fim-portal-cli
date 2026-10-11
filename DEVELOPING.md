@@ -118,6 +118,7 @@ packages/client/     # @maschinenlesbar.org/fim-portal-client — private, bundl
   test/              # tests that only touch the client, + the transport helpers and fixtures
 tools/pack/          # prepack/postpack: bundle the client and commander into the tarball
 tools/bump.mjs       # version bump + commit + tag (npm run bump)
+tsconfig.docs.json   # TypeDoc only: the package entry, with the client read from its sources
 ```
 
 - **The client is its own package** so a later MCP app can share it with the CLI. It is

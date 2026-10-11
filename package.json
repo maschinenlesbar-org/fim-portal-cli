@@ -17,7 +17,7 @@
     "pretest": "npm run build",
     "test": "npm test --workspaces --if-present",
     "coverage": "node --test $(node -p \"+process.versions.node.split('.')[0] >= 24 ? '--test-timeout=5000' : ''\") --experimental-test-coverage --test-coverage-exclude=\"**/test/**\" apps/*/dist/test/*.test.js packages/*/dist/test/*.test.js",
-    "docs": "node tools/docs/node_modules/typedoc/bin/typedoc packages/client/src/index.ts --tsconfig packages/client/tsconfig.json --name @maschinenlesbar.org/fim-portal-cli --out out",
+    "docs": "node tools/docs/node_modules/typedoc/bin/typedoc apps/cli/src/index.ts --tsconfig tsconfig.docs.json --name @maschinenlesbar.org/fim-portal-cli --out out",
     "start": "node apps/cli/dist/src/cli/index.js",
     "pack": "npm pack -w apps/cli",
     "bump": "node tools/bump.mjs",
