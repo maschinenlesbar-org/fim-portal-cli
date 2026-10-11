@@ -20,7 +20,7 @@ npm i -g @maschinenlesbar.org/fim-portal-cli
 
 This installs the binary **`fim-portal`** (run `fim-portal --help`). All examples
 below assume it is on your `PATH`. If you have not installed globally, replace
-`fim-portal` with `node dist/src/cli/index.js`.
+`fim-portal` with `node apps/cli/dist/src/cli/index.js`.
 
 Many examples pipe JSON to [`jq`](https://jqlang.github.io/jq/) for filtering;
 `jq` is optional.
