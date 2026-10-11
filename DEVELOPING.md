@@ -272,7 +272,7 @@ with the message `Invalid <name>: <reason>`. Client methods call it before any
 request (an async method rejects rather than throwing synchronously), so a
 rejected input sends nothing. The CLI's commander parsers call the same `Problem`
 functions and report the reason as a usage error, so the CLI and the library
-cannot drift apart. `test/helpers.ts` has a `parity()` helper that drives one
+cannot drift apart. `apps/cli/test/helpers.ts` has a `parity()` helper that drives one
 input through `run()` and through the library on one recording mock transport.
 
 What the library rejects with `FimValidationError`, before any request:
