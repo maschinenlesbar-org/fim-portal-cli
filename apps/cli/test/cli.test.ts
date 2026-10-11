@@ -1,0 +1,857 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { run } from "../src/cli/run.js";
+import { FimPortalClient } from "@maschinenlesbar.org/fim-portal-client/internal/client";
+import type { CliDeps } from "../src/cli/io.js";
+import type { HttpRequest, HttpResponse } from "@maschinenlesbar.org/fim-portal-client/internal/http";
+import { makeMockTransport, jsonResponse, rawResponse, untimed } from "./helpers.js";
+import * as fx from "@maschinenlesbar.org/fim-portal-client/test/fixtures";
+import { FimNetworkError, credentialsIn } from "@maschinenlesbar.org/fim-portal-client/internal/errors";
+
+function makeCli(responder: (req: HttpRequest) => HttpResponse) {
+  const out: string[] = [];
+  const err: string[] = [];
+  const files = new Map<string, Buffer>();
+  const mt = makeMockTransport(responder);
+
+  const deps: CliDeps = {
+    io: {
+      out: (s) => out.push(s),
+      err: (s) => err.push(s),
+      writeFile: (p, d) => files.set(p, d),
+      outBinary: (d) => void out.push(d.toString("utf8")),
+    },
+    createClient: (opts) => new FimPortalClient({ ...opts, transport: mt.transport }),
+  };
+  return { deps, out, err, files, mt };
+}
+
+test("schemas search prints JSON and sends the right query", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["schemas", "search", "--name", "Geburt", "--limit", "5"], cli.deps);
+
+  assert.equal(code, 0);
+  assert.deepEqual(JSON.parse(cli.out.join("\n")), fx.schemaSearchResult);
+  const url = new URL(cli.mt.last().url);
+  assert.equal(url.pathname, "/api/v1/schemas");
+  assert.equal(url.searchParams.get("name"), "Geburt");
+  assert.equal(url.searchParams.get("limit"), "5");
+});
+
+for (const group of ["schemas", "document-profiles", "fields", "groups"]) {
+  test(`${group} search sends --versionshinweis as the capitalised Versionshinweis parameter`, async () => {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run([group, "search", "--versionshinweis", "neu"], cli.deps);
+    assert.equal(code, 0);
+    const params = new URL(cli.mt.last().url).searchParams;
+    assert.equal(params.get("Versionshinweis"), "neu");
+    assert.equal(params.has("versionshinweis"), false);
+  });
+}
+
+test("--xdf-version offers only the values the API accepts (2.0, 3.0.0)", async () => {
+  for (const [value, ok] of [["2.0", true], ["3.0.0", true], ["2.0.0", false]] as const) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["schemas", "search", "--xdf-version", value], cli.deps);
+    assert.equal(code, ok ? 0 : 1, value);
+    assert.equal(cli.mt.calls.length, ok ? 1 : 0, value);
+  }
+});
+
+for (const group of ["schemas", "document-profiles", "fields", "groups"]) {
+  test(`${group} search accepts --order-by relevance`, async () => {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run([group, "search", "--fts-query", "Geburt", "--order-by", "relevance"], cli.deps);
+    assert.equal(code, 0);
+    assert.equal(new URL(cli.mt.last().url).searchParams.get("order_by"), "relevance");
+  });
+}
+
+test("schemas search rejects an out-of-range freigabe-status", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["schemas", "search", "--freigabe-status", "99"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0); // never reached the client
+});
+
+test("--freigabe-status accepts only a plain decimal code", async () => {
+  for (const value of [" 5", "0x5", "5.0", "1e0", "0b101", "+5", ""]) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["schemas", "search", "--freigabe-status", value], cli.deps);
+    assert.equal(code, 1, JSON.stringify(value));
+    assert.equal(cli.mt.calls.length, 0, JSON.stringify(value));
+  }
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  assert.equal(await run(["schemas", "search", "--freigabe-status", "5"], cli.deps), 0);
+  assert.deepEqual(new URL(cli.mt.last().url).searchParams.getAll("freigabe_status"), ["5"]);
+});
+
+test("schemas get with explicit version", async () => {
+  const cli = makeCli(() => jsonResponse(fx.fullSchema));
+  const code = await run(["schemas", "get", "S07000009", "1.0"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v1/schemas/S07000009/1.0");
+});
+
+test("schemas get defaults the version to latest", async () => {
+  const cli = makeCli(() => jsonResponse(fx.fullSchema));
+  await run(["schemas", "get", "S07000009"], cli.deps);
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v1/schemas/S07000009/latest");
+});
+
+test("--compact prints single-line JSON", async () => {
+  const cli = makeCli(() => jsonResponse(fx.fullSchema));
+  await run(["--compact", "schemas", "get", "S1", "1.0"], cli.deps);
+  assert.equal(cli.out.length, 1);
+  assert.equal(cli.out[0], JSON.stringify(fx.fullSchema));
+});
+
+test("DEL and C1 control characters in server data are escaped in the JSON output", async () => {
+  const controls = String.fromCharCode(0x7f, 0x85, 0x9b) + "2J";
+  const served = { ...fx.fullSchema, name: `Geburt${controls}`, fim_version: String.fromCharCode(0x1b) + "[31m" };
+  for (const format of [[], ["--compact"]]) {
+    const cli = makeCli(() => jsonResponse(served));
+    assert.equal(await run([...format, "schemas", "get", "S1", "1.0"], cli.deps), 0);
+    const text = cli.out.join("\n");
+    const raw = [...text].filter((c) => c.charCodeAt(0) < 0x20 ? c !== "\n" : c.charCodeAt(0) >= 0x7f && c.charCodeAt(0) <= 0x9f);
+    assert.deepEqual(raw, [], format.join(" "));
+    assert.match(text, /Geburt\\u007f\\u0085\\u009b2J/);
+    assert.deepEqual(JSON.parse(text), served);
+  }
+});
+
+test("bidi formatting characters in server data are escaped in the JSON output", async () => {
+  const bidi = String.fromCharCode(0x202e, 0x2066, 0x200f, 0x061c);
+  const served = { ...fx.fullSchema, name: `Geburt${bidi}gnirts` };
+  for (const format of [[], ["--compact"]]) {
+    const cli = makeCli(() => jsonResponse(served));
+    assert.equal(await run([...format, "schemas", "get", "S1", "1.0"], cli.deps), 0);
+    const text = cli.out.join("\n");
+    assert.ok(!/[\u202e\u2066\u200f\u061c]/.test(text), format.join(" "));
+    assert.match(text, /Geburt\\u202e\\u2066\\u200f\\u061cgnirts/);
+    assert.deepEqual(JSON.parse(text), served);
+  }
+});
+
+test("xdf download writes to --output file and reports bytes on stderr", async () => {
+  const cli = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
+  const code = await run(
+    ["--output", "/tmp/out.xml", "schemas", "xdf", "S1", "1.0"],
+    cli.deps,
+  );
+  assert.equal(code, 0);
+  assert.equal(cli.files.get("/tmp/out.xml")?.toString("utf8"), fx.xmlBody);
+  assert.equal(cli.out.length, 0); // nothing on stdout
+  assert.match(untimed(cli.err.join("\n")), /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to \/tmp\/out\.xml/);
+});
+
+test("an -o path with a line break, ESC or a bidi control stays inside one escaped record", async () => {
+  const path = "/tmp/m\n2026-10-09T00:00:00.000Z WARN  [fim-portal.http] forged\u001b[31m\u202e.xml";
+  for (const format of ["text", "jsonl"]) {
+    const cli = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
+    const code = await run(["--log-format", format, "-o", path, "schemas", "xdf", "S1", "1.0"], cli.deps);
+    assert.equal(code, 0);
+    assert.equal(cli.files.get(path)?.toString("utf8"), fx.xmlBody);
+    assert.equal(cli.err.length, 1, cli.err.join("\n"));
+    const line = cli.err[0] as string;
+    assert.ok(!/[\n\u001b\u202e]/.test(line), JSON.stringify(line));
+    if (format === "jsonl") assert.match((JSON.parse(line) as { msg: string }).msg, /^Wrote \d+ bytes to \/tmp\/m\n2026/);
+    else assert.match(untimed(line), /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to \/tmp\/m\\n2026-10-09T00:00:00\.000Z WARN  \[fim-portal\.http\] forged\\u001b\[31m\\u202e\.xml/);
+  }
+});
+
+test("the Content-Type in a download's note is quoted at most 500 characters long (L3)", async () => {
+  const cli = makeCli(() => rawResponse(fx.xmlBody, `application/xml; x=${"z".repeat(10_000)}`));
+  assert.equal(await run(["-o", "/tmp/out.xml", "schemas", "xdf", "S1", "1.0"], cli.deps), 0);
+  const record = cli.err.join("\n");
+  assert.match(record, /\(Content-Type: application\/xml; x=z+…\)$/);
+  assert.ok(record.length < 700, `${record.length}`);
+});
+
+test("xdf download without --output streams to stdout", async () => {
+  const cli = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
+  await run(["schemas", "xdf", "S1", "1.0"], cli.deps);
+  assert.equal(cli.out.join(""), fx.xmlBody);
+});
+
+test("--base-url is forwarded to the client", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  await run(["--base-url", "https://schema.fim.fitko.net", "schemas", "search"], cli.deps);
+  assert.equal(new URL(cli.mt.last().url).host, "schema.fim.fitko.net");
+});
+
+test("a non-http(s) --base-url is rejected at parse time (usage error, no HTTP call)", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["--base-url", "file:///etc/passwd", "schemas", "search"], cli.deps);
+  // Rejected by the value-parser before any request is built: commander's usage
+  // exit code (1 in this version), and crucially the transport is never reached.
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+test("a malformed --base-url is rejected at parse time", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["--base-url", "not a url", "schemas", "search"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+test("a --base-url with a query, a fragment or surrounding whitespace is a usage error", async () => {
+  for (const [baseUrl, message] of [
+    ["http://127.0.0.1:18113/?x=1", /cannot have a query \(\?\) or fragment \(#\)/],
+    ["http://127.0.0.1:18113/#frag", /cannot have a query \(\?\) or fragment \(#\)/],
+    ["http://127.0.0.1:18113?", /cannot have a query \(\?\) or fragment \(#\)/],
+    [" https://fimportal.de", /cannot have surrounding whitespace/],
+    ["https://fimportal.de\t", /cannot have surrounding whitespace/],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["--base-url", baseUrl, "schemas", "search"], cli.deps);
+    assert.equal(code, 1, baseUrl);
+    assert.equal(cli.mt.calls.length, 0, baseUrl);
+    assert.match(cli.err.join("\n"), message, baseUrl);
+  }
+});
+
+test("a --base-url with a path prefix still works", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["--base-url", "https://mirror.example/fim/", "schemas", "get", "S1"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(cli.mt.last().url, "https://mirror.example/fim/api/v1/schemas/S1/latest");
+});
+
+test("a blank -o/--output is a usage error instead of silently writing to stdout", async () => {
+  for (const value of ["", " "]) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["-o", value, "--compact", "schemas", "get", "X"], cli.deps);
+    assert.equal(code, 1, JSON.stringify(value));
+    assert.equal(cli.mt.calls.length, 0);
+    assert.deepEqual(cli.out, []);
+    assert.match(cli.err.join("\n"), /Expected a non-empty value/);
+  }
+});
+
+test("--user-agent with control or non-Latin-1 characters is a usage error, not an 'Unexpected error'", async () => {
+  const CR = String.fromCharCode(0x0d);
+  const LF = String.fromCharCode(0x0a);
+  for (const [ua, message] of [
+    [`a${CR}${LF}X-Evil: 1`, /Value contains control characters\./],
+    [`a${String.fromCharCode(0x7f)}`, /Value contains control characters\./],
+    ["agent \u20ac", /Value contains characters outside Latin-1/],
+    [" ", /Expected a non-empty value/],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["--user-agent", ua, "schemas", "search"], cli.deps);
+    assert.equal(code, 1, JSON.stringify(ua));
+    assert.equal(cli.mt.calls.length, 0);
+    assert.match(cli.err.join("\n"), message);
+  }
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  assert.equal(await run(["--user-agent", "müller-bot/1.0\t(test)", "schemas", "search"], cli.deps), 0);
+  assert.equal(cli.mt.last().headers?.["User-Agent"], "müller-bot/1.0\t(test)");
+});
+
+test("a deeply nested response fails pretty-printing cleanly and still prints with --compact", async () => {
+  const depth = 200_000;
+  const deep = () => rawResponse('{"x":' + "[".repeat(depth) + "]".repeat(depth) + "}", "application/json");
+  const pretty = makeCli(deep);
+  assert.equal(await run(["schemas", "get", "X"], pretty.deps), 1);
+  assert.deepEqual(pretty.out, []);
+  assert.equal(untimed(pretty.err.join("\n")), "ERROR [fim-portal.cli] The response is nested too deeply to pretty-print; try --compact.");
+
+  // Compact serialisation goes much deeper (it prints this one on current Node);
+  // should a runtime's stack still be too small, it must fail just as cleanly.
+  const compact = makeCli(deep);
+  const code = await run(["--compact", "schemas", "get", "X"], compact.deps);
+  if (code === 0) assert.equal(compact.out.join("").length, 2 * depth + 6);
+  else assert.equal(untimed(compact.err.join("\n")), "ERROR [fim-portal.cli] The response is nested too deeply to print.");
+});
+
+test("credentials in --base-url are redacted from error messages", async () => {
+  const cli = makeCli(() => jsonResponse({ detail: "not here" }, 404));
+  const code = await run(["--base-url", "http://user:secret@127.0.0.1:18113", "schemas", "get", "Y"], cli.deps);
+  assert.equal(code, 4);
+  // ...but still sent: the request URL keeps the userinfo (Node turns it into Basic auth).
+  assert.equal(cli.mt.last().url, "http://user:secret@127.0.0.1:18113/api/v1/schemas/Y/latest");
+  assert.equal(
+    untimed(cli.err.join("\n")),
+    "ERROR [fim-portal.api] HTTP 404 for GET http://***@127.0.0.1:18113/api/v1/schemas/Y/latest: not here",
+  );
+});
+
+test("--timeout accepts up to the largest timer Node supports", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  assert.equal(await run(["--timeout", "2147483647", "schemas", "search"], cli.deps), 0);
+  assert.equal(cli.mt.last().timeoutMs, 2_147_483_647);
+
+  const over = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  assert.equal(await run(["--timeout", "2147483648", "schemas", "search"], over.deps), 1);
+  assert.equal(over.mt.calls.length, 0);
+  assert.match(over.err.join("\n"), /Must be <= 2147483647/);
+});
+
+test("--max-response-bytes is forwarded to the transport", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  await run(["--max-response-bytes", "2048", "schemas", "search"], cli.deps);
+  assert.equal(cli.mt.last().maxResponseBytes, 2048);
+});
+
+test("a 404 from the API maps to exit code 4 and an error message", async () => {
+  const cli = makeCli(() => jsonResponse({ detail: "Schema not found" }, 404));
+  const code = await run(["--max-retries", "0", "schemas", "get", "NOPE", "1.0"], cli.deps);
+  assert.equal(code, 4);
+  assert.match(cli.err.join("\n"), /Schema not found/);
+});
+
+test("service-texts get passes the source path segment", async () => {
+  const cli = makeCli(() => jsonResponse({ ok: true }));
+  await run(["service-texts", "get", "R1", "L1", "leika"], cli.deps);
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/leistung-stammtexte/R1/L1/leika");
+});
+
+test("processes get passes the Detaillierungsstufe and the verwaltungspolitische Kodierung", async () => {
+  const cli = makeCli(() => jsonResponse({ ok: true }));
+  await run(["processes", "get", "P1", "1.0", "101", "17"], cli.deps);
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/processes/P1/1.0/101/17");
+});
+
+for (const [name, suffix] of [
+  ["xprozess", "xprozess"],
+  ["report", "report"],
+  ["visualization", "visualization"],
+  ["visualization-display", "visualization_display"],
+] as const) {
+  test(`processes ${name} addresses the process by all four path segments`, async () => {
+    const cli = makeCli(() => rawResponse("%PDF-1.4", "application/pdf"));
+    const code = await run(["-o", "out.bin", "processes", name, "P1", "1.0", "105", "17"], cli.deps);
+    assert.equal(code, 0);
+    assert.equal(new URL(cli.mt.last().url).pathname, `/api/v0/processes/P1/1.0/105/17/${suffix}`);
+  });
+}
+
+test("process-classes xprozess downloads the XML instead of parsing it as JSON", async () => {
+  const xml = "<?xml version='1.0' encoding='utf-8'?><xprozess:alleInhalte.export.0303/>";
+  const cli = makeCli(() => rawResponse(xml, "application/xml"));
+  const code = await run(["-o", "pc.xml", "process-classes", "xprozess", "P1", "1.0"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/processclasses/P1/1.0/xprozess");
+  assert.equal(cli.mt.last().headers?.["Accept"], "application/xml");
+  assert.equal(cli.files.get("pc.xml")?.toString("utf8"), xml);
+  assert.match(untimed(cli.err.join("\n")), /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to pc\.xml \(Content-Type: application\/xml\)/);
+});
+
+test("an id of .. exits 1 without a request instead of printing another endpoint's data", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["--compact", "fields", "versions", "..", "schemas"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+  assert.deepEqual(cli.out, []);
+  assert.match(untimed(cli.err.join("\n")), /^ERROR \[fim-portal\.cli\] Invalid path segment "\.\."/);
+});
+
+test("--max-retries is bounded to 0..10", async () => {
+  for (const [value, ok] of [["0", true], ["10", true], ["11", false], ["1000000", false]] as const) {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["--max-retries", value, "schemas", "search"], cli.deps);
+    assert.equal(code, ok ? 0 : 1, value);
+    if (!ok) assert.match(cli.err.join("\n"), /Must be <= 10\./);
+  }
+});
+
+test("organizational-units and online-services list forward --fts-query", async () => {
+  for (const [group, path] of [
+    ["organizational-units", "/api/v0/organizational-unit"],
+    ["online-services", "/api/v0/online-service"],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse({ items: [], limit: 5, count: 0, next_cursor: null }));
+    const code = await run([group, "list", "--fts-query", "Standesamt", "--limit", "5"], cli.deps);
+    assert.equal(code, 0);
+    const url = new URL(cli.mt.last().url);
+    assert.equal(url.pathname, path);
+    assert.equal(url.searchParams.get("fts_query"), "Standesamt");
+  }
+});
+
+test("specializations list has no --fts-query (the endpoint does not support it)", async () => {
+  const cli = makeCli(() => jsonResponse({ items: [], total_count: 0 }));
+  const code = await run(["specializations", "list", "--fts-query", "x"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+test("process-classes search forwards --is-latest", async () => {
+  const cli = makeCli(() => jsonResponse({ items: [], total_count: 0 }));
+  const code = await run(["process-classes", "search", "--is-latest"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("is_latest"), "true");
+});
+
+test("processes get without the Kodierung is a usage error, before any request", async () => {
+  const cli = makeCli(() => jsonResponse({ ok: true }));
+  const code = await run(["processes", "get", "P1", "1.0", "101"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+  assert.match(cli.err.join("\n"), /missing required argument 'kodierung'/);
+});
+
+test("--version prints the version and exits 0", async () => {
+  const cli = makeCli(() => jsonResponse({}));
+  const code = await run(["--version"], cli.deps);
+  assert.equal(code, 0);
+  assert.match(cli.out.join("\n"), /\d+\.\d+\.\d+/);
+});
+
+test("unknown command is a usage error (non-zero exit, no HTTP call)", async () => {
+  const cli = makeCli(() => jsonResponse({}));
+  const code = await run(["bogus-command"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+// ---- H1: service searches expose order_by and lagen_portalverbund ----
+
+test("service-profiles search forwards --order-by and --lagen-portalverbund", async () => {
+  const cli = makeCli(() => jsonResponse({ items: [], total_count: 0 }));
+  const code = await run(
+    [
+      "service-profiles",
+      "search",
+      "--order-by",
+      "titel_asc",
+      "--lagen-portalverbund",
+      "Familie",
+    ],
+    cli.deps,
+  );
+  assert.equal(code, 0);
+  const q = new URL(cli.mt.last().url).searchParams;
+  assert.equal(q.get("order_by"), "titel_asc");
+  assert.equal(q.get("lagen_portalverbund"), "Familie");
+});
+
+test("service-profiles search rejects an order value from a different enum", async () => {
+  const cli = makeCli(() => jsonResponse({ items: [], total_count: 0 }));
+  // "name_asc" is a Datenfelder order, not a Leistungsteckbrief order.
+  const code = await run(["service-profiles", "search", "--order-by", "name_asc"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+test("service-texts search forwards --order-by", async () => {
+  const cli = makeCli(() => jsonResponse(fx.stammtextSearchResult));
+  await run(["service-texts", "search", "--order-by", "relevance"], cli.deps);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("order_by"), "relevance");
+});
+
+// ---- H2: --limit is bounded to 1..200 ----
+
+test("--limit accepts a value within 1..200", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["schemas", "search", "--limit", "50"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("limit"), "50");
+});
+
+for (const bad of ["0", "201", "999999", "-1", "1.5"]) {
+  test(`--limit rejects ${bad}`, async () => {
+    const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+    const code = await run(["schemas", "search", "--limit", bad], cli.deps);
+    assert.notEqual(code, 0);
+    assert.equal(cli.mt.calls.length, 0);
+  });
+}
+
+test("organizational-units --limit is also bounded", async () => {
+  const cli = makeCli(() => jsonResponse(fx.orgUnitListResult));
+  const code = await run(["organizational-units", "list", "--limit", "500"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+// ---- L3: positional enum args are validated by the library, before any request ----
+
+test("processes get rejects an invalid Detaillierungsstufe without an HTTP call", async () => {
+  const cli = makeCli(() => jsonResponse({}));
+  const code = await run(["processes", "get", "P1", "1.0", "999", "17"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+  assert.equal(untimed(cli.err.join("\n")), "ERROR [fim-portal.cli] Invalid stufe: Expected one of: 101, 102, 103, 104, 105.");
+});
+
+test("processes get accepts a valid Detaillierungsstufe", async () => {
+  const cli = makeCli(() => jsonResponse({ ok: true }));
+  const code = await run(["processes", "get", "P1", "1.0", "101", "17"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/processes/P1/1.0/101/17");
+});
+
+test("service-texts get rejects an invalid source without an HTTP call", async () => {
+  const cli = makeCli(() => jsonResponse({}));
+  const code = await run(["service-texts", "get", "R1", "L1", "bogus"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.mt.calls.length, 0);
+  assert.equal(untimed(cli.err.join("\n")), "ERROR [fim-portal.cli] Invalid source: Expected one of: leika, landesredaktion, pvog.");
+});
+
+// ---- M3: choice options reuse the spec enums (incl. schema-only "Stichwort") ----
+
+test("schemas search accepts the schema-only suche-nur-in value Stichwort", async () => {
+  const cli = makeCli(() => jsonResponse(fx.schemaSearchResult));
+  const code = await run(["schemas", "search", "--suche-nur-in", "Stichwort"], cli.deps);
+  assert.equal(code, 0);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("suche_nur_in"), "Stichwort");
+});
+
+test("fields search rejects the schema-only value Stichwort (not in FeldSucheIn)", async () => {
+  const cli = makeCli(() => jsonResponse(fx.fieldSearchResult));
+  const code = await run(["fields", "search", "--suche-nur-in", "Stichwort"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+// ---- code-lists ----
+
+test("code-lists hits /api/v0/code-lists and forwards pagination", async () => {
+  const cli = makeCli(() => jsonResponse(fx.codeListResult));
+  const code = await run(["code-lists", "--offset", "0", "--limit", "20"], cli.deps);
+  assert.equal(code, 0);
+  assert.deepEqual(JSON.parse(cli.out.join("\n")), fx.codeListResult);
+  const url = new URL(cli.mt.last().url);
+  assert.equal(url.pathname, "/api/v0/code-lists");
+  assert.equal(url.searchParams.get("offset"), "0");
+  assert.equal(url.searchParams.get("limit"), "20");
+});
+
+test("code-lists --limit is bounded to 1..200", async () => {
+  const cli = makeCli(() => jsonResponse(fx.codeListResult));
+  const code = await run(["code-lists", "--limit", "500"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+// ---- search-csv ----
+
+test("search-csv maps options to query params and streams CSV to stdout", async () => {
+  const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+  const code = await run(
+    [
+      "search-csv",
+      "--resource",
+      "field",
+      "--term",
+      "Name",
+      "--xdf-version",
+      "2.0",
+      "--order-by",
+      "name_asc",
+      "--feldart",
+      "input",
+      "--datentyp",
+      "text",
+    ],
+    cli.deps,
+  );
+  assert.equal(code, 0);
+  assert.equal(cli.out.join(""), fx.csvBody);
+  const q = new URL(cli.mt.last().url).searchParams;
+  assert.equal(new URL(cli.mt.last().url).pathname, "/tools/search-csv-download");
+  assert.equal(q.get("resource"), "field");
+  assert.equal(q.get("term"), "Name");
+  assert.equal(q.get("xdf_version"), "2.0");
+  assert.equal(q.get("order_by"), "name_asc");
+  assert.equal(q.get("feldart"), "input");
+  assert.equal(q.get("datentyp"), "text");
+
+  for (const [resource, flag, value, key] of [
+    ["document-profile", "--dokumentart", "001", "dokumentart"],
+    ["leistung-steckbriefe", "--sprache", "Englisch", "sprache"],
+    ["leistung-steckbriefe", "--order-by", "titel_asc", "order_by"],
+  ] as const) {
+    const other = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+    assert.equal(await run(["search-csv", "--resource", resource, flag, value], other.deps), 0);
+    assert.equal(new URL(other.mt.last().url).searchParams.get(key), value);
+  }
+});
+
+test("search-csv requires --resource", async () => {
+  const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+  const code = await run(["search-csv", "--term", "Name"], cli.deps);
+  assert.notEqual(code, 0);
+  assert.equal(cli.mt.calls.length, 0);
+});
+
+for (const resource of ["schema", "document-profile", "field", "group", "leistung-steckbriefe", "processclass", "process"]) {
+  test(`search-csv accepts --resource ${resource}`, async () => {
+    const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+    const code = await run(["search-csv", "--resource", resource], cli.deps);
+    assert.equal(code, 0);
+    assert.equal(new URL(cli.mt.last().url).searchParams.get("resource"), resource);
+  });
+}
+
+test("search-csv rejects a --resource the server would silently replace with Leistungen", async () => {
+  for (const resource of ["schemas", "fields", "leistungen", "steckbriefe", "bogus"]) {
+    const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+    const code = await run(["search-csv", "--resource", resource], cli.deps);
+    assert.equal(code, 1, resource);
+    assert.equal(cli.mt.calls.length, 0);
+    assert.match(cli.err.join("\n"), /Allowed choices are schema, document-profile, field/);
+  }
+});
+
+test("search-csv refuses a filter value or a filter the export would ignore, before any request", async () => {
+  // Each of these exported the unfiltered result, byte for byte, live (exploratory 01 and 06).
+  for (const [argv, message] of [
+    [["--resource", "field", "--feldart", "SELECT"], /option '--feldart <art>' argument 'SELECT' is invalid/],
+    [["--resource", "field", "--feldart", "bogus"], /Allowed choices are input, select/],
+    [["--resource", "field", "--datentyp", "string"], /option '--datentyp <typ>' argument 'string' is invalid/],
+    [["--resource", "field", "--xdf-version", "3"], /Allowed choices are 2\.0, 3\.0\.0/],
+    [["--resource", "document-profile", "--dokumentart", "1"], /option '--dokumentart <code>' argument '1' is invalid/],
+    [["--resource", "leistung-steckbriefe", "--sprache", "Klingonisch"], /Allowed choices are Deutsch/],
+    [["--resource", "schema", "--feldart", "select"], /Invalid feldart: it filters resource field only, not schema/],
+    [["--resource", "schema", "--sprache", "Englisch"], /Invalid sprache: it filters resource leistung-steckbriefe only, not schema/],
+    [["--resource", "process", "--xdf-version", "2.0"], /Invalid xdf_version: it filters resource schema, document-profile, field, group only, not process/],
+    [["--resource", "field", "--order-by", "titel_asc"], /Invalid order_by: Expected one of: relevance/],
+    [["--resource", "process", "--order-by", "name_asc"], /Invalid order_by: the CSV export of process has no sort order/],
+  ] as const) {
+    const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+    const code = await run(["search-csv", ...argv], cli.deps);
+    assert.equal(code, 1, argv.join(" "));
+    assert.equal(cli.mt.calls.length, 0, argv.join(" "));
+    assert.match(cli.err.join("\n"), message, argv.join(" "));
+  }
+});
+
+test("search-csv writes the CSV to --output and reports bytes on stderr", async () => {
+  const cli = makeCli(() => rawResponse(fx.csvBody, "text/csv"));
+  const code = await run(
+    ["--output", "/tmp/fields.csv", "search-csv", "--resource", "field"],
+    cli.deps,
+  );
+  assert.equal(code, 0);
+  assert.equal(cli.files.get("/tmp/fields.csv")?.toString("utf8"), fx.csvBody);
+  assert.equal(cli.out.length, 0);
+  assert.match(untimed(cli.err.join("\n")), /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to \/tmp\/fields\.csv/);
+});
+
+// ---- error paths through run() ----
+
+test("a transport-level network error maps to exit 1 with a clean Error message", async () => {
+  const out: string[] = [];
+  const err: string[] = [];
+  const deps: CliDeps = {
+    io: {
+      out: (s) => out.push(s),
+      err: (s) => err.push(s),
+      writeFile: () => {},
+      outBinary: (d) => void out.push(d.toString("utf8")),
+    },
+    createClient: (opts) =>
+      new FimPortalClient({
+        ...opts,
+        transport: () => Promise.reject(new FimNetworkError("connection reset")),
+      }),
+  };
+  const code = await run(["--max-retries", "0", "schemas", "search"], deps);
+  assert.equal(code, 1);
+  assert.equal(out.length, 0);
+  assert.match(untimed(err.join("\n")), /^ERROR \[fim-portal\.http\] connection reset/);
+});
+
+test("a failed -o write degrades to exit 1 with a clean ERROR record (not Unexpected error)", async () => {
+  const out: string[] = [];
+  const err: string[] = [];
+  const mt = makeMockTransport(() => rawResponse(fx.xmlBody, "application/xml"));
+  const deps: CliDeps = {
+    io: {
+      out: (s) => out.push(s),
+      err: (s) => err.push(s),
+      writeFile: () => {
+        const e = new Error("ENOENT: no such file or directory, open '/nope/out.xml'");
+        throw e;
+      },
+      outBinary: (d) => void out.push(d.toString("utf8")),
+    },
+    createClient: (opts) => new FimPortalClient({ ...opts, transport: mt.transport }),
+  };
+  const code = await run(["--output", "/nope/out.xml", "schemas", "xdf", "S1", "1.0"], deps);
+  assert.equal(code, 1);
+  const errText = err.join("\n");
+  assert.match(untimed(errText), /^ERROR \[fim-portal\.output\] could not write \/nope\/out\.xml/);
+  assert.doesNotMatch(errText, /Unexpected error/);
+});
+
+// ---- blank values are a usage error, never an empty parameter ----
+
+// Each free-text, filter or id input once, set to "" (plus one whitespace case).
+// A blank value is never meaningful: it must be rejected at parse time, before
+// any request, instead of being sent as `key=` or an empty path segment.
+const blankCases: Array<[string, string[]]> = [
+  ["--bezug-unterelemente", ["schemas", "search", "--bezug-unterelemente", ""]],
+  ["--bezeichnung", ["schemas", "search", "--bezeichnung", ""]],
+  ["--stichwort", ["schemas", "search", "--stichwort", ""]],
+  ["--name", ["schemas", "search", "--name", ""]],
+  ["--name (whitespace)", ["schemas", "search", "--name", "   "]],
+  ["--nummernkreis", ["schemas", "search", "--nummernkreis", ""]],
+  ["--gueltig-am", ["schemas", "search", "--gueltig-am", ""]],
+  ["--status-gesetzt-durch", ["schemas", "search", "--status-gesetzt-durch", ""]],
+  ["--status-gesetzt-seit", ["schemas", "search", "--status-gesetzt-seit", ""]],
+  ["--status-gesetzt-bis", ["schemas", "search", "--status-gesetzt-bis", ""]],
+  ["--bezug", ["schemas", "search", "--bezug", ""]],
+  ["--versionshinweis", ["schemas", "search", "--versionshinweis", ""]],
+  ["--updated-since", ["schemas", "search", "--updated-since", ""]],
+  ["--fts-query", ["schemas", "search", "--fts-query", ""]],
+  ["--leistungstyp", ["service-profiles", "search", "--leistungstyp", ""]],
+  ["--typisierung", ["service-profiles", "search", "--typisierung", ""]],
+  ["--title", ["service-profiles", "search", "--title", ""]],
+  ["--leistungsbezeichnung", ["service-profiles", "search", "--leistungsbezeichnung", ""]],
+  ["--leistungsbezeichnung2", ["service-profiles", "search", "--leistungsbezeichnung2", ""]],
+  ["--leistungsschluessel", ["service-profiles", "search", "--leistungsschluessel", ""]],
+  ["--rechtsgrundlagen", ["service-profiles", "search", "--rechtsgrundlagen", ""]],
+  ["--sdg", ["service-profiles", "search", "--sdg", ""]],
+  ["--leistungsadressat", ["service-profiles", "search", "--leistungsadressat", ""]],
+  ["--ozg-themenfeld", ["service-profiles", "search", "--ozg-themenfeld", ""]],
+  ["--ozg-id", ["service-profiles", "search", "--ozg-id", ""]],
+  ["--lagen-portalverbund", ["service-profiles", "search", "--lagen-portalverbund", ""]],
+  ["--redaktion-id", ["service-texts", "search", "--redaktion-id", ""]],
+  ["--resource", ["search-csv", "--resource", ""]],
+  ["--term", ["search-csv", "--resource", "field", "--term", ""]],
+  ["--xdf-version", ["search-csv", "--resource", "field", "--xdf-version", ""]],
+  ["--order-by", ["search-csv", "--resource", "field", "--order-by", ""]],
+  ["--feldart", ["search-csv", "--resource", "field", "--feldart", ""]],
+  ["--datentyp", ["search-csv", "--resource", "field", "--datentyp", ""]],
+  ["--dokumentart", ["search-csv", "--resource", "field", "--dokumentart", ""]],
+  ["--sprache", ["search-csv", "--resource", "field", "--sprache", ""]],
+  ["<fimId>", ["schemas", "versions", ""]],
+  ["[fimVersion]", ["schemas", "get", "S1", ""]],
+  ["<namespace>", ["fields", "versions", "", "F1"]],
+  ["<leistungsschluessel>", ["service-profiles", "get", ""]],
+  ["<languageCode>", ["service-profiles", "pdf", "99123456760000", ""]],
+  ["<redaktionId>", ["organizational-units", "xzufi", "", "1"]],
+  ["<id>", ["process-classes", "get", "", "1.0"]],
+  ["<version>", ["process-classes", "get", "P1", ""]],
+  ["service-texts <redaktionId>", ["service-texts", "get", "", "L1", "leika"]],
+  ["service-texts <leistungId>", ["service-texts", "get", "R1", "", "leika"]],
+  ["service-texts <source>", ["service-texts", "get", "R1", "L1", ""]],
+  ["service-texts <languageCode>", ["service-texts", "pdf", "R1", "L1", "leika", ""]],
+];
+
+for (const [input, argv] of blankCases) {
+  test(`a blank ${input} is a usage error with no request`, async () => {
+    const cli = makeCli(() => jsonResponse({}));
+    const code = await run(argv, cli.deps);
+    assert.notEqual(code, 0);
+    assert.equal(cli.mt.calls.length, 0);
+  });
+}
+
+test("a download answered with an HTML page fails and writes no file", async () => {
+  const cli = makeCli(() => rawResponse("<html>oops</html>", "text/html"));
+  const code = await run(["-o", "report.pdf", "processes", "report", "P1", "1.0", "101", "17"], cli.deps);
+  assert.equal(code, 1);
+  assert.equal(cli.files.size, 0);
+  assert.match(cli.err.join("\n"), /expected application\/pdf, got an HTML page \(Content-Type "text\/html"\)/);
+});
+
+test("an a:b@c argument (here a User-Agent) is neither a credential in the log nor rewritten in the JSON on stdout (L14)", async () => {
+  const cli = makeCli(() => jsonResponse({ items: [{ name: "run:2026-10-09@x" }], offset: 0, limit: 200, count: 1, total_count: 1 }));
+  assert.equal(await run(["--user-agent", "run:2026-10-09@x", "code-lists"], cli.deps), 0);
+  assert.match(cli.out.join("\n"), /"name": "run:2026-10-09@x"/);
+  assert.deepEqual(credentialsIn("run:2026-10-09@x"), []);
+  assert.deepEqual(credentialsIn("https://alice:pw@host"), ["alice:pw"]);
+});
+
+test("a group without its subcommand, and an unknown help topic, log an ERROR before the help (L5)", async () => {
+  for (const [argv, error] of [
+    [["schemas"], /^ERROR \[fim-portal\.cli\] missing command: `fim-portal schemas <subcommand>`$/],
+    [[], /^ERROR \[fim-portal\.cli\] missing command: `fim-portal <subcommand>`$/],
+    [["help", "nosuch"], /^ERROR \[fim-portal\.cli\] /],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse({}));
+    assert.equal(await run([...argv], cli.deps), 1, JSON.stringify(argv));
+    const records = cli.err.map(untimed);
+    assert.match(records[0] ?? "", error, records.join("\n"));
+    assert.ok(records.slice(1).every((line) => line.startsWith("INFO  [fim-portal.cli] ")), records.join("\n"));
+  }
+});
+
+test("a repeated --log-format is reported in the format commander kept, the first (B02-1, L6)", async () => {
+  for (const [argv, jsonl] of [
+    [["--log-format", "jsonl", "--log-format", "text", "code-lists"], true],
+    [["--log-format", "text", "--log-format", "jsonl", "code-lists"], false],
+    [["--log-format", "jsonl", "--log-format=xml", "code-lists"], true],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse({}));
+    assert.equal(await run([...argv], cli.deps), 1, JSON.stringify(argv));
+    const first = cli.err[0] ?? "";
+    if (jsonl) assert.equal((JSON.parse(first) as Record<string, unknown>)["level"], "ERROR", first);
+    else assert.match(untimed(first), /^ERROR \[fim-portal\.cli\] /);
+    assert.match(first, /was given more than once/);
+  }
+});
+
+test("an option's value that looks like --log-format sets no format, in a parse error too (B02-1, L6)", async () => {
+  // commander takes "--log-format" as the User-Agent (or the -o path) and then fails on the command "jsonl".
+  for (const argv of [["--user-agent", "--log-format", "jsonl", "code-lists"], ["-o", "--log-format", "jsonl", "code-lists"]]) {
+    const cli = makeCli(() => jsonResponse({}));
+    assert.equal(await run(argv, cli.deps), 1, JSON.stringify(argv));
+    assert.match(untimed(cli.err[0] ?? ""), /^ERROR \[fim-portal\.cli\] unknown command 'jsonl'/, cli.err.join("\n"));
+  }
+  // commander takes "--log-format=jsonl" as the User-Agent and sends it: the log stays text.
+  const ua = makeCli(() => jsonResponse({ detail: "boom" }, 500));
+  assert.equal(await run(["--user-agent", "--log-format=jsonl", "code-lists"], ua.deps), 1);
+  assert.equal(ua.mt.last().headers?.["User-Agent"], "--log-format=jsonl");
+  assert.match(untimed(ua.err[0] ?? ""), /^ERROR \[fim-portal\.api\] /);
+});
+
+test("every -o failure is an ERROR record of fim-portal.output, exit 1 (B04-1, L8)", async () => {
+  for (const argv of [["-o", "out.json", "code-lists"], ["-o", "out.xml", "schemas", "xdf", "S1", "1.0"]]) {
+    for (const thrown of [new Error("EACCES: permission denied, open 'out.json'"), new Error("EISDIR: illegal operation on a directory, open 'out'")]) {
+      const cli = makeCli(() => (argv.includes("xdf") ? rawResponse(fx.xmlBody, "application/xml") : jsonResponse({ items: [], offset: 0, limit: 200, count: 0, total_count: 0 })));
+      cli.deps.io.writeFile = () => {
+        throw thrown;
+      };
+      assert.equal(await run(argv, cli.deps), 1);
+      assert.match(untimed(cli.err.join("\n")), /^ERROR \[fim-portal\.output\] could not write /);
+      assert.doesNotMatch(cli.err.join("\n"), /Unexpected error/);
+    }
+  }
+});
+
+test("a raw download to stdout logs \"Wrote N bytes to stdout\" only once the write has succeeded (B04-3)", async () => {
+  // The write fails (EBADF: stdout opened read-only): no success note; handleOutputErrors reports the failure.
+  const failed = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
+  failed.deps.io.outBinary = async () => false;
+  assert.equal(await run(["schemas", "xdf", "S1", "1.0"], failed.deps), 0);
+  assert.deepEqual(failed.err, []);
+
+  // The write completes later: the note comes after it, still within the run.
+  const slow = makeCli(() => rawResponse(fx.xmlBody, "application/xml"));
+  const order: string[] = [];
+  slow.deps.io.outBinary = (data) =>
+    new Promise<boolean>((resolve) =>
+      setImmediate(() => {
+        order.push(`wrote ${data.length}`);
+        resolve(true);
+      }),
+    );
+  slow.deps.io.err = (line) => order.push(untimed(line));
+  assert.equal(await run(["schemas", "xdf", "S1", "1.0"], slow.deps), 0);
+  assert.equal(order.length, 2, order.join("\n"));
+  assert.match(order[0] ?? "", /^wrote \d+$/);
+  assert.match(order[1] ?? "", /^INFO  \[fim-portal\.output\] Wrote \d+ bytes to stdout \(Content-Type: application\/xml\)$/);
+});
+
+test("a malformed answer to a download is an ERROR record of fim-portal.api too (B01-2, L9)", async () => {
+  const cli = makeCli(() => rawResponse("<!doctype html><html>maintenance</html>", "text/html"));
+  assert.equal(await run(["-o", "/tmp/out.xml", "schemas", "xdf", "S1", "1.0"], cli.deps), 1);
+  assert.match(untimed(cli.err.join("\n")), /^ERROR \[fim-portal\.api\] Unexpected response from /);
+  assert.equal(cli.files.size, 0);
+});
+
+test("a subcommand's value option does not swallow the program's --log-format, in a parse error too (L6)", async () => {
+  // commander takes the program's --log-format out of argv first; --limit is left without its value.
+  const cli = makeCli(() => jsonResponse({}));
+  assert.equal(await run(["code-lists", "--limit", "--log-format", "jsonl"], cli.deps), 1);
+  assert.ok(cli.err.length > 0 && cli.err.every((line) => line.startsWith("{")), cli.err.join("\n"));
+  assert.match((JSON.parse(cli.err[0] ?? "") as Record<string, unknown>)["msg"] as string, /--limit <n>' argument missing/);
+});

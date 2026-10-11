@@ -1,0 +1,108 @@
+// Assemble the full commander program. The program is built around an injectable
+// CliDeps so the entire CLI can be driven in tests with a mocked client and
+// captured output.
+
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { Command, InvalidArgumentError } from "commander";
+import type { CliDeps } from "./io.js";
+import { defaultIO } from "./io.js";
+import { FimPortalClient } from "@maschinenlesbar.org/fim-portal-client/internal/client";
+import { MAX_TIMEOUT_MS } from "@maschinenlesbar.org/fim-portal-client/internal/http";
+import { MAX_RETRIES, MAX_RETRY_AFTER_MS } from "@maschinenlesbar.org/fim-portal-client/internal/engine";
+import {
+  forbidRepeatedOptions,
+  parseBaseUrl,
+  parseBoundedInt,
+  parseHeaderValue,
+  parseIntArg,
+  parseNonEmpty,
+} from "./shared.js";
+import { registerSchemaCommands } from "./commands/schemas.js";
+import { registerDocumentProfileCommands } from "./commands/document-profiles.js";
+import { registerFieldCommands } from "./commands/fields.js";
+import { registerGroupCommands } from "./commands/groups.js";
+import { registerServiceCommands } from "./commands/services.js";
+import { registerXzufiEntityCommands } from "./commands/xzufi.js";
+import { registerProcessCommands } from "./commands/processes.js";
+import { registerMiscCommands } from "./commands/misc.js";
+import { DEFAULT_LOG_FORMAT, logFormatProblem } from "./log.js";
+
+/**
+ * Single source of truth for the version: read from package.json at runtime
+ * rather than duplicating a literal that can silently drift after a release bump.
+ * From the compiled location (dist/src/cli/program.js) package.json is three
+ * directories up; the same offset holds for the source under src/cli.
+ */
+function readVersion(): string {
+  try {
+    const pkgUrl = new URL("../../../package.json", import.meta.url);
+    const pkg = JSON.parse(readFileSync(fileURLToPath(pkgUrl), "utf8")) as { version?: string };
+    return pkg.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
+export const VERSION = readVersion();
+
+/** Default dependencies: real client + real stdout/stderr/filesystem. */
+export const defaultDeps: CliDeps = {
+  io: defaultIO,
+  createClient: (options) => new FimPortalClient(options),
+};
+
+/** commander value-parser for `--log-format`. */
+function parseLogFormat(value: string): string {
+  const problem = logFormatProblem(value);
+  if (problem !== undefined) throw new InvalidArgumentError(problem);
+  return value;
+}
+
+export function buildProgram(deps: CliDeps = defaultDeps): Command {
+  const program = new Command();
+
+  program
+    .name("fim-portal")
+    .description(
+      "CLI for the open (no-auth) endpoints of the FIM Portal API (https://fimportal.de)",
+    )
+    .version(VERSION)
+    .option("--base-url <url>", "API base URL (http/https only)", parseBaseUrl, "https://fimportal.de")
+    .option("--timeout <ms>", "per-request timeout in milliseconds", parseBoundedInt(0, MAX_TIMEOUT_MS))
+    .option("--user-agent <ua>", "User-Agent header value", parseHeaderValue)
+    .option(
+      "--max-retries <n>",
+      `retries for transient 429/503 responses and connection resets (0..${MAX_RETRIES}; each waits the server's Retry-After, up to ${MAX_RETRY_AFTER_MS / 1000} s)`,
+      parseBoundedInt(0, MAX_RETRIES),
+    )
+    .option(
+      "--max-response-bytes <n>",
+      "cap response body size in bytes (0 = unlimited; default 100 MiB)",
+      parseIntArg,
+    )
+    .option(
+      "--log-format <format>",
+      `how errors, warnings and notes are written to stderr: text (log4j style: time, level, [topic], message) or jsonl (one JSON object per line: ts, level, topic, msg); default ${DEFAULT_LOG_FORMAT}`,
+      parseLogFormat,
+    )
+    .option("--compact", "print JSON on a single line instead of pretty-printed")
+    .option(
+      "-o, --output <file>",
+      'for downloads: write bytes to this file instead of stdout ("-" = stdout)',
+      parseNonEmpty,
+    )
+    .showHelpAfterError();
+
+  registerSchemaCommands(program, deps);
+  registerDocumentProfileCommands(program, deps);
+  registerFieldCommands(program, deps);
+  registerGroupCommands(program, deps);
+  registerServiceCommands(program, deps);
+  registerXzufiEntityCommands(program, deps);
+  registerProcessCommands(program, deps);
+  registerMiscCommands(program, deps);
+  forbidRepeatedOptions(program);
+
+  return program;
+}

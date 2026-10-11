@@ -1,0 +1,88 @@
+import { Command } from "commander";
+import type { CliDeps } from "../io.js";
+import {
+  action,
+  addLimitOption,
+  parseIntArg,
+  parseNonEmpty,
+  pruneUndefined,
+  renderJson,
+  renderRaw,
+} from "../shared.js";
+import type { XzufiEntityListParams } from "@maschinenlesbar.org/fim-portal-client/internal/params";
+import type { FimPortalClient } from "@maschinenlesbar.org/fim-portal-client/internal/client";
+
+type EntityResource =
+  | FimPortalClient["organizationalUnits"]
+  | FimPortalClient["specializations"]
+  | FimPortalClient["onlineServices"];
+
+/** All three XZuFi entity resources share the same cursor-list + xzufi-download shape. */
+function registerEntity(
+  program: Command,
+  deps: CliDeps,
+  name: string,
+  description: string,
+  pick: (c: FimPortalClient) => EntityResource,
+  /** Whether the listing supports full-text search (`fts_query`). */
+  fullText: boolean,
+): void {
+  const cmd = program.command(name).description(description);
+
+  const list = addLimitOption(
+    cmd
+      .command("list")
+      .description(`List ${name} (cursor paginated)`)
+      .option("--cursor <n>", "pagination cursor (>= 0)", parseIntArg),
+  );
+  if (fullText) list.option("--fts-query <q>", "full-text search query", parseNonEmpty);
+  list
+    .action(
+      action(deps, async ({ client, global, opts }) => {
+        const params = pruneUndefined({
+          fts_query: opts["ftsQuery"],
+          cursor: opts["cursor"],
+          limit: opts["limit"],
+        }) as XzufiEntityListParams;
+        renderJson(deps, global, await pick(client).list(params));
+      }),
+    );
+
+  cmd
+    .command("xzufi")
+    .argument("<redaktionId>", "Redaktion id", parseNonEmpty)
+    .argument("<id>", "entity id", parseNonEmpty)
+    .description(`Download the XZuFi XML for a ${name} entity`)
+    .action(
+      action(deps, async ({ client, global }, [redaktionId, id]) => {
+        await renderRaw(deps, global, await pick(client).downloadXzufi(redaktionId!, id!));
+      }),
+    );
+}
+
+export function registerXzufiEntityCommands(program: Command, deps: CliDeps): void {
+  registerEntity(
+    program,
+    deps,
+    "organizational-units",
+    "Organisationseinheiten (XZuFi)",
+    (c) => c.organizationalUnits,
+    true,
+  );
+  registerEntity(
+    program,
+    deps,
+    "specializations",
+    "Spezialisierungen (XZuFi)",
+    (c) => c.specializations,
+    false,
+  );
+  registerEntity(
+    program,
+    deps,
+    "online-services",
+    "Onlinedienste (XZuFi)",
+    (c) => c.onlineServices,
+    true,
+  );
+}
