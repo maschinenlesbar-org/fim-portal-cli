@@ -447,7 +447,11 @@ Anything else — `null`, `{}`, an error envelope, a bare string — is a `FimPa
 out of range (`1e400`, which JSON.parse makes `Infinity`, printed as `null`), one past 2^53
 in any written form (`12345678901234567890`, `…890.0`, `9007199254740993e0`,
 `9007199254740992.5`), which it rounds, and a non-zero one too small (`1e-400`, which becomes
-0). Below 2^53 a decimal fraction keeps a double's usual precision, as JSON means it. No
+0). Past 2^53 the number as written is compared with the number as printed (`String(value)`),
+not with the double's exact binary value: `12345678901234567890` prints as
+`12345678901234567000` and is refused, while `1E23` or `1.7976931348623157E308` (a double a
+server printed in its shortest form) print as the same number and pass. Below 2^53 a decimal
+fraction keeps a double's usual precision, as JSON means it. No
 field of the API is a number that large (ids, keys and cursors are strings or small
 integers). `getRaw` refuses an HTML page (by Content-Type, or a body that starts
 `<!doctype html`/`<html`) answered to a download, so `-o` doesn't save a maintenance

@@ -551,7 +551,7 @@ test("onRetry must be a function", () => {
 test("a number JSON.parse can't carry exactly is a FimParseError, never a changed value", async () => {
   const inexact = [
     "12345678901234567890", "-9007199254740993", "1e400", "-1E400", "12345678901234567890.0", "9007199254740993e0",
-    "90071992547409930E-1", "9007199254740992.5", "1e-400", "-0.0001e-399", "1e23",
+    "90071992547409930E-1", "9007199254740992.5", "1e-400", "-0.0001e-399", "123456789012345678901234567890",
   ];
   for (const literal of inexact) {
     const engine = new RequestEngine({ transport: makeMockTransport(() => rawResponse(`{"items":[],"total_count":${literal}}`, "application/json")).transport });
@@ -569,6 +569,10 @@ test("a number a double carries exactly, and a decimal fraction below 2^53, pass
   const exact: Array<[string, number]> = [
     ["0", 0], ["42", 42], ["9007199254740991", 9007199254740991], ["9007199254740992.0", 2 ** 53], ["1e21", 1e21],
     ["0.1", 0.1], ["-2.5e-3", -0.0025], ["5e-324", 5e-324], ["0.0e-500", 0],
+    // A double a server printed in its shortest form reads back as that double and prints as the
+    // same number: not a changed value, though the decimal is not the double's exact binary value.
+    ["1e23", 1e23], ["100000000000000000000000", 1e23], ["1E23", 1e23], ["1.7976931348623157E308", Number.MAX_VALUE],
+    ["-1.7976931348623157e308", -Number.MAX_VALUE], ["4.35e30", 4.35e30],
   ];
   for (const [literal, value] of exact) {
     const engine = new RequestEngine({ transport: makeMockTransport(() => rawResponse(`{"n":${literal},"s":"1e400 12345678901234567890"}`, "application/json")).transport });
