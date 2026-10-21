@@ -154,7 +154,7 @@ const SERVICES: ParamSpec = {
   vollzugsbehoerde: oneOf(BehoerdeValues),
 };
 
-/** `serviceProfiles.search` — GET /api/v0/leistung-steckbriefe (`sdg`, like the lists above, is left to the API). */
+/** `serviceProfiles.search` — GET /api/v1/leistung-steckbriefe (`sdg`, like the lists above, is left to the API). */
 export const SERVICE_PROFILE_SEARCH_PARAMS: ParamSpec = {
   ...SERVICES,
   freigabe_status: someOf(FreigabeStatusValues),
@@ -164,7 +164,7 @@ export const SERVICE_PROFILE_SEARCH_PARAMS: ParamSpec = {
   order_by: oneOf(LeistungSteckbriefSearchOrderValues),
 };
 
-/** `serviceTexts.search` — GET /api/v0/leistung-stammtexte. */
+/** `serviceTexts.search` — GET /api/v1/leistung-stammtexte. */
 export const SERVICE_TEXT_SEARCH_PARAMS: ParamSpec = {
   ...SERVICES,
   redaktion_id: STRING,

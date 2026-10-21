@@ -37,13 +37,13 @@ const cases: Array<{ name: string; run: (c: FimPortalClient) => Promise<unknown>
   { name: "groups.get", run: (c) => c.groups.get("ns", "G1", "1.1"), url: `${BASE}/api/v1/groups/ns/G1/1.1` },
   { name: "groups.downloadXdf", run: (c) => c.groups.downloadXdf("ns", "G1", "1.1"), url: `${BASE}/api/v1/groups/ns/G1/1.1/xdf` },
 
-  { name: "serviceProfiles.get", run: (c) => c.serviceProfiles.get("99050048262000"), url: `${BASE}/api/v0/leistung-steckbriefe/99050048262000` },
-  { name: "serviceProfiles.downloadXzufi", run: (c) => c.serviceProfiles.downloadXzufi("K1"), url: `${BASE}/api/v0/leistung-steckbriefe/K1/xzufi` },
-  { name: "serviceProfiles.exportPdf", run: (c) => c.serviceProfiles.exportPdf("K1", "de-DE"), url: `${BASE}/api/v0/leistung-steckbriefe/K1/de-DE/pdf` },
+  { name: "serviceProfiles.get", run: (c) => c.serviceProfiles.get("99050048262000"), url: `${BASE}/api/v1/leistung-steckbriefe/99050048262000` },
+  { name: "serviceProfiles.downloadXzufi", run: (c) => c.serviceProfiles.downloadXzufi("K1"), url: `${BASE}/api/v1/leistung-steckbriefe/K1/xzufi` },
+  { name: "serviceProfiles.exportPdf", run: (c) => c.serviceProfiles.exportPdf("K1", "de-DE"), url: `${BASE}/api/v1/leistung-steckbriefe/K1/de-DE/pdf` },
 
-  { name: "serviceTexts.get", run: (c) => c.serviceTexts.get("R1", "L1", "leika"), url: `${BASE}/api/v0/leistung-stammtexte/R1/L1/leika` },
-  { name: "serviceTexts.downloadXzufi", run: (c) => c.serviceTexts.downloadXzufi("R1", "L1", "pvog"), url: `${BASE}/api/v0/leistung-stammtexte/R1/L1/pvog/xzufi` },
-  { name: "serviceTexts.exportPdf", run: (c) => c.serviceTexts.exportPdf("R1", "L1", "leika", "en"), url: `${BASE}/api/v0/leistung-stammtexte/R1/L1/leika/en/pdf` },
+  { name: "serviceTexts.get", run: (c) => c.serviceTexts.get("R1", "L1", "leika"), url: `${BASE}/api/v1/leistung-stammtexte/R1/L1/leika` },
+  { name: "serviceTexts.downloadXzufi", run: (c) => c.serviceTexts.downloadXzufi("R1", "L1", "pvog"), url: `${BASE}/api/v1/leistung-stammtexte/R1/L1/pvog/xzufi` },
+  { name: "serviceTexts.exportPdf", run: (c) => c.serviceTexts.exportPdf("R1", "L1", "leika", "en"), url: `${BASE}/api/v1/leistung-stammtexte/R1/L1/leika/en/pdf` },
   { name: "serviceTexts.parsedXzufi", run: (c) => c.serviceTexts.parsedXzufi("R1", "L1", "leika"), url: `${BASE}/api/v0/leistung-stammtexte/R1/L1/leika/parsed-xzufi` },
 
   { name: "organizationalUnits.downloadXzufi", run: (c) => c.organizationalUnits.downloadXzufi("R1", "O1"), url: `${BASE}/api/v0/organizational-unit/R1/O1/xzufi` },
@@ -104,11 +104,17 @@ test("fields.search hits /api/v1/fields and parses the paginated result", async 
   assert.equal(q.get("datentyp"), "text");
 });
 
-test("serviceTexts.search hits /api/v0/leistung-stammtexte", async () => {
+test("serviceProfiles.search hits /api/v1/leistung-steckbriefe (the portal moved the service routes off /api/v0/)", async () => {
+  const { client, mt } = clientReturning(fx.stammtextSearchResult);
+  await client.serviceProfiles.search({ fts_query: "Personalausweis", limit: 1 });
+  assert.equal(new URL(mt.last().url).pathname, "/api/v1/leistung-steckbriefe");
+});
+
+test("serviceTexts.search hits /api/v1/leistung-stammtexte", async () => {
   const { client, mt } = clientReturning(fx.stammtextSearchResult);
   const result = await client.serviceTexts.search({ source: "leika", fts_query: "Ausweis" });
   assert.deepEqual(result, fx.stammtextSearchResult);
-  assert.equal(new URL(mt.last().url).pathname, "/api/v0/leistung-stammtexte");
+  assert.equal(new URL(mt.last().url).pathname, "/api/v1/leistung-stammtexte");
   assert.equal(queryOf(mt.last()).get("source"), "leika");
 });
 
@@ -339,7 +345,7 @@ test("a path id is sent trimmed; one with a \"/\", or a dot segment once trimmed
   await client.schemas.versions(" S1\n");
   assert.equal(mt.last().url, `${BASE}/api/v1/schemas/S1`);
   await client.serviceTexts.get(" R1 ", "\tL1", "leika").catch(() => {});
-  assert.equal(mt.last().url, `${BASE}/api/v0/leistung-stammtexte/R1/L1/leika`);
+  assert.equal(mt.last().url, `${BASE}/api/v1/leistung-stammtexte/R1/L1/leika`);
   const before = mt.calls.length;
   for (const id of ["S1/../S2", "S1/", "/S1", " .. ", "."]) {
     await assert.rejects(client.schemas.versions(id), FimValidationError, JSON.stringify(id));

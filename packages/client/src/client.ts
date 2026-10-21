@@ -205,20 +205,20 @@ class ServiceProfilesResource {
   async search(params: LeistungSteckbriefSearchParams = {}, options: FilterOptions = {}): Promise<JsonObject> {
     const query = assertParams(params, SERVICE_PROFILE_SEARCH_PARAMS, "serviceProfiles.search", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/leistung-steckbriefe", query, "page");
+    return this.e.getJson("/api/v1/leistung-steckbriefe", query, "page");
   }
 
   async get(leistungsschluessel: string): Promise<LeistungSteckbrief> {
-    return this.e.getJson(`/api/v0/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}`, undefined, "record");
+    return this.e.getJson(`/api/v1/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}`, undefined, "record");
   }
 
   async downloadXzufi(leistungsschluessel: string): Promise<RawResponse> {
-    return this.e.getRaw(`/api/v0/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}/xzufi`, ACCEPT_XML);
+    return this.e.getRaw(`/api/v1/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}/xzufi`, ACCEPT_XML);
   }
 
   async exportPdf(leistungsschluessel: string, languageCode: string): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v0/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}/${pathSegment("languageCode", languageCode)}/pdf`,
+      `/api/v1/leistung-steckbriefe/${pathSegment("leistungsschluessel", leistungsschluessel)}/${pathSegment("languageCode", languageCode)}/pdf`,
       ACCEPT_PDF,
     );
   }
@@ -231,12 +231,12 @@ class ServiceTextsResource {
   async search(params: LeistungStammtextSearchParams = {}, options: FilterOptions = {}): Promise<PaginatedResult<LeistungStammtextOut>> {
     const query = assertParams(params, SERVICE_TEXT_SEARCH_PARAMS, "serviceTexts.search", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/leistung-stammtexte", query, "page");
+    return this.e.getJson("/api/v1/leistung-stammtexte", query, "page");
   }
 
   async get(redaktionId: string, leistungId: string, source: XzufiSource): Promise<FullLeistungStammtextOut> {
     return this.e.getJson(
-      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}`,
+      `/api/v1/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}`,
       undefined,
       "record",
     );
@@ -244,7 +244,7 @@ class ServiceTextsResource {
 
   async downloadXzufi(redaktionId: string, leistungId: string, source: XzufiSource): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}/xzufi`,
+      `/api/v1/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}/xzufi`,
       ACCEPT_XML,
     );
   }
@@ -256,7 +256,7 @@ class ServiceTextsResource {
     languageCode: string,
   ): Promise<RawResponse> {
     return this.e.getRaw(
-      `/api/v0/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}/${pathSegment("languageCode", languageCode)}/pdf`,
+      `/api/v1/leistung-stammtexte/${pathSegment("redaktionId", redaktionId)}/${pathSegment("leistungId", leistungId)}/${sourceSegment(source)}/${pathSegment("languageCode", languageCode)}/pdf`,
       ACCEPT_PDF,
     );
   }

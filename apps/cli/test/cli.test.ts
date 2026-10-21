@@ -326,7 +326,7 @@ test("a 404 from the API maps to exit code 4 and an error message", async () => 
 test("service-texts get passes the source path segment", async () => {
   const cli = makeCli(() => jsonResponse({ ok: true }));
   await run(["service-texts", "get", "R1", "L1", "leika"], cli.deps);
-  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v0/leistung-stammtexte/R1/L1/leika");
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api/v1/leistung-stammtexte/R1/L1/leika");
 });
 
 test("processes get passes the Detaillierungsstufe and the verwaltungspolitische Kodierung", async () => {
