@@ -22,6 +22,7 @@ import {
   cutForMessage,
   cutText,
   echoedCredentialForms,
+  quoteValue,
   redactCredentials,
   redactSecrets,
   redactUrl,
@@ -461,7 +462,7 @@ export class RequestEngine {
     const dotSegment = segments.find((s) => s === "." || s === "..");
     if (dotSegment !== undefined) {
       throw new FimValidationError(
-        `Invalid path segment "${dotSegment}" in ${cutForMessage(normalizedPath)}: "." and ".." cannot be used as an id.`,
+        `Invalid path segment ${quoteValue(dotSegment)} in ${cutForMessage(normalizedPath)}: "." and ".." cannot be used as an id.`,
       );
     }
     if (segments.includes("")) {

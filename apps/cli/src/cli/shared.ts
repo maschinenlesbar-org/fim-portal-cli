@@ -3,7 +3,7 @@
 
 import { Command, InvalidArgumentError, Option } from "commander";
 import { OutputError, isDirectoryMessage, logOf, nodeFiles, refuseOverwrite, type CliDeps } from "./io.js";
-import { FimError, FimValidationError } from "@maschinenlesbar.org/fim-portal-client/internal/errors";
+import { FimError, FimValidationError, quoteValue } from "@maschinenlesbar.org/fim-portal-client/internal/errors";
 import {
   DEFAULT_BASE_URL,
   cleartextProblem,
@@ -94,7 +94,7 @@ export function parseOutputPath(value: string): string {
   parseNonEmpty(value);
   if (value !== STDOUT_PATH && value.startsWith("-")) {
     throw new InvalidArgumentError(
-      `looks like a missing value — ${JSON.stringify(value)} is the next option, consumed because ` +
+      `looks like a missing value — ${quoteValue(value)} is the next option, consumed because ` +
         "this one was left without a value. For a file whose name starts with a dash, write ./-name.",
     );
   }

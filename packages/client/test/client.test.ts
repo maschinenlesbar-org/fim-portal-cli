@@ -378,3 +378,18 @@ test("a path id is sent trimmed; one with a \"/\", or a dot segment once trimmed
   await assert.rejects(client.schemas.versions("S1/x"), /Invalid fimId: An id cannot contain "\/"/);
   assert.equal(mt.calls.length, before);
 });
+
+test("a refusal quotes the value visibly: invisible and format characters escaped, never raw (D10)", async () => {
+  const { client, mt } = clientReturning(fx.schemaSearchResult);
+  for (const key of ["fts​query", "name‮", "­name"]) {
+    await assert.rejects(
+      client.schemas.search({ [key]: "x" } as never),
+      (e: unknown) =>
+        e instanceof FimValidationError &&
+        /\\u(200b|202e|00ad)/.test(e.message) &&
+        !/[​‮­]/.test(e.message),
+      JSON.stringify(key),
+    );
+  }
+  assert.equal(mt.calls.length, 0);
+});

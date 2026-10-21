@@ -282,7 +282,8 @@ carries `status`/`detail`; the `detail` and a redirect target are cut at 500 cha
 (`MAX_MESSAGE_VALUE_LENGTH`; also a path in a validation message, an unknown charset and
 the Content-Type in the CLI's download note), never inside a surrogate pair (`cutText`),
 so the message stays well-formed and bounded for a library caller too, while `body`
-and `url` keep the full text), `FimNetworkError` (transport failure/timeout),
+and `url` keep the full text; a refused value is quoted with `quoteValue`, exported, which escapes
+invisible and format characters, `"a\u200bb"`, so the message shows what is wrong with it), `FimNetworkError` (transport failure/timeout),
 `FimParseError` (bad JSON), `FimValidationError` (an input refused before any
 request, including a bad client option such as the base URL), all extending
 `FimError`. The CLI maps a `404` to exit code `4`, a

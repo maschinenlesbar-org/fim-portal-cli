@@ -11,7 +11,7 @@
 // portal adds after this table was written can still be sent with
 // `{ allowUnknownFilters: true }` as the call's second argument.
 
-import { FimValidationError, cutText } from "./errors.js";
+import { FimValidationError, quoteValue } from "./errors.js";
 import { assertValid, normalizeText, oneOfProblem, type Problem } from "./validate.js";
 import type { QueryParams } from "./query.js";
 import {
@@ -350,10 +350,6 @@ function suggest(key: string, known: readonly string[]): string | undefined {
   return best;
 }
 
-/** A parameter name as an error message shows it: quoted and escaped, cut at 100 characters. */
-function quoteKey(key: string): string {
-  return JSON.stringify(key.length > 100 ? `${cutText(key, 100)}…` : key);
-}
 
 /** The parameters as a record, or a FimValidationError for anything but an object (a bare string, a list). */
 function paramRecord(params: unknown, call: string): Record<string, unknown> {
@@ -370,7 +366,7 @@ function paramRecord(params: unknown, call: string): Record<string, unknown> {
 function unknownKey(key: string, call: string, known: readonly string[]): FimValidationError {
   const hint = suggest(key, known);
   return new FimValidationError(
-    `Invalid parameter ${quoteKey(key)}: ${call} has no such parameter` +
+    `Invalid parameter ${quoteValue(key)}: ${call} has no such parameter` +
       (hint === undefined ? "" : ` (did you mean ${hint}?)`) +
       "; the portal would ignore it and answer with the unfiltered result. " +
       "Pass { allowUnknownFilters: true } to send it anyway.",
