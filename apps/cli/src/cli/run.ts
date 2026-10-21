@@ -124,7 +124,7 @@ export interface Redaction {
  * whatever path a credential takes to stdout or stderr, the exact userinfo (as
  * `credentialsIn` finds it, plus its JSON-quoted form) is replaced by `***`. A pattern
  * alone can't delimit a password with spaces, quotes, `#`, `?` or `/`; the exact strings
- * can. Downloads (`outBinary`, `writeFile`) are data and pass unchanged, as does all text
+ * can. Downloads (`outBinary`, the `-o` file) are data and pass unchanged, as does all text
  * when no argument carries credentials.
  */
 export function redactionFor(argv: readonly string[]): Redaction {

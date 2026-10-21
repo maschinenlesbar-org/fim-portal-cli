@@ -68,7 +68,9 @@ function makeDeps(out: string[], err: string[], now: () => Date, answer?: HttpRe
     body: Buffer.from(JSON.stringify(okBody)),
   };
   return {
-    io: { out: (s) => out.push(s), err: (s) => err.push(s), writeFile: () => {}, outBinary: () => {} },
+    io: { out: (s) => out.push(s), err: (s) => err.push(s), outBinary: () => {} },
+    // -o writes nowhere: the file system is never touched.
+    files: { state: () => "absent", write: () => {} },
     now,
     createClient: (opts) => new Client({ ...opts, transport }),
   };

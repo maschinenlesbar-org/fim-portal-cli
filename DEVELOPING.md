@@ -260,8 +260,21 @@ serialiser: omits `undefined`/`null`, repeats keys for arrays, renders booleans 
 
 **CliDeps / CliIO.** The dependency-injection seam for the CLI
 ([`io.ts`](apps/cli/src/cli/io.ts)): a client factory plus an I/O object
-(`out`/`err`/`writeFile`/`outBinary`). Lets the whole CLI run in tests with a
+(`out`/`err`/`outBinary`), plus `files` (`OutputFiles`: `state` and `write`), the seam
+for `-o`, unset the real file system (`nodeFiles`). Lets the whole CLI run in tests with a
 mocked client and captured output — no subprocess.
+
+**`-o` and `--force`.** `checkOutputTarget` (`cli/shared.ts`) runs in `action()` before the
+client is built, so a refused target costs no request: `--force` without `-o`, a directory,
+and an existing path (a dangling link too) without `--force` are `FimValidationError`s
+(usage errors, exit 1); `-o -` is stdout. `nodeFiles.write` writes atomically: without
+`--force` it claims the name with an exclusive create (so a file that appeared during the
+request is refused too, an `OutputError`), writes a temporary file beside the target
+(`.<name>.<pid>-<hex>.tmp`, created exclusively), keeps an existing file's mode and renames
+it over the target; `--force` writes through a symlink to the file it names. On failure the
+temporary file and a claimed name are removed. Conformance test P26 checks a write cut short
+by a file-size limit; deliberately not kept: the owner and hard links of a replaced file, and
+a directory that isn't writable refuses `-o` even when the file in it is.
 
 **Error types.** [`errors.ts`](packages/client/src/errors.ts): `FimApiError` (non-2xx,
 carries `status`/`detail`; the `detail` and a redirect target are cut at 500 characters,

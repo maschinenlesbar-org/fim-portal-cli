@@ -89,9 +89,10 @@ export function buildProgram(deps: CliDeps = defaultDeps): Command {
     .option("--compact", "print JSON on a single line instead of pretty-printed")
     .option(
       "-o, --output <file>",
-      'for downloads: write bytes to this file instead of stdout ("-" = stdout)',
+      'write the output (JSON or a download) to this file instead of stdout ("-" = stdout); an existing file is refused unless --force',
       parseNonEmpty,
     )
+    .option("--force", "with -o: replace an existing file (atomically; through a symlink)")
     .showHelpAfterError();
 
   registerSchemaCommands(program, deps);

@@ -55,7 +55,7 @@ function cliWith(createClient: CliDeps["createClient"]) {
   const out: string[] = [];
   const err: string[] = [];
   const deps: CliDeps = {
-    io: { out: (s) => out.push(s), err: (s) => err.push(s), writeFile: () => {}, outBinary: () => {} },
+    io: { out: (s) => out.push(s), err: (s) => err.push(s), outBinary: () => {} },
     createClient,
   };
   return { deps, out, err };

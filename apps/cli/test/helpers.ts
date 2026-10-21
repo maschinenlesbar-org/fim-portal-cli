@@ -63,7 +63,10 @@ export async function parity(
       out: (s) => out.push(s),
       err: (s) => err.push(s),
       outBinary: (d) => void out.push(d.toString("utf8")),
-      writeFile: () => {
+    },
+    files: {
+      state: () => "absent",
+      write: () => {
         throw new Error("parity(): the CLI must not write files here");
       },
     },

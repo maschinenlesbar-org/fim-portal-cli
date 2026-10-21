@@ -33,7 +33,7 @@ function makeDeps(out: string[], err: string[], _env: Record<string, string>): C
     body: Buffer.from(JSON.stringify(okBody)),
   });
   return {
-    io: { out: (s) => out.push(s), err: (s) => err.push(s), writeFile: () => {}, outBinary: () => {} },
+    io: { out: (s) => out.push(s), err: (s) => err.push(s), outBinary: () => {} },
     createClient: (opts) => new Client({ ...opts, transport }),
   };
 }

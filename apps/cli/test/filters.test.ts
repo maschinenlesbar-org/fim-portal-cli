@@ -150,7 +150,7 @@ function cli() {
   const err: string[] = [];
   const mt = makeMockTransport(() => jsonResponse(page));
   const deps: CliDeps = {
-    io: { out: (s) => out.push(s), err: (s) => err.push(s), writeFile: () => {}, outBinary: () => {} },
+    io: { out: (s) => out.push(s), err: (s) => err.push(s), outBinary: () => {} },
     createClient: (opts) => new FimPortalClient({ ...opts, transport: mt.transport }),
   };
   return { deps, out, err, mt };

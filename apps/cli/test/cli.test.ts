@@ -19,9 +19,10 @@ function makeCli(responder: (req: HttpRequest) => HttpResponse) {
     io: {
       out: (s) => out.push(s),
       err: (s) => err.push(s),
-      writeFile: (p, d) => files.set(p, d),
       outBinary: (d) => void out.push(d.toString("utf8")),
     },
+    // -o in memory: a path exists once written here.
+    files: { state: (p) => (files.has(p) ? "exists" : "absent"), write: (p, d) => void files.set(p, d) },
     createClient: (opts) => new FimPortalClient({ ...opts, transport: mt.transport }),
   };
   return { deps, out, err, files, mt };
@@ -662,7 +663,6 @@ test("a transport-level network error maps to exit 1 with a clean Error message"
     io: {
       out: (s) => out.push(s),
       err: (s) => err.push(s),
-      writeFile: () => {},
       outBinary: (d) => void out.push(d.toString("utf8")),
     },
     createClient: (opts) =>
@@ -685,18 +685,20 @@ test("a failed -o write degrades to exit 1 with a clean ERROR record (not Unexpe
     io: {
       out: (s) => out.push(s),
       err: (s) => err.push(s),
-      writeFile: () => {
-        const e = new Error("ENOENT: no such file or directory, open '/nope/out.xml'");
-        throw e;
-      },
       outBinary: (d) => void out.push(d.toString("utf8")),
+    },
+    files: {
+      state: () => "absent",
+      write: () => {
+        throw new Error("Could not write to \"/nope/out.xml\": ENOENT: no such file or directory, open '/nope/out.xml'");
+      },
     },
     createClient: (opts) => new FimPortalClient({ ...opts, transport: mt.transport }),
   };
   const code = await run(["--output", "/nope/out.xml", "schemas", "xdf", "S1", "1.0"], deps);
   assert.equal(code, 1);
   const errText = err.join("\n");
-  assert.match(untimed(errText), /^ERROR \[fim-portal\.output\] could not write \/nope\/out\.xml/);
+  assert.match(untimed(errText), /^ERROR \[fim-portal\.output\] Could not write to "\/nope\/out\.xml": ENOENT/);
   assert.doesNotMatch(errText, /Unexpected error/);
 });
 
@@ -827,11 +829,14 @@ test("every -o failure is an ERROR record of fim-portal.output, exit 1 (B04-1, L
   for (const argv of [["-o", "out.json", "code-lists"], ["-o", "out.xml", "schemas", "xdf", "S1", "1.0"]]) {
     for (const thrown of [new Error("EACCES: permission denied, open 'out.json'"), new Error("EISDIR: illegal operation on a directory, open 'out'")]) {
       const cli = makeCli(() => (argv.includes("xdf") ? rawResponse(fx.xmlBody, "application/xml") : jsonResponse({ items: [], offset: 0, limit: 200, count: 0, total_count: 0 })));
-      cli.deps.io.writeFile = () => {
-        throw thrown;
+      cli.deps.files = {
+        state: () => "absent",
+        write: () => {
+          throw thrown;
+        },
       };
       assert.equal(await run(argv, cli.deps), 1);
-      assert.match(untimed(cli.err.join("\n")), /^ERROR \[fim-portal\.output\] could not write /);
+      assert.match(untimed(cli.err.join("\n")), /^ERROR \[fim-portal\.output\] (EACCES|EISDIR): /);
       assert.doesNotMatch(cli.err.join("\n"), /Unexpected error/);
     }
   }

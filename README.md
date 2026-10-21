@@ -279,10 +279,14 @@ a message longer than 4000 characters is cut and ends in `… (N more characters
 fim-portal --log-format jsonl -o geburt.xml schemas xdf S07000009 1.0 2>log.jsonl   # {"ts":"…","level":"INFO","topic":"fim-portal.output","msg":"Wrote … bytes to geburt.xml …"}
 ```
 
-> **`-o` overwrites without asking.** If the target file already exists it is
-> replaced (the bytes are fully buffered first, so a failed download never leaves
-> a half-written file). Pick a fresh path, or check for the file yourself, if you
-> need to avoid clobbering existing data. An answer that isn't the data asked for
+> **`-o` never overwrites by accident.** An existing file (a dangling symlink too) is
+> refused before any request (exit `1`), unless you pass `--force`; a directory is always
+> refused, and `--force` without `-o` is a usage error. The write is atomic: the data goes to
+> a temporary file beside the target, renamed over it once complete, so a write cut short (a
+> full disk) leaves the old file as it was and no half-written or temporary file behind.
+> `--force` keeps the old file's mode and writes through a symlink to the file it points at.
+> A file that appears while the request runs is not overwritten either (exit `1`, an `ERROR`
+> record of `fim-portal.output`). An answer that isn't the data asked for
 > fails (exit `1`) without touching the file: an HTML page (a maintenance or proxy
 > page) for a download, a JSON body without the documented shape (`null`, `{}`,
 > a page without `items`), or one with a number a double can't carry exactly (`1e400`,
@@ -340,8 +344,9 @@ stderr's reader is gone (`2>&1 | true`), a failed run still exits with its own c
   30 s the client waits; not retried`): wait that long before trying again.
 - **Empty `items` / `total_count: 0`** — the search matched nothing; broaden
   `--fts-query`, drop a filter, or try a different keyword.
-- **`-o` write error** — the parent directory must exist and be writable; the path
-  is used verbatim with no auto-creation.
+- **`-o` write error** — the parent directory must exist and be writable (the file is
+  written beside the target and renamed over it); the path is used verbatim with no
+  auto-creation. `Refusing to overwrite existing file …`: pick another path or add `--force`.
 - **XML/PDF to stdout by accident** — download commands (`xdf`, `pdf`, `xprozess`,
   …) stream binary/XML. Always use `-o <file>` unless you intend to pipe the bytes.
 
@@ -355,7 +360,8 @@ These apply to every command and may be given **before or after** it:
 | `-h, --help` | Show help for the program or a command |
 | `--compact` | Print JSON on a single line instead of pretty-printed |
 | `--log-format <format>` | How errors, warnings and notes are written to stderr: `text` (default; log4j style, `2026-10-09T14:03:12.481Z WARN  [fim-portal.http] …`) or `jsonl` (one JSON object per line: `ts`, `level`, `topic`, `msg`). stdout is not affected |
-| `-o, --output <file>` | For downloads: write bytes to a file instead of stdout; `-o -` means stdout |
+| `-o, --output <file>` | Write the output (JSON or a download) to a file instead of stdout; `-o -` means stdout. An existing file is refused unless `--force`; the write is atomic |
+| `--force` | With `-o`: replace an existing file (atomically, keeping its mode; through a symlink to the file it points at) |
 | `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works). Must be an `http:`/`https:` URL without a query, a fragment, whitespace or control characters, and a `%` in a user name or password must be an escape (write a literal `%` as `%25`) — anything else is rejected at parse time (exit `1`) before any request is made. A plain `http:` URL to a host other than loopback (`localhost`, `127.0.0.0/8`, `::1`) logs one warning on stderr before the first request, a `WARN` record of `fim-portal.http` (`requests to <host> are sent unencrypted (http:, not https:)`) (naming the URL's credentials instead when it carries any, never printing them); stdout and the exit code are unchanged. A `user:password@` in it is shown as `***@` in every message; echoed back by a server (the `Basic` value, `user:password`, the password), it is shown as `***` |
 | `--timeout <ms>` | Per-request timeout (default `30000`; at most `2147483647`) |
 | `--user-agent <ua>` | `User-Agent` header value |

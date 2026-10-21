@@ -2,8 +2,8 @@
 // option resolver, and the two result-rendering paths (JSON and raw download).
 
 import { Command, InvalidArgumentError, Option } from "commander";
-import { OutputError, logOf, type CliDeps } from "./io.js";
-import { FimError } from "@maschinenlesbar.org/fim-portal-client/internal/errors";
+import { OutputError, isDirectoryMessage, logOf, nodeFiles, refuseOverwrite, type CliDeps } from "./io.js";
+import { FimError, FimValidationError } from "@maschinenlesbar.org/fim-portal-client/internal/errors";
 import {
   DEFAULT_BASE_URL,
   cleartextProblem,
@@ -165,6 +165,7 @@ export interface GlobalOptions {
   maxResponseBytes?: number;
   compact?: boolean;
   output?: string;
+  force?: boolean;
 }
 
 /** Translate resolved global CLI options into client EngineOptions. */
@@ -259,17 +260,36 @@ function holdsHugeString(value: unknown): boolean {
 }
 
 /**
- * `deps.io.writeFile`, with any failure an `OutputError` (`could not write <file>:
- * <reason>`, cause kept), so every `-o` failure is logged under `fim-portal.output`,
- * whatever the `CliIO` threw.
+ * Write the `-o` file atomically (`deps.files`, else the real file system: a temporary file
+ * beside it, renamed over it; without `--force` the name is claimed exclusively first), with
+ * any failure an `OutputError` (`Could not write to "<file>": <reason>`, `Refusing to
+ * overwrite existing file …` for one that appeared during the request; cause kept), so every
+ * `-o` failure is logged under `fim-portal.output`.
  */
-function writeOutputFile(deps: CliDeps, file: string, data: Buffer): void {
+function writeOutputFile(deps: CliDeps, global: GlobalOptions, file: string, data: Buffer): void {
   try {
-    deps.io.writeFile(file, data);
+    (deps.files ?? nodeFiles).write(file, data, global.force === true);
   } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    throw new OutputError(`could not write ${file}: ${reason}`, { cause: err });
+    throw new OutputError(err instanceof Error ? err.message : String(err), { cause: err });
   }
+}
+
+/**
+ * Check `-o` before any request, so a refused target costs none: `--force` without `-o`, a
+ * directory, and an existing path (a dangling link too) without `--force` are usage errors
+ * (a FimValidationError: an ERROR record of `fim-portal.cli`, exit 1). `-o -` is stdout. The
+ * write checks again: a file that appears during the request is not overwritten either (an
+ * OutputError then).
+ */
+export function checkOutputTarget(deps: CliDeps, global: GlobalOptions): void {
+  if (global.force === true && global.output === undefined) {
+    throw new FimValidationError("--force needs --output (it only allows overwriting the -o file).");
+  }
+  const file = outputFile(global);
+  if (file === undefined) return;
+  const state = (deps.files ?? nodeFiles).state(file);
+  if (state === "directory") throw new FimValidationError(isDirectoryMessage(file));
+  if (state === "exists" && global.force !== true) throw new FimValidationError(refuseOverwrite(file));
 }
 
 /** The `-o` value that means stdout, as in other Unix tools (`-o -`). */
@@ -295,7 +315,7 @@ export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown)
   const file = outputFile(global);
   if (file !== undefined) {
     const data = Buffer.from(text + "\n", "utf8");
-    writeOutputFile(deps, file, data);
+    writeOutputFile(deps, global, file, data);
     logOf(deps).info("output", `Wrote ${data.length} bytes to ${file}`);
   } else {
     deps.io.out(text);
@@ -312,10 +332,11 @@ export function renderJson(deps: CliDeps, global: GlobalOptions, value: unknown)
  * HTML/JSON error page served with a 200). When writing to stdout the same
  * Content-Type note goes to stderr, keeping stdout byte-clean for piping.
  *
- * The --output path is trusted input (the user owns their shell). A failed write
- * (missing directory, permissions, read-only FS) is wrapped in an OutputError so it
- * exits 1 with a clean `could not write ...` error (an ERROR record of `fim-portal.output`) rather than falling
- * through to the generic "Unexpected error" handler.
+ * The --output path is trusted input (the user owns their shell). The write is atomic and
+ * never overwrites a file without --force (writeOutputFile). A failed write (missing
+ * directory, permissions, read-only FS, a full disk) is wrapped in an OutputError so it
+ * exits 1 with a clean `Could not write to ...` error (an ERROR record of `fim-portal.output`)
+ * rather than falling through to the generic "Unexpected error" handler.
  */
 export async function renderRaw(
   deps: CliDeps,
@@ -330,7 +351,7 @@ export async function renderRaw(
     : "";
   const file = outputFile(global);
   if (file !== undefined) {
-    writeOutputFile(deps, file, response.data);
+    writeOutputFile(deps, global, file, response.data);
     logOf(deps).info("output", `Wrote ${response.data.length} bytes to ${file}${typeNote}`);
   } else {
     // The note only once the bytes are written: a write that fails (stdout opened
@@ -381,6 +402,8 @@ export function action(
     const command = args[args.length - 1] as Command;
     const positionals = args.slice(0, Math.max(0, args.length - 2)) as string[];
     const global = command.optsWithGlobals() as GlobalOptions;
+    // A refused -o target costs no request.
+    checkOutputTarget(deps, global);
     const cleartext = cleartextProblem(global.baseUrl ?? DEFAULT_BASE_URL);
     if (cleartext !== undefined) logOf(deps).warn("http", cleartext);
     const options = toEngineOptions(global);

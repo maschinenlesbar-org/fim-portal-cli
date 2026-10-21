@@ -27,7 +27,7 @@ function makeDeps(
   transport: () => Promise<HttpResponse>,
 ): CliDeps {
   return {
-    io: { ...io, writeFile: () => {}, outBinary: () => {} },
+    io: { ...io, outBinary: () => {} },
     createClient: (opts) => new Client({ ...opts, transport }),
   };
 }

@@ -20,7 +20,7 @@ async function exercise(extra: string[], failures: number, retryAfter?: string) 
       ? { status: 503, headers: retryAfter ? { "retry-after": retryAfter } : {}, body: Buffer.from("{}") }
       : { status: 200, headers: { "content-type": "application/json" }, body: Buffer.from(JSON.stringify(okBody)) };
   const deps: CliDeps = {
-    io: { out: (s) => out.push(s), err: (s) => err.push(s), writeFile: () => {}, outBinary: () => {} },
+    io: { out: (s) => out.push(s), err: (s) => err.push(s), outBinary: () => {} },
     now: () => new Date("2026-01-02T03:04:05.678Z"),
     createClient: (opts) => new FimPortalClient({ ...opts, transport, sleep: async () => {} }),
   };
