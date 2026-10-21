@@ -283,7 +283,8 @@ Zeitstempel, eine Stufe (`ERROR`, `WARN`, `INFO`) und ein Thema `fim-portal.<Ber
 Text (im Stil von log4j) oder mit `--log-format jsonl` als ein JSON-Objekt pro Zeile. Die
 Bereiche: `cli` (Bedienfehler, Meldungen von commander, unerwartete Fehler), `api` (die
 Antworten der API: ein Fehlerstatus und eine fehlerhafte Antwort — ungültiges JSON, die
-falsche Form, eine HTML-Seite, ein unbekannter Zeichensatz), `http` (die Verbindung, die
+falsche Form, eine Zahl, die sich nicht exakt darstellen lässt, eine HTML-Seite, ein
+unbekannter Zeichensatz), `http` (die Verbindung, die
 Klartext-Warnung und je Wiederholung eine WARN-Zeile vor dem Warten) und `output` (die Hinweise `Wrote N bytes`, ein Fehler beim Schreiben
 der `-o`-Datei oder nach stdout). Ein Eintrag ist immer eine Zeile; Steuerzeichen darin
 werden maskiert.

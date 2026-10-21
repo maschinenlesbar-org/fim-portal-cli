@@ -547,3 +547,31 @@ test("onRetry is never called without a retry, and a throw in it is swallowed", 
 test("onRetry must be a function", () => {
   assert.throws(() => new RequestEngine({ onRetry: 5 as never }), FimValidationError);
 });
+
+test("a number JSON.parse can't carry exactly is a FimParseError, never a changed value", async () => {
+  const inexact = [
+    "12345678901234567890", "-9007199254740993", "1e400", "-1E400", "12345678901234567890.0", "9007199254740993e0",
+    "90071992547409930E-1", "9007199254740992.5", "1e-400", "-0.0001e-399", "1e23",
+  ];
+  for (const literal of inexact) {
+    const engine = new RequestEngine({ transport: makeMockTransport(() => rawResponse(`{"items":[],"total_count":${literal}}`, "application/json")).transport });
+    await assert.rejects(
+      engine.getJson("/api/v1/schemas"),
+      (e: unknown) =>
+        e instanceof FimParseError &&
+        e.message === `Unexpected response from /api/v1/schemas: the number ${literal} cannot be represented exactly.`,
+      literal,
+    );
+  }
+});
+
+test("a number a double carries exactly, and a decimal fraction below 2^53, pass unchanged", async () => {
+  const exact: Array<[string, number]> = [
+    ["0", 0], ["42", 42], ["9007199254740991", 9007199254740991], ["9007199254740992.0", 2 ** 53], ["1e21", 1e21],
+    ["0.1", 0.1], ["-2.5e-3", -0.0025], ["5e-324", 5e-324], ["0.0e-500", 0],
+  ];
+  for (const [literal, value] of exact) {
+    const engine = new RequestEngine({ transport: makeMockTransport(() => rawResponse(`{"n":${literal},"s":"1e400 12345678901234567890"}`, "application/json")).transport });
+    assert.deepEqual(await engine.getJson("/x"), { n: value, s: "1e400 12345678901234567890" }, literal);
+  }
+});

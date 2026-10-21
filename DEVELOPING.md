@@ -409,7 +409,14 @@ with an `items` array and a numeric `total_count`, a cursor listing an object wi
 `items` array, a `versions` call an array, and a single record a non-empty object.
 Anything else — `null`, `{}`, an error envelope, a bare string — is a `FimParseError`
 (`Unexpected response from <path> (HTTP 200): …`), never printed as data or read as
-"nothing found". `getRaw` refuses an HTML page (by Content-Type, or a body that starts
+"nothing found". A number a double can't carry exactly is a `FimParseError` too
+(`Unexpected response from <path>: the number <N> cannot be represented exactly.`): one
+out of range (`1e400`, which JSON.parse makes `Infinity`, printed as `null`), one past 2^53
+in any written form (`12345678901234567890`, `…890.0`, `9007199254740993e0`,
+`9007199254740992.5`), which it rounds, and a non-zero one too small (`1e-400`, which becomes
+0). Below 2^53 a decimal fraction keeps a double's usual precision, as JSON means it. No
+field of the API is a number that large (ids, keys and cursors are strings or small
+integers). `getRaw` refuses an HTML page (by Content-Type, or a body that starts
 `<!doctype html`/`<html`) answered to a download, so `-o` doesn't save a maintenance
 page over the user's file.
 

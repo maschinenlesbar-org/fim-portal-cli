@@ -284,8 +284,9 @@ fim-portal --log-format jsonl -o geburt.xml schemas xdf S07000009 1.0 2>log.json
 > a half-written file). Pick a fresh path, or check for the file yourself, if you
 > need to avoid clobbering existing data. An answer that isn't the data asked for
 > fails (exit `1`) without touching the file: an HTML page (a maintenance or proxy
-> page) for a download, or a JSON body without the documented shape (`null`, `{}`,
-> a page without `items`).
+> page) for a download, a JSON body without the documented shape (`null`, `{}`,
+> a page without `items`), or one with a number a double can't carry exactly (`1e400`,
+> `12345678901234567890`: JSON.parse would print a changed value).
 
 ```bash
 # How many schemas match a query?

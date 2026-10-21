@@ -279,7 +279,8 @@ public CSV export.
 (`ERROR`, `WARN`, `INFO`) and a topic `fim-portal.<area>`, as text (log4j style) or with
 `--log-format jsonl` as one JSON object per line. The areas: `cli` (usage errors,
 commander's messages, unexpected errors), `api` (the API's answers: an error status, and
-a malformed answer — bad JSON, the wrong shape, an HTML page, an unknown charset), `http`
+a malformed answer — bad JSON, the wrong shape, a number that can't be carried exactly, an
+HTML page, an unknown charset), `http`
 (the connection, the cleartext warning, and one WARN per retry before it waits) and `output` (the `Wrote N bytes` notes, a failure
 to write the `-o` file or stdout). A record is always one line; control characters in it
 are escaped.
