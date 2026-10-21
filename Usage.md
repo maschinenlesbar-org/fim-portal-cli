@@ -279,7 +279,7 @@ These go **before** the command, e.g. `fim-portal --compact schemas get S0700000
 | `--max-retries <n>` | Retries for transient `429`/`503` responses and reset connections (`0`–`10`; each backs off linearly or waits the server's longer `Retry-After`, up to 30 s; a longer one is not retried; each retry logs one WARN record of `fim-portal.http` before it waits) |
 | `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB) |
 | `--user-agent <ua>` | `User-Agent` header value |
-| `--compact` | Print JSON on a single line instead of pretty-printed |
+| `--compact` | Print JSON on a single line instead of pretty-printed. It also prints an answer nested too deeply to pretty-print (which fails cleanly, exit `1`, suggesting `--compact`) |
 | `--log-format <format>` | How errors, warnings and notes are written to stderr: `text` (default; log4j style, `2026-10-09T14:03:12.481Z WARN  [fim-portal.http] …`) or `jsonl` (one JSON object per line: `ts`, `level`, `topic`, `msg`). stdout is not affected |
 | `-o, --output <file>` | For downloads: write bytes to this file instead of stdout (an existing file is overwritten without a prompt); `-o -` means stdout |
 | `-V, --version` / `-h, --help` | Version / help |
