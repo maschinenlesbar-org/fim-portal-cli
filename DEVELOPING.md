@@ -649,8 +649,10 @@ default `warning` listener and logs `(node) <name>: <message>` through `processL
 In `defaultIO` a record waits for stdout (`stderrAfterStdout`): it is held while stdout
 has a backlog and written, in order, once it is gone, so with `2>&1 |` and a slow reader
 it never lands inside the data. `CliDeps.now` makes the timestamps testable. stdout
-carries data only. A stdout
-write error other than a closed pipe (EBADF, EIO) is an ERROR record of `fim-portal.output`
+carries data only. When stdout is a regular file (`> out.json`), `defaultIO` writes it with
+`stdoutWriter` (every byte, `writeAll`): Node's stream wrote it with one `writeSync` and dropped a
+short count, so a full disk or a size limit cut the output with exit 0. A stdout
+write error other than a closed pipe (EBADF, EIO, EFBIG, ENOSPC) is an ERROR record of `fim-portal.output`
 too, `Could not write to stdout: …` (`handleOutputErrors`, which the bin shim installs
 outside any run with `processLogger(argv)`: the format argv asks for, the run's
 redaction), and exits 1; a reader that stops early (EPIPE, ENOTCONN) exits 0 quietly.

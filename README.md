@@ -264,7 +264,8 @@ Each line on stderr is a **log record**: a timestamp (UTC), a level (`ERROR`, `W
 errors, `fim-portal.api` for the API's answers, a malformed one included, and a `WARN` when text in
 an answer was not valid (invalid bytes, half a character) and was replaced with U+FFFD, `fim-portal.http` for the connection,
 `fim-portal.output` for the `Wrote N bytes …` confirmations of downloads and any failure to
-write the output, to the `-o` file or to stdout). By default it
+write the output, to the `-o` file or to stdout: stdout redirected to a file that fills up or
+hits a size limit is an ERROR and exit 1, never half a file with exit 0). By default it
 is written log4j style; `--log-format jsonl` writes one JSON object per line instead. A
 record is always one line: a line break, a control character or a bidi control in a
 message (a server's text, a value you typed) is written as an escape (`\n`, `\u001b`,

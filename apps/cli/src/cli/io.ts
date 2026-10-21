@@ -8,6 +8,7 @@ import {
   chmodSync,
   closeSync,
   constants,
+  fstatSync,
   lstatSync,
   openSync,
   readlinkSync,
@@ -403,11 +404,59 @@ export function stderrAfterStdout(stdout: StdoutBacklog, write: (text: string) =
 
 const stderrLine = stderrAfterStdout(process.stdout, (text) => process.stderr.write(text + "\n"));
 
+/** What `stdoutWriter` needs of stdout. */
+interface Stdout {
+  write(data: string | Buffer, callback?: (err?: Error | null) => void): unknown;
+  emit(event: "error", err: Error): unknown;
+  readonly fd?: number;
+}
+
+/**
+ * A writer for stdout that never drops a byte silently. When stdout is a regular file
+ * (`> out.json`), Node's stream wrote it with one `writeSync` and ignored a short count, so a
+ * file-size limit or a full disk cut the output short with exit 0 and a "Wrote N bytes to
+ * stdout" note. Here the data is written with `writeAll`, and a failure (EFBIG, ENOSPC) is
+ * emitted as stdout's `error`, which `handleOutputErrors` turns into an ERROR record of
+ * `fim-portal.output` and exit 1. A pipe, a socket or a terminal goes through the stream as
+ * before (EPIPE stays quiet). `done`, when given, is told whether every byte was written: the
+ * stream's write callback, or at once for a file.
+ */
+export function stdoutWriter(
+  stdout: Stdout = process.stdout,
+  write: (fd: number, data: Buffer) => void = writeAll,
+): (data: string | Buffer, done?: (ok: boolean) => void) => void {
+  let toFile: boolean | undefined;
+  return (data, done) => {
+    toFile ??= stdout.fd !== undefined && isRegularFile(stdout.fd);
+    if (!toFile) {
+      stdout.write(data, done === undefined ? undefined : (err) => done(err == null));
+      return;
+    }
+    try {
+      write(stdout.fd as number, typeof data === "string" ? Buffer.from(data, "utf8") : data);
+      done?.(true);
+    } catch (err) {
+      stdout.emit("error", err instanceof Error ? err : new Error(String(err)));
+      done?.(false);
+    }
+  };
+}
+
+function isRegularFile(fd: number): boolean {
+  try {
+    return fstatSync(fd).isFile();
+  } catch {
+    return false;
+  }
+}
+
+const stdoutData = stdoutWriter();
+
 export const defaultIO: CliIO = {
-  out: (text) => process.stdout.write(text + "\n"),
+  out: (text) => stdoutData(text + "\n"),
   // A record never lands inside the data when both streams share a pipe.
   err: stderrLine,
-  // Settles when the write callback fires: after the bytes are handed to the OS, or with
-  // the error (EBADF, EPIPE) that the stream then also emits to handleOutputErrors.
-  outBinary: (data) => new Promise<boolean>((resolve) => process.stdout.write(data, (err) => resolve(err == null))),
+  // Settles once the bytes are written (handed to the OS, or every one in a file), or with the
+  // error (EBADF, EFBIG) that stdout then also emits to handleOutputErrors.
+  outBinary: (data) => new Promise<boolean>((resolve) => stdoutData(data, resolve)),
 };
