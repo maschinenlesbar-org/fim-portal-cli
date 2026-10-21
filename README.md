@@ -347,7 +347,9 @@ stderr's reader is gone (`2>&1 | true`), a failed run still exits with its own c
   `--fts-query`, drop a filter, or try a different keyword.
 - **`-o` write error** — the parent directory must exist and be writable (the file is
   written beside the target and renamed over it); the path is used verbatim with no
-  auto-creation. `Refusing to overwrite existing file …`: pick another path or add `--force`.
+  auto-creation, and a missing or read-only directory is refused before any request
+  (`Cannot write to "…": the directory "…" does not exist.`). `Refusing to overwrite existing
+  file …`: pick another path or add `--force`.
 - **XML/PDF to stdout by accident** — download commands (`xdf`, `pdf`, `xprozess`,
   …) stream binary/XML. Always use `-o <file>` unless you intend to pipe the bytes.
 
@@ -361,8 +363,8 @@ These apply to every command and may be given **before or after** it:
 | `-h, --help` | Show help for the program or a command |
 | `--compact` | Print JSON on a single line instead of pretty-printed |
 | `--log-format <format>` | How errors, warnings and notes are written to stderr: `text` (default; log4j style, `2026-10-09T14:03:12.481Z WARN  [fim-portal.http] …`) or `jsonl` (one JSON object per line: `ts`, `level`, `topic`, `msg`). stdout is not affected |
-| `-o, --output <file>` | Write the output (JSON or a download) to a file instead of stdout; `-o -` means stdout (any other value starting with a dash is refused as the next option, so write a file named `-x` as `./-x`). An existing file is refused unless `--force`; the write is atomic |
-| `--force` | With `-o`: replace an existing file (atomically, keeping its mode; through a symlink to the file it points at) |
+| `-o, --output <file>` | Write the output (JSON or a download) to a file instead of stdout; `-o -` means stdout (any other value starting with a dash is refused as the next option, so write a file named `-x` as `./-x`). An existing file is refused before any request (exit `1`) unless `--force` is given; a directory, and a file whose directory is missing or not writable, are refused either way. The file is written beside the target and renamed over it when complete, so a write cut short (a full disk) or interrupted (Ctrl-C, `SIGTERM`, `SIGHUP`: exit `130`, `143`, `129`) leaves the old file as it was and no half-written or temporary one. A device, a FIFO or the shell's own descriptor (`/dev/null`, `/dev/stdout`, `>(gzip > x.gz)`) is written in place, without `--force` |
+| `--force` | With `-o`: replace an existing file (atomically, keeping its mode; through a symlink to the file it points at, which is created if the link dangles) |
 | `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works). Must be an `http:`/`https:` URL without a query, a fragment, whitespace or control characters, and a `%` in a user name or password must be an escape (write a literal `%` as `%25`) — anything else is rejected at parse time (exit `1`) before any request is made. A plain `http:` URL to a host other than loopback (`localhost`, `127.0.0.0/8`, `::1`) logs one warning on stderr before the first request, a `WARN` record of `fim-portal.http` (`requests to <host> are sent unencrypted (http:, not https:)`) (naming the URL's credentials instead when it carries any, never printing them); stdout and the exit code are unchanged. A `user:password@` in it is shown as `***@` in every message; echoed back by a server (the `Basic` value, `user:password`, the password), it is shown as `***` |
 | `--timeout <ms>` | Per-request timeout (default `30000`; at most `2147483647`) |
 | `--user-agent <ua>` | `User-Agent` header value |

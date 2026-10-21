@@ -354,10 +354,12 @@ function writeOutputFile(deps: CliDeps, global: GlobalOptions, file: string, dat
 
 /**
  * Check `-o` before any request, so a refused target costs none: `--force` without `-o`, a
- * directory, and an existing path (a dangling link too) without `--force` are usage errors
- * (a FimValidationError: an ERROR record of `fim-portal.cli`, exit 1). `-o -` is stdout. The
- * write checks again: a file that appears during the request is not overwritten either (an
- * OutputError then).
+ * directory, an existing path (a dangling link too) without `--force`, and a file whose
+ * directory is missing or not writable (or a link loop) are usage errors (a
+ * FimValidationError: an ERROR record of `fim-portal.cli`, exit 1). A stream (`/dev/null`, a
+ * FIFO, `/dev/stdout`, `>(…)`) needs no `--force`: it is written in place, and nothing in it can
+ * be lost. `-o -` is stdout. The write checks again: a file that appears during the request is
+ * not overwritten either (an OutputError then).
  */
 export function checkOutputTarget(deps: CliDeps, global: GlobalOptions): void {
   if (global.force === true && global.output === undefined) {
@@ -365,9 +367,13 @@ export function checkOutputTarget(deps: CliDeps, global: GlobalOptions): void {
   }
   const file = outputFile(global);
   if (file === undefined) return;
-  const state = (deps.files ?? nodeFiles).state(file);
+  const files = deps.files ?? nodeFiles;
+  const state = files.state(file);
   if (state === "directory") throw new FimValidationError(isDirectoryMessage(file));
+  if (state === "stream") return;
   if (state === "exists" && global.force !== true) throw new FimValidationError(refuseOverwrite(file));
+  const problem = files.parentProblem(file, global.force === true);
+  if (problem !== undefined) throw new FimValidationError(problem);
 }
 
 /** The `-o` value that means stdout, as in other Unix tools (`-o -`). */

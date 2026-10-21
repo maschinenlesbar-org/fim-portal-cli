@@ -22,7 +22,7 @@ function makeCli(responder: (req: HttpRequest) => HttpResponse) {
       outBinary: (d) => void out.push(d.toString("utf8")),
     },
     // -o in memory: a path exists once written here.
-    files: { state: (p) => (files.has(p) ? "exists" : "absent"), write: (p, d) => void files.set(p, d) },
+    files: { state: (p) => (files.has(p) ? "exists" : "absent"), parentProblem: () => undefined, write: (p, d) => void files.set(p, d) },
     createClient: (opts) => new FimPortalClient({ ...opts, transport: mt.transport }),
   };
   return { deps, out, err, files, mt };
@@ -713,6 +713,7 @@ test("a failed -o write degrades to exit 1 with a clean ERROR record (not Unexpe
     },
     files: {
       state: () => "absent",
+      parentProblem: () => undefined,
       write: () => {
         throw new Error("Could not write to \"/nope/out.xml\": ENOENT: no such file or directory, open '/nope/out.xml'");
       },
@@ -858,6 +859,7 @@ test("every -o failure is an ERROR record of fim-portal.output, exit 1 (B04-1, L
       const cli = makeCli(() => (argv.includes("xdf") ? rawResponse(fx.xmlBody, "application/xml") : jsonResponse({ items: [], offset: 0, limit: 200, count: 0, total_count: 0 })));
       cli.deps.files = {
         state: () => "absent",
+        parentProblem: () => undefined,
         write: () => {
           throw thrown;
         },

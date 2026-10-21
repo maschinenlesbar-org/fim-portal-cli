@@ -280,16 +280,23 @@ for `-o`, unset the real file system (`nodeFiles`). Lets the whole CLI run in te
 mocked client and captured output — no subprocess.
 
 **`-o` and `--force`.** `checkOutputTarget` (`cli/shared.ts`) runs in `action()` before the
-client is built, so a refused target costs no request: `--force` without `-o`, a directory,
-and an existing path (a dangling link too) without `--force` are `FimValidationError`s
-(usage errors, exit 1); `-o -` is stdout. `nodeFiles.write` writes atomically: without
-`--force` it claims the name with an exclusive create (so a file that appeared during the
-request is refused too, an `OutputError`), writes a temporary file beside the target
-(`.<name>.<pid>-<hex>.tmp`, created exclusively), keeps an existing file's mode and renames
-it over the target; `--force` writes through a symlink to the file it names. On failure the
-temporary file and a claimed name are removed. Conformance test P26 checks a write cut short
-by a file-size limit; deliberately not kept: the owner and hard links of a replaced file, and
-a directory that isn't writable refuses `-o` even when the file in it is.
+client is built, so a refused target costs no request: `--force` without `-o`, a directory, an
+existing path (a dangling link too) without `--force`, and a file whose directory is missing,
+not a directory or not writable (or a link loop with `--force`; `OutputFiles.parentProblem`) are
+`FimValidationError`s (usage errors, exit 1); `-o -` is stdout. A stream — a character device
+(`/dev/null`), a FIFO, a socket, or a descriptor path (`/dev/stdout`, `/dev/fd/N` from `>(…)`) —
+is written in place (`writeInPlace`, every byte), with no claim, no temporary file and no
+`--force` needed. A file is written atomically (`nodeFiles.write`): without `--force` the name is
+claimed with an exclusive create (so a file that appeared during the request is refused too, an
+`OutputError`), the data goes to a temporary file beside the target
+(`.<name>.<pid>-<hex>.tmp`, the name shortened to stay within NAME_MAX, 255 bytes), an existing
+file's mode is kept, and it is renamed over the target; `--force` writes through a chain of
+symlinks to the file they name, creating it when the link dangles (`linkTarget`). On failure
+the temporary file and a claimed name are removed, and so they are on SIGINT, SIGTERM and SIGHUP
+(exit 130, 143, 129; installed at the first file write, never for a stream). An error names the
+user's file, never the temporary one (`reasonOf`). Conformance test P26 checks a write cut short
+by a file-size limit, the streams, a dangling link, a long name and a signal; deliberately not
+kept: the owner and hard links of a replaced file.
 
 **Error types.** [`errors.ts`](packages/client/src/errors.ts): `FimApiError` (non-2xx,
 carries `status`/`detail`; the `detail` and a redirect target are cut at 500 characters,
@@ -537,8 +544,11 @@ everything that drives the CLI is in `apps/cli/test/`.
   id never with a `/`, a list item by item), P25 (`conformance-p25-response-corpus`: a number a double can't carry, a subnormal that
   prints changed included, is a parse error, exit 1, on `schemas get`; every answer error names
   the request on both sides; a declared big-integer member, none here, is its exact literal) and P26 (`conformance-p26-output-integrity`: the built
-  bin under `ulimit -f` keeps the old `-o` file whole and leaves no temporary file, and an
-  existing file without `--force` costs no request; 30 s, it starts a process).
+  bin under `ulimit -f` keeps the old `-o` file whole and leaves no temporary file; an existing
+  file without `--force` and a missing directory cost no request; `/dev/null`, a FIFO and
+  `/dev/stdout` are written in place; `--force` through a dangling link creates its file; a
+  255-byte name is written; a signal leaves no claim or temporary file; 30 s, it starts a
+  process).
 - **`output.test.ts`** — `-o` and `--force` against real files in a temp directory: refused
   targets, atomic replace, mode and symlinks, a file that appears during the request.
 - **`parity.test.ts`** — the same input through the CLI and the library (`parity()`): both reject
