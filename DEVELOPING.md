@@ -472,8 +472,9 @@ Anything else — `null`, `{}`, an error envelope, a bare string — is a `FimPa
 (`GET <url>: the number <N> cannot be represented exactly.`): one
 out of range (`1e400`, which JSON.parse makes `Infinity`, printed as `null`), one past 2^53
 in any written form (`12345678901234567890`, `…890.0`, `9007199254740993e0`,
-`9007199254740992.5`), which it rounds, and a non-zero one too small (`1e-400`, which becomes
-0). Past 2^53 the number as written is compared with the number as printed (`String(value)`),
+`9007199254740992.5`), which it rounds, a non-zero one too small (`1e-400`, which becomes
+0), and a subnormal one (below 2.2250738585072014e-308) that doesn't print as written (`3e-324`
+becomes `5e-324`; `5e-324` and `1e-310` pass). Past 2^53 the number as written is compared with the number as printed (`String(value)`),
 not with the double's exact binary value: `12345678901234567890` prints as
 `12345678901234567000` and is refused, while `1E23` or `1.7976931348623157E308` (a double a
 server printed in its shortest form) print as the same number and pass. Below 2^53 a decimal

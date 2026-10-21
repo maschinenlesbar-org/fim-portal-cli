@@ -553,6 +553,8 @@ test("a number JSON.parse can't carry exactly is a FimParseError, never a change
   const inexact = [
     "12345678901234567890", "-9007199254740993", "1e400", "-1E400", "12345678901234567890.0", "9007199254740993e0",
     "90071992547409930E-1", "9007199254740992.5", "1e-400", "-0.0001e-399", "123456789012345678901234567890",
+    // D4: below the smallest normal double a subnormal must print as written.
+    "3e-324", "4e-324", "-4.9e-324", "1.2345678901234567e-310", "2.225073858507201e-309",
   ];
   for (const literal of inexact) {
     const engine = new RequestEngine({ transport: makeMockTransport(() => rawResponse(`{"items":[],"total_count":${literal}}`, "application/json")).transport });
@@ -563,6 +565,11 @@ test("a number JSON.parse can't carry exactly is a FimParseError, never a change
         e.message === `GET https://fimportal.de/api/v1/schemas: the number ${literal} cannot be represented exactly.`,
       literal,
     );
+  }
+  // A subnormal printed in its shortest form, and the smallest normal double, pass (D4).
+  for (const literal of ["5e-324", "-5e-324", "1e-310", "2.2250738585072014e-308"]) {
+    const engine = new RequestEngine({ transport: makeMockTransport(() => rawResponse(`{"items":[],"total_count":${literal}}`, "application/json")).transport });
+    assert.equal(((await engine.getJson("/api/v1/schemas")) as { total_count: number }).total_count, Number(literal), literal);
   }
 });
 
