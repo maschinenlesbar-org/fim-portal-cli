@@ -163,6 +163,10 @@ test("P10: a single-value option given twice is a usage error; repeatable ones c
     ["--timeout", "1000", "code-lists", "--timeout", "2000"],
     ["--base-url", "https://fimportal.de", "--base-url", "https://schema.fim.fitko.net", "code-lists"],
     ["-o", "a.json", "--output", "b.json", "code-lists"],
+    ["--log-format", "text", "--log-format", "jsonl", "code-lists"],
+    ["--log-format=jsonl", "code-lists", "--log-format", "jsonl"],
+    ["--max-retries", "1", "--max-retries", "2", "code-lists"],
+    ["search-csv", "--resource", "schema", "--resource", "field"],
   ]) {
     const c = cli();
     assert.equal(await run(argv, c.deps), 1, argv.join(" "));
