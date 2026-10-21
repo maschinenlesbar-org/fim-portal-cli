@@ -302,7 +302,7 @@ fim-portal --compact fields search --feldart select --limit 50 \
 
 # Reshape a service profile (title + service key)
 fim-portal service-profiles get 99008001012012 \
-  | jq '{titel: .titel, schluessel: .leistungsschluessel}'
+  | jq '{title: .title, schluessel: .leistungsschluessel}'
 ```
 
 Use `--compact` for single-line JSON in pipelines and logs:
