@@ -20,6 +20,8 @@ import {
   intInRangeProblem,
   nonEmptyProblem,
   nonNegativeIntProblem,
+  normalizeToken,
+  tokenProblem,
 } from "@maschinenlesbar.org/fim-portal-client/internal/validate";
 import { LIMIT_MAX, LIMIT_MIN } from "@maschinenlesbar.org/fim-portal-client/internal/params";
 import {
@@ -446,13 +448,24 @@ export function addPagination(cmd: Command): Command {
   return addLimitOption(cmd.option("--offset <n>", "offset within the total dataset (>= 0)", parseIntArg));
 }
 
-/** Add an Option constrained to a fixed set of choices. */
+/**
+ * An Option constrained to a fixed set of choices. The value is a token, as the library reads
+ * it (D8): refused when it holds an invisible or control character (tokenProblem), trimmed and
+ * in NFC (normalizeToken), then checked against the choices, so ` 2.0` selects `2.0` on the
+ * CLI and in the library alike. The help still lists the choices.
+ */
 export function choiceOption(
   flags: string,
   description: string,
   choices: readonly string[],
 ): Option {
-  return new Option(flags, description).choices([...choices]);
+  return new Option(flags, description).choices([...choices]).argParser((value: string) => {
+    const problem = tokenProblem(value);
+    if (problem !== undefined) throw new InvalidArgumentError(problem);
+    const token = normalizeToken(value);
+    if (!choices.includes(token)) throw new InvalidArgumentError(`Allowed choices are ${choices.join(", ")}.`);
+    return token;
+  });
 }
 
 /** Build a QueryParams object for the four XDatenfelder search endpoints. */

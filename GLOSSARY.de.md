@@ -240,8 +240,9 @@ getroffen wurde.
 erlauben zusätzlich `Stichwort`).
 
 **Leere Filterwerte.** Die API behandelt einen leeren Parameter (`name=`) wie keinen
-Filter und antwortet mit dem ungefilterten Ergebnis. Ein leerer Wert (`""` oder nur
-Leerraum) wird deshalb vor jeder Anfrage zurückgewiesen: von der CLI als Bedienfehler, von
+Filter und antwortet mit dem ungefilterten Ergebnis. Ein leerer Wert (`""`, nur
+Leerraum oder nur unsichtbare Zeichen wie ein Nullbreite-Leerzeichen oder ein weiches
+Trennzeichen, oder kombinierende Zeichen) wird deshalb vor jeder Anfrage zurückgewiesen: von der CLI als Bedienfehler, von
 der Bibliothek (`FimPortalClient`) mit einem `FimValidationError`. Dasselbe gilt für eine
 leere ID oder Version im Pfad: Sie würde aus der Anfrage nach einem Objekt die Suche oder
 die Versionsliste machen. Eine ID oder Version wird ohne umgebenden Leerraum gesendet, eine
@@ -253,8 +254,13 @@ mit `/` zurückgewiesen: Der Server läse ihn als Pfadtrenner.
 `--rechtsgrundlagen` und `search-csv --term`), werden ohne umgebenden Leerraum und in
 zusammengesetztem Unicode (NFC) gesendet: Ein Wert mit einem mitkopierten Leerzeichen am Ende
 oder ein zerlegtes „Müller" (u plus kombinierendes Trema, wie in macOS-Dateinamen) fand
-nichts. Codes, Schlüssel und IDs (`--nummernkreis`, `--leistungsschluessel`, `--ozg-id`, eine
-FIM-ID) und Datumsangaben werden unverändert gesendet.
+nichts. Ein Textfilter mit einem Steuerzeichen (außer Tab und Zeilenumbruch) oder einem
+unsichtbaren Zeichen (Nullbreite-Leerzeichen, weiches Trennzeichen, Bidi-Steuerzeichen) darin
+oder einem halben Zeichen wird zurückgewiesen, und die Meldung zeigt es maskiert
+(`"a\u200bb"`). Codes, Schlüssel, IDs, Datumsangaben und Aufzählungswerte (`--nummernkreis`,
+`--leistungsschluessel`, `--ozg-id`, `--order-by`, eine FIM-ID, eine `source` oder `stufe`)
+werden ebenso ohne umgebenden Leerraum und in NFC gesendet und mit einem Steuer- oder
+unsichtbaren Zeichen darin zurückgewiesen.
 
 **order_by.** Sortierung der Ergebnisse. Die zulässigen Werte hängen von der Ressource ab –
 die Datenfelder-Ressourcen teilen sich einen Satz (`relevance`, `id_asc`, `name_asc`, …);

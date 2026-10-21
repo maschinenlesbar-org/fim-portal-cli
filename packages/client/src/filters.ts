@@ -12,7 +12,16 @@
 // `{ allowUnknownFilters: true }` as the call's second argument.
 
 import { FimValidationError, quoteValue } from "./errors.js";
-import { assertValid, normalizeText, oneOfProblem, type Problem } from "./validate.js";
+import {
+  assertValid,
+  listProblem,
+  normalizeText,
+  normalizeToken,
+  oneOfProblem,
+  textProblem,
+  tokenProblem,
+  type Problem,
+} from "./validate.js";
 import type { QueryParams } from "./query.js";
 import {
   AnwendungsgebietValues,
@@ -53,10 +62,12 @@ export interface FilterOptions {
 
 /**
  * What one query parameter takes: a string, free text (`text`: a string the API searches,
- * sent trimmed and in NFC, normalizeText), a date (an ISO string or a valid `Date`), an
- * integer, a boolean, or one of a fixed set of values; `list` when the API takes it more
- * than once (a repeated key, `?nummernkreis=01&nummernkreis=02`). A list parameter also
- * takes a single value. A plain `string` (a code, a key, an id) is sent as given.
+ * checked by textProblem and sent trimmed and in NFC, normalizeText), a date (an ISO string or
+ * a valid `Date`), an integer, a boolean, or one of a fixed set of values; `list` when the API
+ * takes it more than once (a repeated key, `?nummernkreis=01&nummernkreis=02`). A list
+ * parameter also takes a single value. A plain `string` (a code, a key, an id), a date string
+ * and an enum value are tokens: checked by tokenProblem and sent trimmed and in NFC
+ * (normalizeToken), the enum value then checked against its values.
  */
 export type ParamKind =
   | { readonly type: "string" | "text" | "date" | "int" | "bool"; readonly list?: boolean }
@@ -313,6 +324,23 @@ function kindProblem(kind: ParamKind): Problem<unknown> {
   };
 }
 
+/**
+ * `value` as it is sent (a string, or a list of them): text through textProblem and
+ * normalizeText, every other string (a code, a date, an enum value) through tokenProblem and
+ * normalizeToken; a list item by item (listProblem names the item). Anything else unchanged,
+ * for kindProblem to judge. Throws FimValidationError (`Invalid <key>: …`).
+ */
+function canonicalValue(key: string, kind: ParamKind, value: unknown): unknown {
+  const problem = kind.type === "text" ? textProblem : tokenProblem;
+  const normalize = kind.type === "text" ? normalizeText : normalizeToken;
+  if (typeof value === "string") return normalize(assertValid(key, value, problem));
+  if (Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "string")) {
+    assertValid(key, value as string[], (items) => listProblem(items, problem));
+    return (value as string[]).map(normalize);
+  }
+  return value;
+}
+
 /** A value of a parameter the tables don't know, sent with allowUnknownFilters: a scalar or a list of them. */
 const anyScalarProblem: Problem<unknown> = (value) => {
   const scalar = (v: unknown): boolean =>
@@ -383,8 +411,11 @@ function unknownKey(key: string, call: string, known: readonly string[]): FimVal
  * `null` mean omitted. Throws FimValidationError (`Invalid <key>: <reason>`) before any
  * request. Blank values are refused separately (assertNonBlankParams, in the engine).
  *
- * Returns the parameters as they are sent: a copy in which every `text` parameter is
- * trimmed and in NFC (normalizeText); everything else, and the caller's object, unchanged.
+ * Returns the parameters as they are sent: a copy in which every `text` parameter is checked
+ * (textProblem) and trimmed and in NFC (normalizeText), and every other string — a code, a date,
+ * an enum value, each item of a list — checked as a token (tokenProblem) and trimmed and in NFC
+ * (normalizeToken); the caller's object unchanged. A parameter the table doesn't know, sent
+ * with allowUnknownFilters, goes as given.
  */
 export function assertParams(params: unknown, spec: ParamSpec, call: string, options: FilterOptions = {}): QueryParams {
   const record = paramRecord(params, call);
@@ -399,8 +430,10 @@ export function assertParams(params: unknown, spec: ParamSpec, call: string, opt
       continue;
     }
     const kind = spec[key]!;
-    assertValid(key, value, kindProblem(kind));
-    if (kind.type === "text" && typeof value === "string") sent[key] = normalizeText(value);
+    // Only strings are canonicalised; an int or bool parameter given a string is refused by kindProblem.
+    const canonical = kind.type === "int" || kind.type === "bool" ? value : canonicalValue(key, kind, value);
+    assertValid(key, canonical, kindProblem(kind));
+    sent[key] = canonical;
   }
   return sent as QueryParams;
 }
@@ -415,13 +448,31 @@ export function assertParams(params: unknown, spec: ParamSpec, call: string, opt
  * only `resource` and the value types are checked.
  */
 export function assertSearchCsvParams(params: unknown, options: FilterOptions = {}): SearchCsvResource {
+  return searchCsvQuery(params, options).resource;
+}
+
+/**
+ * assertSearchCsvParams, and the parameters as they are sent: `term` checked as text and
+ * trimmed and in NFC (normalizeText), every other known filter checked as a token and trimmed
+ * and in NFC (normalizeToken) before its domain check; a filter sent with allowUnknownFilters
+ * as given. The caller's object is unchanged.
+ */
+export function searchCsvQuery(params: unknown, options: FilterOptions = {}): { resource: SearchCsvResource; query: QueryParams } {
   const call = "tools.searchCsvDownload";
   const record = paramRecord(params, call);
-  const resource = assertValid("resource", record["resource"], oneOfProblem(SearchCsvResourceValues)) as SearchCsvResource;
+  // The resource is a token too (` schema` selects `schema`); anything else is refused by its values.
+  const given = record["resource"];
+  const token = typeof given === "string" && tokenProblem(given) === undefined ? normalizeToken(given) : given;
+  const resource = assertValid("resource", token, oneOfProblem(SearchCsvResourceValues)) as SearchCsvResource;
   const known = ["resource", ...Object.keys(SEARCH_CSV_FILTERS)];
-  for (const [key, value] of Object.entries(record)) {
-    if (key === "resource" || value === undefined || value === null) continue;
-    assertValid(key, value, kindProblem(STRING));
+  const query: Record<string, unknown> = {};
+  for (const [key, raw] of Object.entries(record)) {
+    query[key] = key === "resource" ? resource : raw;
+    if (key === "resource" || raw === undefined || raw === null) continue;
+    assertValid(key, raw, kindProblem(STRING));
+    if (options.allowUnknownFilters === true && !Object.hasOwn(SEARCH_CSV_FILTERS, key)) continue;
+    const value = canonicalValue(key, key === "term" ? TEXT : STRING, raw);
+    query[key] = value;
     if (options.allowUnknownFilters === true) continue;
     if (!Object.hasOwn(SEARCH_CSV_FILTERS, key)) throw unknownKey(key, call, known);
     const filter = SEARCH_CSV_FILTERS[key]!;
@@ -440,5 +491,5 @@ export function assertSearchCsvParams(params: unknown, options: FilterOptions = 
     const values = key === "order_by" ? CSV_ORDER_VALUES[resource] : filter.values;
     if (values !== undefined) assertValid(key, value, oneOfProblem(values));
   }
-  return resource;
+  return { resource, query: query as QueryParams };
 }

@@ -239,8 +239,8 @@ when; the `seit`/`bis` variants are date-range filters.
 allow `Stichwort`).
 
 **Blank filter values.** The API treats an empty parameter (`name=`) as no filter
-and answers with the unfiltered result. So a blank value (`""` or whitespace only)
-is rejected before any request: by the CLI as a usage error, and by the library
+and answers with the unfiltered result. So a blank value (`""`, whitespace, or only invisible characters such as a zero-width
+space or a soft hyphen, or combining marks) is rejected before any request: by the CLI as a usage error, and by the library
 (`FimPortalClient`) with a `FimValidationError`. The same goes for a blank id or
 version in a path: it would turn a request for one object into the search or the
 versions list. An id or version is sent trimmed, and one with a `/` is refused: the server
@@ -251,8 +251,12 @@ would read it as a path separator.
 `--status-gesetzt-durch`, `--title`, `--leistungsbezeichnung`, `--leistungsbezeichnung2`,
 `--rechtsgrundlagen`, and `search-csv --term`) go out trimmed and in composed Unicode (NFC):
 a value pasted with a trailing space, or a decomposed "Müller" (u plus a combining
-diaeresis, as macOS file names have it), matched nothing. Codes, keys and ids
-(`--nummernkreis`, `--leistungsschluessel`, `--ozg-id`, a FIM id) and dates are sent as given.
+diaeresis, as macOS file names have it), matched nothing. A text filter with a control
+character (but tab and newline) or an invisible one (a zero-width space, a soft hyphen, a bidi
+control) inside, or half a character, is refused, and the message shows it escaped
+(`"a\u200bb"`). Codes, keys, ids, dates and enum values (`--nummernkreis`,
+`--leistungsschluessel`, `--ozg-id`, `--order-by`, a FIM id, a `source` or `stufe`) are tokens:
+sent trimmed and in NFC too, and refused with any control or invisible character inside.
 
 **order_by.** Result ordering. The allowed values differ by resource —
 Datenfelder resources share one set (`relevance`, `id_asc`, `name_asc`, …); services

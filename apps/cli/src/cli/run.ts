@@ -57,7 +57,10 @@ function writeCommanderErr(command: Command, deps: CliDeps, state: { errorLogged
   if (text.trim() === "") return;
   if (text.startsWith("error: ")) {
     state.errorLogged = true;
-    log.error("cli", text.slice("error: ".length).replace(/\n(\(Did you mean .*\?\))$/, " $1"));
+    const message = text.slice("error: ".length);
+    // commander quotes the rejected value raw: escape what the log would leave invisible.
+    const hint = /\n(\(Did you mean [^\n]*\?\))$/.exec(message);
+    log.error("cli", hint === null ? escapeTerminalText(message) : `${escapeTerminalText(message.slice(0, hint.index))} ${hint[1]}`);
     return;
   }
   if (!state.errorLogged) {
@@ -65,6 +68,18 @@ function writeCommanderErr(command: Command, deps: CliDeps, state: { errorLogged
     log.error("cli", `missing command: \`${commandPath(command)} <subcommand>\``);
   }
   for (const line of text.split("\n")) if (line.trim() !== "") log.info("cli", line.trimEnd());
+}
+
+/**
+ * `text` with every character a terminal acts on, or that can't be seen, written as a `\uXXXX`
+ * escape: C0 (but TAB and LF, which become `\n`), DEL, C1, every format character (a zero-width
+ * space, a soft hyphen, a bidi override) and a lone surrogate. commander echoes a rejected value
+ * as it was typed (`argument 'a<ZWSP>b' is invalid`), so the refusal showed nothing wrong with it.
+ */
+function escapeTerminalText(text: string): string {
+  return text.replace(/[\u0000-\u0008\u000a-\u001f\u007f-\u009f]|\p{Cf}|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/gu, (ch) =>
+    ch === "\n" ? "\\n" : ch === "\r" ? "\\r" : `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
 }
 
 /**
@@ -141,6 +156,8 @@ export function redactionFor(argv: readonly string[]): Redaction {
     for (const secret of credentialsIn(source)) {
       secrets.add(secret);
       secrets.add(JSON.stringify(secret).slice(1, -1));
+      // As commander's echo of it reaches the log (escapeTerminalText).
+      secrets.add(escapeTerminalText(secret));
       encoded.add(encodeURIComponent(secret));
       // What a server echoes back: the Basic value and the decoded user:password on
       // stdout and stderr, the password alone (it may well occur in the data) on stderr.

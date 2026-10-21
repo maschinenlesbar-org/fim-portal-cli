@@ -4,7 +4,7 @@
 // commander parsers call the same functions and turn the reason into a usage
 // error, so a rule is written once and the CLI and the library cannot drift apart.
 
-import { FimValidationError } from "./errors.js";
+import { FimValidationError, quoteValue } from "./errors.js";
 import type { QueryParams } from "./query.js";
 import { LIMIT_MAX, LIMIT_MIN, SearchCsvResourceValues } from "./params.js";
 import { DetaillierungsstufeValues, XzufiSourceValues } from "./enums.js";
@@ -25,9 +25,109 @@ export function assertValid<T>(name: string, value: T, problem: Problem<T>): T {
   return value;
 }
 
-/** True for an empty or whitespace-only string. */
+/** Characters that never make a value non-blank: whitespace, controls, format characters, combining marks. */
+const INVISIBLE = /[\s\p{Cc}\p{Cf}\p{M}]/gu;
+
+/** A lone surrogate: half of a character, which URLSearchParams would send as U+FFFD. */
+const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
+
+/**
+ * True when nothing in `value` would match anything: it is empty or holds only whitespace,
+ * control and format characters (a zero-width space, a soft hyphen) and combining marks. Such a
+ * value reads as "no filter" upstream, or matches nothing, so it is refused as blank.
+ */
 export function isBlank(value: string): boolean {
-  return value.trim() === "";
+  return value.replace(INVISIBLE, "") === "";
+}
+
+/** `U+200B` for the first character of `text` that `pattern` matches. */
+function codePointOf(text: string, pattern: RegExp): string {
+  const ch = pattern.exec(text)?.[0] ?? "";
+  return `U+${(ch.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, "0")}`;
+}
+
+/** A control character inside a text filter: C0 and C1, but not TAB, LF or CR (whitespace in a pasted phrase). */
+const TEXT_CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/;
+
+/** A format character inside a text filter, but not ZWNJ/ZWJ (U+200C/U+200D), which some scripts and emoji need. */
+const TEXT_FORMAT = /(?![\u200c\u200d])\p{Cf}/u;
+
+/**
+ * Why `value` cannot be sent as a text filter (a value the portal searches as text), or
+ * undefined when it can. Refused, before any request, as the portal would match nothing or
+ * everything:
+ * - a value that is blank (`isBlank`: only whitespace, invisible characters and combining
+ *   marks): an empty filter reads as "no filter" and answers with the whole catalogue;
+ * - a lone surrogate (half of a character, sent as U+FFFD);
+ * - a control character (but TAB, LF and CR) or a format character (a zero-width space, a soft
+ *   hyphen, a bidi control; ZWNJ and ZWJ are allowed): pasted along, it makes the search find
+ *   nothing.
+ * The reason quotes the value with every invisible character escaped (`quoteValue`).
+ */
+export function textProblem(value: string): string | undefined {
+  if (typeof value !== "string") return "Expected a string.";
+  if (isBlank(value)) return "Expected a non-empty value.";
+  if (LONE_SURROGATE.test(value)) return `${quoteValue(value)} contains half of a character (a lone surrogate).`;
+  if (TEXT_CONTROL.test(value)) return `${quoteValue(value)} contains a control character (${codePointOf(value, TEXT_CONTROL)}).`;
+  if (TEXT_FORMAT.test(value)) return `${quoteValue(value)} contains an invisible character (${codePointOf(value, TEXT_FORMAT)}).`;
+  return undefined;
+}
+
+/** A control or format character in a token (after trimming): every Cc and every Cf. */
+const TOKEN_INVISIBLE = /[\p{Cc}\p{Cf}]/u;
+
+/**
+ * Why `value` cannot be sent as a token, or undefined when it can. A token is a value the
+ * portal compares exactly: a path id, a code (`nummernkreis`, `leistungsschluessel`,
+ * `ozg_id`), a date, an enum value or a sort key. The rules apply to the value with
+ * surrounding whitespace trimmed, as it is sent ({@link normalizeToken}): not blank (and not
+ * only invisible characters or combining marks), no lone surrogate, and no control or format
+ * character at all (a zero-width space, ZWJ, a soft hyphen, a bidi control), since an invisible
+ * character in an id or a code only ever makes it match nothing. The reason quotes the value
+ * visibly. Enums and sort keys are then checked against their values (`oneOfProblem`).
+ */
+export function tokenProblem(value: string): string | undefined {
+  if (typeof value !== "string") return "Expected a string.";
+  if (isBlank(value)) return "Expected a non-empty value.";
+  const token = value.trim();
+  if (LONE_SURROGATE.test(token)) return `${quoteValue(value)} contains half of a character (a lone surrogate).`;
+  if (TOKEN_INVISIBLE.test(token)) {
+    return `${quoteValue(value)} contains an invisible or control character (${codePointOf(token, TOKEN_INVISIBLE)}).`;
+  }
+  return undefined;
+}
+
+/**
+ * A token as it is sent: trimmed and in composed Unicode (NFC). A code pasted with a trailing
+ * space or newline (`99008001012012 `) matched nothing. Check it with {@link tokenProblem} first.
+ */
+export function normalizeToken(value: string): string {
+  return value.trim().normalize("NFC");
+}
+
+/**
+ * The items of a comma-separated list, as typed: each item is checked (`listProblem`) and
+ * canonicalised (`normalizeToken`) on its own, so `"a1, a2"` sends `a2`, and `"a1,,a2"`,
+ * `"a1,"` and `","` are refused rather than sent as an empty item.
+ */
+export function splitList(value: string): string[] {
+  return value.split(",");
+}
+
+/**
+ * Why `items` cannot be sent as a list (a repeated parameter, `?nummernkreis=01&nummernkreis=02`),
+ * or undefined when it can: not an array of strings, no item at all (an empty list reads as
+ * "no filter"), or an item that `itemProblem` refuses (by default {@link tokenProblem}: a blank
+ * item is refused, never dropped). The reason names the item.
+ */
+export function listProblem(items: readonly string[], itemProblem: Problem<string> = tokenProblem): string | undefined {
+  if (!Array.isArray(items)) return "Expected a list of strings.";
+  if (items.length === 0) return "Expected at least one value.";
+  for (let i = 0; i < items.length; i++) {
+    const problem = itemProblem(items[i] as string);
+    if (problem !== undefined) return items.length === 1 ? problem : `item ${i + 1} of ${items.length}: ${problem}`;
+  }
+  return undefined;
 }
 
 /**
@@ -43,7 +143,8 @@ export function normalizeText(value: string): string {
 }
 
 /**
- * A blank value ("" or whitespace only) is invalid: the API treats an empty
+ * A blank value (`isBlank`: "", whitespace, or only invisible characters and combining
+ * marks) is invalid: the API treats an empty
  * parameter as no filter and answers with the unfiltered result, and an empty path
  * segment re-targets the request to another endpoint.
  */
@@ -83,7 +184,8 @@ const queryScalarProblem: Problem<unknown> = (value) => {
 
 /**
  * A path id (a FIM id, version, namespace, Leistungsschlüssel, language code, …)
- * must be a string that is not blank once trimmed, as the client sends it. An empty
+ * is a token (`tokenProblem`: not blank, no invisible or control character, no lone
+ * surrogate), sent trimmed and in NFC (`normalizeToken`). An empty
  * last segment turns `/api/v1/schemas/<id>` into `/api/v1/schemas/` (the search
  * collection) and `/api/v1/schemas/S1/<version>` into the versions list, which the
  * library would return as the requested object; an empty middle segment requests `//`.
@@ -93,19 +195,21 @@ const queryScalarProblem: Problem<unknown> = (value) => {
  * not, pass encoding unchanged and are rejected by RequestEngine.buildUrl.)
  */
 export const pathSegmentProblem: Problem<string> = (value) => {
-  if (typeof value !== "string" || isBlank(value)) return "Expected a non-empty value.";
+  if (typeof value !== "string") return "Expected a non-empty value.";
+  const problem = tokenProblem(value);
+  if (problem !== undefined) return problem;
   const id = value.trim();
   return id.includes("/") ? 'An id cannot contain "/": the API reads it as a path separator.' : undefined;
 };
 
 /**
- * Validate one path id (pathSegmentProblem) and percent-encode it, trimmed, for the
- * request path: a value pasted with a trailing newline or space named no object.
+ * Validate one path id (pathSegmentProblem) and percent-encode it, trimmed and in NFC
+ * (normalizeToken), for the request path: a value pasted with a trailing newline or space named no object.
  * Throws `FimValidationError` (`Invalid <name>: ...`) for a blank id and one with a `/`.
  * "." and ".." pass through encoding unchanged and are rejected by RequestEngine.buildUrl.
  */
 export function pathSegment(name: string, value: string): string {
-  return encodeURIComponent(assertValid(name, value, pathSegmentProblem).trim());
+  return encodeURIComponent(normalizeToken(assertValid(name, value, pathSegmentProblem)));
 }
 
 /**

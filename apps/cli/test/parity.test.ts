@@ -122,7 +122,7 @@ test("parity: a valid path id sends the identical request from CLI and library",
 
 const csvResourceCases: Array<[string[], Record<string, string | undefined>]> = [
   [["search-csv", "--resource", "schemas", "--term", "Name"], { resource: "schemas", term: "Name" }],
-  [["search-csv", "--resource", " schema", "--term", "Name"], { resource: " schema", term: "Name" }],
+  [["search-csv", "--resource", "sch\u200bema", "--term", "Name"], { resource: "sch\u200bema", term: "Name" }],
   [["search-csv", "--resource", "", "--term", "Name"], { resource: "", term: "Name" }],
   [["search-csv", "--term", "Name"], { term: "Name" }],
 ];
@@ -149,6 +149,18 @@ test("parity: search-csv with a known resource sends the identical request", asy
   assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
 });
 
+test("parity: a padded search-csv resource is a token, sent trimmed by both (D8)", async () => {
+  const { cli, lib } = await parity(
+    ["search-csv", "--resource", " schema\n", "--term", "Name"],
+    (t) => client(t).tools.searchCsvDownload({ resource: " schema\n" as "schema", term: "Name" }),
+    () => rawResponse("a;b\n", "text/csv"),
+  );
+  assert.equal(cli.code, 0, cli.err);
+  assert.ok(lib.ok);
+  assert.deepEqual(requestShapes(cli.requests), requestShapes(lib.requests));
+  assert.equal(new URL(cli.requests[0]!.url).searchParams.get("resource"), "schema");
+});
+
 // ---- Finding #8 (PAT-12): enum-typed query and path values ----
 
 // Plain-JS callers, casts and values taken from data bypass the TypeScript unions.
@@ -158,7 +170,7 @@ const anyClient = (t: Transport) => client(t) as unknown as {
 
 const enumCases: Array<[string[], (t: Transport) => unknown, RegExp]> = [
   [["processes", "get", "P1", "1.0", "999", "17"], (t) => anyClient(t)["processes"]!["get"]!("P1", "1.0", "999", "17"), /^Invalid stufe: Expected one of: 101, 102, 103, 104, 105\.$/],
-  [["processes", "report", "P1", "1.0", " 101", "17"], (t) => anyClient(t)["processes"]!["downloadReport"]!("P1", "1.0", " 101", "17"), /^Invalid stufe: /],
+  [["processes", "report", "P1", "1.0", "101\u200b", "17"], (t) => anyClient(t)["processes"]!["downloadReport"]!("P1", "1.0", "101\u200b", "17"), /^Invalid stufe: /],
   [["processes", "xprozess", "P1", "1.0", "999", "17"], (t) => anyClient(t)["processes"]!["downloadXprozess"]!("P1", "1.0", "999", "17"), /^Invalid stufe: /],
   [["service-texts", "get", "R1", "L1", "bogus"], (t) => anyClient(t)["serviceTexts"]!["get"]!("R1", "L1", "bogus"), /^Invalid source: Expected one of: leika, landesredaktion, pvog\.$/],
   [["service-texts", "pdf", "R1", "L1", "LEIKA", "de"], (t) => anyClient(t)["serviceTexts"]!["exportPdf"]!("R1", "L1", "LEIKA", "de"), /^Invalid source: /],
@@ -167,12 +179,12 @@ const enumCases: Array<[string[], (t: Transport) => unknown, RegExp]> = [
   [["fields", "search", "--feldart", "INPUT"], (t) => anyClient(t)["fields"]!["search"]!({ feldart: "INPUT" }), /^Invalid feldart: /],
   [["fields", "search", "--datentyp", "TEXT"], (t) => anyClient(t)["fields"]!["search"]!({ datentyp: "TEXT" }), /^Invalid datentyp: /],
   [["fields", "search", "--suche-nur-in", "Stichwort"], (t) => anyClient(t)["fields"]!["search"]!({ suche_nur_in: "Stichwort" }), /^Invalid suche_nur_in: /],
-  [["schemas", "search", "--xdf-version", " 2.0"], (t) => anyClient(t)["schemas"]!["search"]!({ xdf_version: " 2.0" }), /^Invalid xdf_version: /],
+  [["schemas", "search", "--xdf-version", "2.0\u200b"], (t) => anyClient(t)["schemas"]!["search"]!({ xdf_version: "2.0\u200b" }), /^Invalid xdf_version: /],
   [["schemas", "search", "--order-by", "NAME_ASC"], (t) => anyClient(t)["schemas"]!["search"]!({ order_by: "NAME_ASC" }), /^Invalid order_by: /],
   [["schemas", "search", "--freigabe-status", "NaN"], (t) => anyClient(t)["schemas"]!["search"]!({ freigabe_status: [NaN] }), /^Invalid freigabe_status: Expected one of: 1, 2, 3, 4, 5, 6, 7, 8\.$/],
   [["schemas", "search", "--freigabe-status", "9"], (t) => anyClient(t)["schemas"]!["search"]!({ freigabe_status: [5, 9] }), /^Invalid freigabe_status: /],
   [["groups", "search", "--suche-nur-in", "Foo"], (t) => anyClient(t)["groups"]!["search"]!({ suche_nur_in: "Foo" }), /^Invalid suche_nur_in: /],
-  [["document-profiles", "search", "--dokumentart", " 001"], (t) => anyClient(t)["documentProfiles"]!["search"]!({ dokumentart: " 001" }), /^Invalid dokumentart: /],
+  [["document-profiles", "search", "--dokumentart", "0\u00ad01"], (t) => anyClient(t)["documentProfiles"]!["search"]!({ dokumentart: "0\u00ad01" }), /^Invalid dokumentart: /],
   [["process-classes", "search", "--operatives-ziel", "000"], (t) => anyClient(t)["processClasses"]!["search"]!({ operatives_ziel: "000" }), /^Invalid operatives_ziel: /],
   [["process-classes", "search", "--verfahrensart", "000"], (t) => anyClient(t)["processClasses"]!["search"]!({ verfahrensart: "000" }), /^Invalid verfahrensart: /],
   [["process-classes", "search", "--handlungsform", "000"], (t) => anyClient(t)["processClasses"]!["search"]!({ handlungsform: "000" }), /^Invalid handlungsform: /],
@@ -191,8 +203,12 @@ for (const [argv, call, message] of enumCases) {
   });
 }
 
-test("parity: valid enum values send the identical request from CLI and library", async () => {
+test("parity: valid enum values send the identical request from CLI and library; a padded one is sent trimmed (D8)", async () => {
   for (const [argv, call] of [
+    [["processes", "report", "P1", "1.0", " 101", "17"], (t: Transport) => client(t).processes.downloadReport("P1", "1.0", " 101" as "101", "17")],
+    [["service-texts", "get", "R1", "L1", " leika\n"], (t: Transport) => client(t).serviceTexts.get("R1", "L1", " leika\n" as "leika")],
+    [["schemas", "search", "--xdf-version", " 2.0"], (t: Transport) => client(t).schemas.search({ xdf_version: " 2.0" as "2.0" })],
+    [["document-profiles", "search", "--dokumentart", " 001"], (t: Transport) => client(t).documentProfiles.search({ dokumentart: " 001" as "001" })],
     [["processes", "get", "P1", "1.0", "101", "17"], (t: Transport) => client(t).processes.get("P1", "1.0", "101", "17")],
     [["service-texts", "get", "R1", "L1", "pvog"], (t: Transport) => client(t).serviceTexts.get("R1", "L1", "pvog")],
     [

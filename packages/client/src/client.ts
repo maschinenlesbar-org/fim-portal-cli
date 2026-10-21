@@ -7,13 +7,13 @@
 //   client.processes.downloadVisualization(id, version, stufe, kodierung)
 
 import { RequestEngine, type EngineOptions, type RawResponse } from "./engine.js";
-import type { QueryParams } from "./query.js";
 import {
   assertPagination,
   assertValid,
   detaillierungsstufeProblem,
-  normalizeText,
+  normalizeToken,
   pathSegment,
+  tokenProblem,
   xzufiSourceProblem,
 } from "./validate.js";
 import type {
@@ -66,7 +66,7 @@ import {
   XZUFI_FTS_LIST_PARAMS,
   XZUFI_LIST_PARAMS,
   assertParams,
-  assertSearchCsvParams,
+  searchCsvQuery,
   type FilterOptions,
   type ParamSpec,
 } from "./filters.js";
@@ -76,14 +76,19 @@ const ACCEPT_PDF = "application/pdf";
 
 /** The XZuFi `source` path segment of a service text, checked against XzufiSourceValues. */
 function sourceSegment(source: XzufiSource): string {
-  assertValid("source", source, xzufiSourceProblem);
-  return pathSegment("source", source);
+  return enumSegment("source", source, xzufiSourceProblem);
 }
 
 /** The `stufe` path segment of a process, checked against DetaillierungsstufeValues. */
 function stufeSegment(stufe: Detaillierungsstufe): string {
-  assertValid("stufe", stufe, detaillierungsstufeProblem);
-  return pathSegment("stufe", stufe);
+  return enumSegment("stufe", stufe, detaillierungsstufeProblem);
+}
+
+/** An enumerated path segment: a token (trimmed, NFC, nothing invisible), then one of its values. */
+function enumSegment(name: string, value: string, problem: (value: unknown) => string | undefined): string {
+  const token = typeof value === "string" ? normalizeToken(assertValid(name, value, tokenProblem)) : value;
+  assertValid(name, token, problem);
+  return pathSegment(name, token);
 }
 
 // Every path id goes through pathSegment(name, value): it rejects a blank id with
@@ -413,10 +418,9 @@ class ToolsResource {
    * sends such filters anyway.
    */
   async searchCsvDownload(params: SearchCsvParams, options: FilterOptions = {}): Promise<RawResponse> {
-    assertSearchCsvParams(params, options);
-    // The search text goes out as the portal matches it; the filters are codes, sent as given.
-    const query = typeof params.term === "string" ? { ...params, term: normalizeText(params.term) } : params;
-    return this.e.getRaw("/tools/search-csv-download", "text/csv", query as QueryParams);
+    // The search text goes out as the portal matches it, the filters as tokens (trimmed, NFC).
+    const { query } = searchCsvQuery(params, options);
+    return this.e.getRaw("/tools/search-csv-download", "text/csv", query);
   }
 }
 

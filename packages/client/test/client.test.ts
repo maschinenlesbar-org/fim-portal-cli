@@ -316,7 +316,7 @@ test("every method DEVELOPING.md's Methods paragraph names exists on the client"
 const DECOMPOSED = "  Müller\t";
 const COMPOSED = "Müller";
 
-test("every free-text filter is sent trimmed and in composed Unicode (NFC); codes and ids are not touched", async () => {
+test("every free-text filter is sent trimmed and in composed Unicode (NFC); codes, dates and enum values are tokens, sent trimmed and in NFC (D8)", async () => {
   const textFilters: Array<[string, (c: FimPortalClient) => Promise<unknown>, string]> = [
     ["name", (c) => c.schemas.search({ name: DECOMPOSED }), "name"],
     ["fts_query", (c) => c.fields.search({ fts_query: DECOMPOSED }), "fts_query"],
@@ -342,14 +342,34 @@ test("every free-text filter is sent trimmed and in composed Unicode (NFC); code
     await call(new FimPortalClient({ transport: mt.transport }));
     assert.equal(queryOf(mt.last()).get(key), COMPOSED, label);
   }
-  // Codes, keys and ids are sent as given.
-  const mt = makeMockTransport(() => jsonResponse({ items: [], total_count: 0 }));
-  const params = { nummernkreis: ["01 "], leistungsschluessel: "99001̈", name: " A " };
-  await new FimPortalClient({ transport: mt.transport }).serviceTexts.search({ leistungsschluessel: params.leistungsschluessel });
-  assert.equal(queryOf(mt.last()).get("leistungsschluessel"), "99001̈");
-  await new FimPortalClient({ transport: mt.transport }).schemas.search({ nummernkreis: params.nummernkreis, name: params.name });
-  assert.deepEqual(queryOf(mt.last()).getAll("nummernkreis"), ["01 "]);
-  assert.deepEqual(params, { nummernkreis: ["01 "], leistungsschluessel: "99001̈", name: " A " }, "the caller's object is not changed");
+  // Codes, keys, dates and enum values are tokens: trimmed and in NFC (a pasted code with a
+  // trailing space matched nothing).
+  const mt = makeMockTransport((req) => (req.url.includes("search-csv") ? rawResponse("a\n", "text/csv") : jsonResponse({ items: [], total_count: 0 })));
+  const params = { nummernkreis: ["01 ", " 02"], leistungsschluessel: " 99001\u0065\u0301\n", name: " A ", updated_since: " 2024-01-01", xdf_version: " 2.0 " };
+  const c = new FimPortalClient({ transport: mt.transport });
+  await c.serviceTexts.search({ leistungsschluessel: params.leistungsschluessel, updated_since: params.updated_since });
+  assert.equal(queryOf(mt.last()).get("leistungsschluessel"), "99001\u00e9");
+  assert.equal(queryOf(mt.last()).get("updated_since"), "2024-01-01");
+  await c.schemas.search({ nummernkreis: params.nummernkreis, name: params.name, xdf_version: params.xdf_version as "2.0" });
+  assert.deepEqual(queryOf(mt.last()).getAll("nummernkreis"), ["01", "02"]);
+  assert.equal(queryOf(mt.last()).get("xdf_version"), "2.0");
+  await c.tools.searchCsvDownload({ resource: "field", feldart: " input", term: " A " });
+  assert.equal(queryOf(mt.last()).get("feldart"), "input");
+  assert.deepEqual(
+    params,
+    { nummernkreis: ["01 ", " 02"], leistungsschluessel: " 99001\u0065\u0301\n", name: " A ", updated_since: " 2024-01-01", xdf_version: " 2.0 " },
+    "the caller's object is not changed",
+  );
+  // A token with an invisible or control character inside is refused, naming it visibly.
+  for (const [call, re] of [
+    [() => c.serviceTexts.search({ leistungsschluessel: "9900\u200b1" }), /^Invalid leistungsschluessel: "9900\\u200b1" contains an invisible or control character \(U\+200B\)\.$/],
+    [() => c.schemas.search({ nummernkreis: ["01", "0\u00ad2"] }), /^Invalid nummernkreis: item 2 of 2: "0\\u00ad2" contains an invisible/],
+    [() => c.schemas.versions("S1\u200b"), /^Invalid fimId: "S1\\u200b" contains an invisible/],
+  ] as const) {
+    const before = mt.calls.length;
+    await assert.rejects(call(), (e: unknown) => e instanceof FimValidationError && re.test(e.message));
+    assert.equal(mt.calls.length, before);
+  }
 });
 
 test("a text filter that is blank once trimmed is refused before any request", async () => {

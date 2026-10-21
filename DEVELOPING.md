@@ -303,7 +303,8 @@ input through `run()` and through the library on one recording mock transport.
 
 What the library rejects with `FimValidationError`, before any request:
 
-- **Blank query values.** A blank string (`""` or whitespace only), a blank
+- **Blank query values.** A blank string (`""`, whitespace, or only invisible characters and
+  combining marks), a blank
   element of an array filter, an empty array, a blank parameter name or an invalid
   `Date` (`new Date("garbage")`, which used to throw a raw `RangeError`), in any
   search, list or `tools.searchCsvDownload` call (`assertNonBlankParams`, run by
@@ -321,10 +322,19 @@ What the library rejects with `FimValidationError`, before any request:
   of the tables in `filters.ts`: `name`, `fts_query`, `bezeichnung`, `stichwort`, `bezug`,
   `bezug_unterelemente`, `Versionshinweis`, `status_gesetzt_durch`, `title`,
   `leistungsbezeichnung`, `leistungsbezeichnung2`, `rechtsgrundlagen`, and the CSV export's
-  `term`) are sent trimmed and in NFC (`normalizeText`, exported): `assertParams` returns the
-  parameters as sent, a copy, the caller's object unchanged. One blank once trimmed is
-  refused like any blank value. Codes, keys, ids and dates (`nummernkreis`,
-  `leistungsschluessel`, `ozg_id`, `redaktion_id`, `lagen_portalverbund`) are sent as given.
+  `term`) are checked by `textProblem` and sent trimmed and in NFC (`normalizeText`, both
+  exported): `assertParams` returns the parameters as sent, a copy, the caller's object
+  unchanged. Refused: a blank value (`isBlank`: whitespace, invisible characters and combining
+  marks only), a lone surrogate, a control character but TAB/LF/CR, a format character but
+  ZWNJ/ZWJ; the reason quotes the value with `quoteValue`. Every other string — codes, keys,
+  ids and dates (`nummernkreis`, `leistungsschluessel`, `ozg_id`, `redaktion_id`,
+  `lagen_portalverbund`, `updated_since`), enum values and sort keys, the CSV export's filters
+  and `resource`, the path ids and the path enums `source` and `stufe` — is a token
+  (`tokenProblem`, `normalizeToken`): refused with any control or format character, sent
+  trimmed and in NFC, an enum then checked against its values. A list (a repeated parameter)
+  is checked item by item (`listProblem`, naming `item i of n`). The CLI's choice options
+  canonicalise the same way (`choiceOption`), and commander's echo of a refused value is
+  escaped (`escapeTerminalText` in `run.ts`). Fix plan 2026-10-21, D8.
 - **Unknown parameters and wrong value types.** Every search and list call checks
   its parameters against its table in [`filters.ts`](packages/client/src/filters.ts)
   (`assertParams`, tables such as `SCHEMA_SEARCH_PARAMS`, read from `openapi.json`):
@@ -502,10 +512,11 @@ everything that drives the CLI is in `apps/cli/test/`.
   must point to a file `package.json` `files` ships; any other document is linked by its absolute
   `https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/<path>` URL).
   The kit round of 2026-10-21 added three, their bodies copied from the create-cli template:
-  P24 (`conformance-p24-input-corpus`: a corpus of tricky values through every text filter and
-  one id of each kind in a path, on the CLI and in the library; both refuse it before any
-  request, exit 1 here, or both send it canonical: text trimmed and NFC, an id trimmed, never
-  with a `/`), P25 (`conformance-p25-response-corpus`: a number a double can't carry is a
+  P24 (`conformance-p24-input-corpus`: a corpus of tricky values through every text filter, the
+  query codes and dates, one id of each kind in a path, the enums and sort keys and the repeatable
+  options, on the CLI and in the library; both refuse it before any request, exit 1 here, showing
+  an invisible character escaped, or both send it canonical: text and tokens trimmed and NFC, an
+  id never with a `/`, a list item by item), P25 (`conformance-p25-response-corpus`: a number a double can't carry is a
   parse error, exit 1, on `schemas get`) and P26 (`conformance-p26-output-integrity`: the built
   bin under `ulimit -f` keeps the old `-o` file whole and leaves no temporary file, and an
   existing file without `--force` costs no request; 30 s, it starts a process).
