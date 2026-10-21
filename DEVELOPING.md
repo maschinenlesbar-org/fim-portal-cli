@@ -439,7 +439,8 @@ and the `cause` chain it attaches.
 **Response shape (2xx).** `getJson` checks the documented envelope of every JSON
 answer (`responseShapeProblem`): a search or `codeLists.list` must return an object
 with an `items` array and a numeric `total_count`, a cursor listing an object with an
-`items` array, a `versions` call an array, and a single record a non-empty object.
+`items` array, a `versions` call an array, and a single record a non-empty object that is not
+the error envelope `{"detail": …}` (an object whose one key is `detail`).
 Anything else — `null`, `{}`, an error envelope, a bare string — is a `FimParseError`
 (`Unexpected response from <path> (HTTP 200): …`), never printed as data or read as
 "nothing found". A number a double can't carry exactly is a `FimParseError` too

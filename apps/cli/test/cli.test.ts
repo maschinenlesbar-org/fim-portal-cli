@@ -873,6 +873,15 @@ test("a malformed answer to a download is an ERROR record of fim-portal.api too 
   assert.equal(cli.files.size, 0);
 });
 
+test("an error envelope answered with HTTP 200 to a record is an ERROR record of fim-portal.api, exit 1, nothing on stdout", async () => {
+  for (const argv of [["schemas", "get", "S1"], ["schemas", "quality-report", "S1"]]) {
+    const cli = makeCli(() => jsonResponse({ detail: "not ok" }));
+    assert.equal(await run(["--compact", ...argv], cli.deps), 1, argv.join(" "));
+    assert.equal(cli.out.join(""), "");
+    assert.match(untimed(cli.err.join("\n")), /^ERROR \[fim-portal\.api\] .*expected a record, got an error envelope: not ok\.$/);
+  }
+});
+
 test("a subcommand's value option does not swallow the program's --log-format, in a parse error too (L6)", async () => {
   // commander takes the program's --log-format out of argv first; --limit is left without its value.
   const cli = makeCli(() => jsonResponse({}));

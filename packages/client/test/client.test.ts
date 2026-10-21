@@ -254,6 +254,30 @@ test("a 2xx JSON body without the documented shape is a FimParseError, never dat
   assert.deepEqual(await clientReturning([fx.schemaOut]).client.schemas.versions("S1"), [fx.schemaOut]);
 });
 
+test("an error envelope ({detail}) answered with a 2xx to a record is a FimParseError naming it, never the record", async () => {
+  const calls: Array<[string, (c: FimPortalClient) => Promise<unknown>]> = [
+    ["schemas.get", (c) => c.schemas.get("S1")],
+    ["schemas.qualityReport", (c) => c.schemas.qualityReport("S1")],
+    ["serviceProfiles.get", (c) => c.serviceProfiles.get("99008001012012")],
+  ];
+  for (const [label, call] of calls) {
+    for (const [body, said] of [
+      [{ detail: "not ok" }, /got an error envelope: not ok\.$/],
+      [{ detail: [{ msg: "field required", loc: ["path", "fim_id"] }] }, /got an error envelope: /],
+      [{ detail: null }, /got an error envelope\.$/],
+    ] as const) {
+      await assert.rejects(
+        call(clientReturning(body).client),
+        (e: unknown) => e instanceof FimParseError && /\(HTTP 200\): expected a record/.test(e.message) && said.test(e.message),
+        `${label}: ${JSON.stringify(body)}`,
+      );
+    }
+  }
+  // A record that has a field named detail among its own is data.
+  const record = { fim_id: "S1", detail: "a field of the record" };
+  assert.deepEqual(await clientReturning(record).client.schemas.get("S1"), record);
+});
+
 test("an HTML page answered with a 2xx to a download is a FimParseError", async () => {
   for (const [body, type] of [
     ["<html>oops</html>", "text/html; charset=utf-8"],

@@ -711,7 +711,8 @@ export class RequestEngine {
  * - `"cursor"`: a cursor-paginated envelope, an object with an `items` array (the XZuFi
  *   entity listings);
  * - `"list"`: an array (the `versions` endpoints);
- * - `"record"`: a non-empty object, not an array (a single record, a quality report).
+ * - `"record"`: a non-empty object, not an array (a single record, a quality report), and not
+ *   the error envelope `{"detail": …}`.
  */
 export type ResponseShape = "page" | "cursor" | "list" | "record";
 
@@ -723,9 +724,20 @@ export function responseShapeProblem(value: unknown, shape: ResponseShape): stri
   switch (shape) {
     case "list":
       return Array.isArray(value) ? undefined : `expected an array, got ${describe()}.`;
-    case "record":
+    case "record": {
       if (!isObject) return `expected an object, got ${describe()}.`;
-      return Object.keys(value).length === 0 ? "expected a record, got an empty object." : undefined;
+      const keys = Object.keys(value);
+      if (keys.length === 0) return "expected a record, got an empty object.";
+      // The portal's (FastAPI's) error envelope is an object whose one key is `detail`; no
+      // record is only that. Answered with a 2xx, it is an error, never the record.
+      if (keys.length === 1 && keys[0] === "detail") {
+        const detail = formatDetail((value as { detail?: unknown }).detail);
+        return detail === undefined || detail === ""
+          ? "expected a record, got an error envelope."
+          : `expected a record, got an error envelope: ${cleanDetail(detail)}${/[.!?]$/.test(detail) ? "" : "."}`;
+      }
+      return undefined;
+    }
     case "page":
     case "cursor": {
       if (!isObject) return `expected a result page, got ${describe()}.`;
