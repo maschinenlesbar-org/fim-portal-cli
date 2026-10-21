@@ -812,12 +812,15 @@ test("a repeated --log-format is reported in the format commander kept, the firs
 });
 
 test("an option's value that looks like --log-format sets no format, in a parse error too (B02-1, L6)", async () => {
-  // commander takes "--log-format" as the User-Agent (or the -o path) and then fails on the command "jsonl".
-  for (const argv of [["--user-agent", "--log-format", "jsonl", "code-lists"], ["-o", "--log-format", "jsonl", "code-lists"]]) {
-    const cli = makeCli(() => jsonResponse({}));
-    assert.equal(await run(argv, cli.deps), 1, JSON.stringify(argv));
-    assert.match(untimed(cli.err[0] ?? ""), /^ERROR \[fim-portal\.cli\] unknown command 'jsonl'/, cli.err.join("\n"));
-  }
+  // commander takes "--log-format" as the User-Agent and then fails on the command "jsonl".
+  const agent = makeCli(() => jsonResponse({}));
+  assert.equal(await run(["--user-agent", "--log-format", "jsonl", "code-lists"], agent.deps), 1);
+  assert.match(untimed(agent.err[0] ?? ""), /^ERROR \[fim-portal\.cli\] unknown command 'jsonl'/, agent.err.join("\n"));
+  // -o refuses a dash-leading value (the next option) before that: a text record too, no request.
+  const output = makeCli(() => jsonResponse({}));
+  assert.equal(await run(["-o", "--log-format", "jsonl", "code-lists"], output.deps), 1);
+  assert.match(untimed(output.err[0] ?? ""), /^ERROR \[fim-portal\.cli\] .*looks like a missing value — "--log-format" is the next option/, output.err.join("\n"));
+  assert.equal(output.mt.calls.length, 0);
   // commander takes "--log-format=jsonl" as the User-Agent and sends it: the log stays text.
   const ua = makeCli(() => jsonResponse({ detail: "boom" }, 500));
   assert.equal(await run(["--user-agent", "--log-format=jsonl", "code-lists"], ua.deps), 1);

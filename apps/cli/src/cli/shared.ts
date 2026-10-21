@@ -83,6 +83,25 @@ export function parseNonEmpty(value: string): string {
 }
 
 /**
+ * commander value-parser for `-o, --output <file>`: a blank path is a usage error, and `-`
+ * means stdout. Any other value that starts with a dash is refused as the next option:
+ * `fim-portal code-lists -o --compact` wrote a pretty-printed file named "--compact" with
+ * exit 0, because commander hands a value option the next argument whatever it looks like
+ * (the same string for `-o -x` and `--output=-x`). A file whose name starts with a dash is
+ * written as `./-name`.
+ */
+export function parseOutputPath(value: string): string {
+  parseNonEmpty(value);
+  if (value !== STDOUT_PATH && value.startsWith("-")) {
+    throw new InvalidArgumentError(
+      `looks like a missing value — ${JSON.stringify(value)} is the next option, consumed because ` +
+        "this one was left without a value. For a file whose name starts with a dash, write ./-name.",
+    );
+  }
+  return value;
+}
+
+/**
  * commander value-parser for a value that ends up in an HTTP header (`--user-agent`):
  * the library's headerValueProblem (non-blank, no C0 control or DEL, tab allowed,
  * nothing above U+00FF), reported as a usage error. The client applies the same

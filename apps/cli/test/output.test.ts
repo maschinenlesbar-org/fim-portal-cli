@@ -86,6 +86,9 @@ test("a refused -o target is a usage error (exit 1) before any request", async (
     const cases: Array<[string[], string]> = [
       [["-o", "", "code-lists"], "Expected a non-empty value."],
       [["-o", "  ", "code-lists"], "Expected a non-empty value."],
+      [["code-lists", "-o", "--compact"], 'looks like a missing value — "--compact" is the next option'],
+      [["--output=-v", "code-lists"], 'looks like a missing value — "-v" is the next option'],
+      [["-o", "--force", "code-lists"], "For a file whose name starts with a dash, write ./-name."],
       [["--force", "code-lists"], "--force needs --output (it only allows overwriting the -o file)."],
       [["-o", existing, "code-lists"], `Refusing to overwrite existing file "${existing}"; pass --force to overwrite.`],
       [["-o", existing, "schemas", "xdf", "S1", "1.0"], `Refusing to overwrite existing file "${existing}"; pass --force to overwrite.`],
@@ -157,5 +160,15 @@ test("a write the file system refuses is an ERROR of the output area naming the 
       assert.match(cli.err[0]!, new RegExp(`^ERROR \\[fim-portal\\.output\\] Could not write to ".*out\\.json": ENOENT`));
     }
     assert.deepEqual(readdirSync(dir), []);
+  });
+});
+
+test("a file whose name starts with a dash is written as ./-name (T13)", async () => {
+  await inTempDir(async (dir) => {
+    const path = join(dir, "-v.json");
+    const cli = makeCli();
+    assert.equal(await run(["-o", `${dir}/./-v.json`, "code-lists"], cli.deps), 0, cli.err.join("\n"));
+    assert.equal(cli.mt.calls.length, 1);
+    assert.match(readFileSync(path, "utf8"), /rotes/);
   });
 });

@@ -16,7 +16,7 @@ import {
   parseBoundedInt,
   parseHeaderValue,
   parseIntArg,
-  parseNonEmpty,
+  parseOutputPath,
 } from "./shared.js";
 import { registerSchemaCommands } from "./commands/schemas.js";
 import { registerDocumentProfileCommands } from "./commands/document-profiles.js";
@@ -89,8 +89,8 @@ export function buildProgram(deps: CliDeps = defaultDeps): Command {
     .option("--compact", "print JSON on a single line instead of pretty-printed")
     .option(
       "-o, --output <file>",
-      'write the output (JSON or a download) to this file instead of stdout ("-" = stdout); an existing file is refused unless --force',
-      parseNonEmpty,
+      'write the output (JSON or a download) to this file instead of stdout ("-" = stdout); an existing file is refused unless --force; a file named -x is written as ./-x',
+      parseOutputPath,
     )
     .option("--force", "with -o: replace an existing file (atomically; through a symlink)")
     .showHelpAfterError();
