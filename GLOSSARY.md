@@ -245,6 +245,14 @@ is rejected before any request: by the CLI as a usage error, and by the library
 version in a path: it would turn a request for one object into the search or the
 versions list.
 
+**Text filters.** The filters the portal searches as text (`--name`, `--fts-query`,
+`--bezeichnung`, `--stichwort`, `--bezug`, `--bezug-unterelemente`, `--versionshinweis`,
+`--status-gesetzt-durch`, `--title`, `--leistungsbezeichnung`, `--leistungsbezeichnung2`,
+`--rechtsgrundlagen`, and `search-csv --term`) go out trimmed and in composed Unicode (NFC):
+a value pasted with a trailing space, or a decomposed "Müller" (u plus a combining
+diaeresis, as macOS file names have it), matched nothing. Codes, keys and ids
+(`--nummernkreis`, `--leistungsschluessel`, `--ozg-id`, a FIM id) and dates are sent as given.
+
 **order_by.** Result ordering. The allowed values differ by resource —
 Datenfelder resources share one set (`relevance`, `id_asc`, `name_asc`, …); services
 have their own sets (including `relevance`, `titel_asc`). `relevance` ranks the hits of

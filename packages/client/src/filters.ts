@@ -12,7 +12,8 @@
 // `{ allowUnknownFilters: true }` as the call's second argument.
 
 import { FimValidationError, cutText } from "./errors.js";
-import { assertValid, oneOfProblem, type Problem } from "./validate.js";
+import { assertValid, normalizeText, oneOfProblem, type Problem } from "./validate.js";
+import type { QueryParams } from "./query.js";
 import {
   AnwendungsgebietValues,
   BehoerdeValues,
@@ -51,19 +52,21 @@ export interface FilterOptions {
 }
 
 /**
- * What one query parameter takes: a string, a date (an ISO string or a valid `Date`), an
+ * What one query parameter takes: a string, free text (`text`: a string the API searches,
+ * sent trimmed and in NFC, normalizeText), a date (an ISO string or a valid `Date`), an
  * integer, a boolean, or one of a fixed set of values; `list` when the API takes it more
  * than once (a repeated key, `?nummernkreis=01&nummernkreis=02`). A list parameter also
- * takes a single value.
+ * takes a single value. A plain `string` (a code, a key, an id) is sent as given.
  */
 export type ParamKind =
-  | { readonly type: "string" | "date" | "int" | "bool"; readonly list?: boolean }
+  | { readonly type: "string" | "text" | "date" | "int" | "bool"; readonly list?: boolean }
   | { readonly type: "enum"; readonly values: readonly unknown[]; readonly list?: boolean };
 
 /** The parameters of one endpoint, by name. */
 export type ParamSpec = Readonly<Record<string, ParamKind>>;
 
 const STRING: ParamKind = { type: "string" };
+const TEXT: ParamKind = { type: "text" };
 const STRINGS: ParamKind = { type: "string", list: true };
 const DATE: ParamKind = { type: "date" };
 const INT: ParamKind = { type: "int" };
@@ -76,17 +79,17 @@ const PAGE: ParamSpec = { offset: INT, limit: INT };
 /** Filters shared by the four XDatenfelder v1 searches. */
 const DATENFELDER: ParamSpec = {
   ...PAGE,
-  name: STRING,
+  name: TEXT,
   nummernkreis: STRINGS,
   freigabe_status: someOf(FreigabeStatusValues),
-  status_gesetzt_durch: STRING,
+  status_gesetzt_durch: TEXT,
   status_gesetzt_seit: DATE,
   status_gesetzt_bis: DATE,
-  bezug: STRING,
-  Versionshinweis: STRING,
+  bezug: TEXT,
+  Versionshinweis: TEXT,
   updated_since: DATE,
   xdf_version: oneOf(XdfVersionValues),
-  fts_query: STRING,
+  fts_query: TEXT,
   is_latest: BOOL,
   order_by: oneOf(DatenfelderSearchOrderValues),
 };
@@ -95,18 +98,18 @@ const DATENFELDER: ParamSpec = {
 export const SCHEMA_SEARCH_PARAMS: ParamSpec = {
   ...DATENFELDER,
   gueltig_am: DATE,
-  bezug_unterelemente: STRING,
-  bezeichnung: STRING,
-  stichwort: STRING,
+  bezug_unterelemente: TEXT,
+  bezeichnung: TEXT,
+  stichwort: TEXT,
   suche_nur_in: oneOf(SchemaSucheInValues),
 };
 
 /** `documentProfiles.search` — GET /api/v1/document-profiles (no `gueltig_am`). */
 export const DOCUMENT_PROFILE_SEARCH_PARAMS: ParamSpec = {
   ...DATENFELDER,
-  bezeichnung: STRING,
+  bezeichnung: TEXT,
   dokumentart: oneOf(DokumentartValues),
-  stichwort: STRING,
+  stichwort: TEXT,
   suche_nur_in: oneOf(SteckbriefSucheInValues),
 };
 
@@ -135,13 +138,13 @@ const SERVICES: ParamSpec = {
   ...PAGE,
   leistungstyp: STRINGS,
   typisierung: STRINGS,
-  fts_query: STRING,
+  fts_query: TEXT,
   suche_nur_in: oneOf(LeistungSucheInValues),
-  title: STRING,
-  leistungsbezeichnung: STRING,
-  leistungsbezeichnung2: STRING,
+  title: TEXT,
+  leistungsbezeichnung: TEXT,
+  leistungsbezeichnung2: TEXT,
   leistungsschluessel: STRING,
-  rechtsgrundlagen: STRING,
+  rechtsgrundlagen: TEXT,
   einheitlicher_ansprechpartner: BOOL,
   updated_since: DATE,
   lagen_portalverbund: STRING,
@@ -170,7 +173,7 @@ export const SERVICE_TEXT_SEARCH_PARAMS: ParamSpec = {
 };
 
 /** `organizationalUnits.list` and `onlineServices.list` — cursor pages with full-text search. */
-export const XZUFI_FTS_LIST_PARAMS: ParamSpec = { cursor: INT, limit: INT, fts_query: STRING };
+export const XZUFI_FTS_LIST_PARAMS: ParamSpec = { cursor: INT, limit: INT, fts_query: TEXT };
 
 /** `specializations.list` — GET /api/v0/specialization takes no `fts_query` (it was ignored). */
 export const XZUFI_LIST_PARAMS: ParamSpec = { cursor: INT, limit: INT };
@@ -178,7 +181,7 @@ export const XZUFI_LIST_PARAMS: ParamSpec = { cursor: INT, limit: INT };
 /** `processClasses.search` — GET /api/v0/processclasses. */
 export const PROCESS_CLASS_SEARCH_PARAMS: ParamSpec = {
   ...PAGE,
-  fts_query: STRING,
+  fts_query: TEXT,
   freigabe_status: someOf(FreigabeStatusValues),
   operatives_ziel: oneOf(OperativesZielValues),
   verfahrensart: oneOf(VerfahrensartValues),
@@ -193,7 +196,7 @@ export const PROCESS_SEARCH_PARAMS: ParamSpec = {
   detaillierungsstufe: oneOf(DetaillierungsstufeValues),
   anwendungsgebiet: oneOf(AnwendungsgebietValues),
   is_musterprozess: BOOL,
-  fts_query: STRING,
+  fts_query: TEXT,
 };
 
 /** `codeLists.list` — GET /api/v0/code-lists. */
@@ -252,6 +255,7 @@ export const CSV_ORDER_VALUES: Readonly<Partial<Record<SearchCsvResource, readon
  * have no documented domain and pass as non-blank strings.
  */
 export const SEARCH_CSV_FILTERS: Readonly<Record<string, CsvFilter>> = {
+  /** The search text: sent trimmed and in NFC (normalizeText). */
   term: {},
   order_by: { resources: Object.keys(CSV_ORDER_VALUES) as SearchCsvResource[] },
   abstraktionsstufe: { values: CSV_ABSTRAKTIONSSTUFE_VALUES, resources: ["document-profile"] },
@@ -283,6 +287,7 @@ function kindProblem(kind: ParamKind): Problem<unknown> {
   const one: Problem<unknown> = (value) => {
     switch (kind.type) {
       case "string":
+      case "text":
         return typeof value === "string" ? undefined : "Expected a string.";
       case "date":
         if (typeof value === "string") return undefined;
@@ -381,19 +386,27 @@ function unknownKey(key: string, call: string, known: readonly string[]): FimVal
  * value of a single-value parameter would be dropped by the server). `undefined` and
  * `null` mean omitted. Throws FimValidationError (`Invalid <key>: <reason>`) before any
  * request. Blank values are refused separately (assertNonBlankParams, in the engine).
+ *
+ * Returns the parameters as they are sent: a copy in which every `text` parameter is
+ * trimmed and in NFC (normalizeText); everything else, and the caller's object, unchanged.
  */
-export function assertParams(params: unknown, spec: ParamSpec, call: string, options: FilterOptions = {}): void {
+export function assertParams(params: unknown, spec: ParamSpec, call: string, options: FilterOptions = {}): QueryParams {
   const record = paramRecord(params, call);
   const known = Object.keys(spec);
+  const sent: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(record)) {
+    sent[key] = value;
     if (value === undefined || value === null) continue;
     if (!Object.hasOwn(spec, key)) {
       if (options.allowUnknownFilters !== true) throw unknownKey(key, call, known);
       assertValid(key, value, anyScalarProblem);
       continue;
     }
-    assertValid(key, value, kindProblem(spec[key]!));
+    const kind = spec[key]!;
+    assertValid(key, value, kindProblem(kind));
+    if (kind.type === "text" && typeof value === "string") sent[key] = normalizeText(value);
   }
+  return sent as QueryParams;
 }
 
 /**

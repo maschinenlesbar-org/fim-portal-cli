@@ -31,6 +31,18 @@ export function isBlank(value: string): boolean {
 }
 
 /**
+ * A free-text filter as the API matches it: without surrounding whitespace (a value pasted
+ * with a trailing space matched nothing) and in composed Unicode, NFC (a decomposed
+ * "Müller", u plus U+0308 as pasted from a macOS file name, matched nothing). Inner
+ * whitespace is kept. Only text the API searches goes through it (the `text` parameters of
+ * filters.ts, the CSV export's `term`), never an id, a code, a key or a date. A value blank
+ * once trimmed is refused before any request (assertNonBlankParams).
+ */
+export function normalizeText(value: string): string {
+  return value.trim().normalize("NFC");
+}
+
+/**
  * A blank value ("" or whitespace only) is invalid: the API treats an empty
  * parameter as no filter and answers with the unfiltered result, and an empty path
  * segment re-targets the request to another endpoint.

@@ -280,3 +280,53 @@ test("every method DEVELOPING.md's Methods paragraph names exists on the client"
   }
   for (const name of named) assert.ok(methods.has(name), `DEVELOPING.md names ${name}(), which no resource group has`);
 });
+
+// ---- text filters go out canonical: trimmed, NFC ----
+
+const DECOMPOSED = "  Müller\t";
+const COMPOSED = "Müller";
+
+test("every free-text filter is sent trimmed and in composed Unicode (NFC); codes and ids are not touched", async () => {
+  const textFilters: Array<[string, (c: FimPortalClient) => Promise<unknown>, string]> = [
+    ["name", (c) => c.schemas.search({ name: DECOMPOSED }), "name"],
+    ["fts_query", (c) => c.fields.search({ fts_query: DECOMPOSED }), "fts_query"],
+    ["bezeichnung", (c) => c.documentProfiles.search({ bezeichnung: DECOMPOSED }), "bezeichnung"],
+    ["stichwort", (c) => c.schemas.search({ stichwort: DECOMPOSED }), "stichwort"],
+    ["bezug", (c) => c.groups.search({ bezug: DECOMPOSED }), "bezug"],
+    ["bezug_unterelemente", (c) => c.schemas.search({ bezug_unterelemente: DECOMPOSED }), "bezug_unterelemente"],
+    ["Versionshinweis", (c) => c.schemas.search({ Versionshinweis: DECOMPOSED }), "Versionshinweis"],
+    ["status_gesetzt_durch", (c) => c.fields.search({ status_gesetzt_durch: DECOMPOSED }), "status_gesetzt_durch"],
+    ["title", (c) => c.serviceProfiles.search({ title: DECOMPOSED }), "title"],
+    ["leistungsbezeichnung", (c) => c.serviceTexts.search({ leistungsbezeichnung: DECOMPOSED }), "leistungsbezeichnung"],
+    ["leistungsbezeichnung2", (c) => c.serviceProfiles.search({ leistungsbezeichnung2: DECOMPOSED }), "leistungsbezeichnung2"],
+    ["rechtsgrundlagen", (c) => c.serviceTexts.search({ rechtsgrundlagen: DECOMPOSED }), "rechtsgrundlagen"],
+    ["processClasses fts_query", (c) => c.processClasses.search({ fts_query: DECOMPOSED }), "fts_query"],
+    ["processes fts_query", (c) => c.processes.search({ fts_query: DECOMPOSED }), "fts_query"],
+    ["organizationalUnits fts_query", (c) => c.organizationalUnits.list({ fts_query: DECOMPOSED }), "fts_query"],
+    ["search-csv term", (c) => c.tools.searchCsvDownload({ resource: "schema", term: DECOMPOSED }), "term"],
+  ];
+  for (const [label, call, key] of textFilters) {
+    const mt = makeMockTransport((req) =>
+      req.url.includes("search-csv") ? rawResponse("a\n", "text/csv") : req.url.includes("organizational-unit") ? jsonResponse({ items: [] }) : jsonResponse({ items: [], total_count: 0 }),
+    );
+    await call(new FimPortalClient({ transport: mt.transport }));
+    assert.equal(queryOf(mt.last()).get(key), COMPOSED, label);
+  }
+  // Codes, keys and ids are sent as given.
+  const mt = makeMockTransport(() => jsonResponse({ items: [], total_count: 0 }));
+  const params = { nummernkreis: ["01 "], leistungsschluessel: "99001̈", name: " A " };
+  await new FimPortalClient({ transport: mt.transport }).serviceTexts.search({ leistungsschluessel: params.leistungsschluessel });
+  assert.equal(queryOf(mt.last()).get("leistungsschluessel"), "99001̈");
+  await new FimPortalClient({ transport: mt.transport }).schemas.search({ nummernkreis: params.nummernkreis, name: params.name });
+  assert.deepEqual(queryOf(mt.last()).getAll("nummernkreis"), ["01 "]);
+  assert.deepEqual(params, { nummernkreis: ["01 "], leistungsschluessel: "99001̈", name: " A " }, "the caller's object is not changed");
+});
+
+test("a text filter that is blank once trimmed is refused before any request", async () => {
+  for (const blank of ["", " ", " ", "\n\t", "　"]) {
+    const mt = makeMockTransport(() => jsonResponse({ items: [], total_count: 0 }));
+    await assert.rejects(new FimPortalClient({ transport: mt.transport }).schemas.search({ name: blank }), FimValidationError, JSON.stringify(blank));
+    await assert.rejects(new FimPortalClient({ transport: mt.transport }).tools.searchCsvDownload({ resource: "schema", term: blank }), FimValidationError, JSON.stringify(blank));
+    assert.equal(mt.calls.length, 0);
+  }
+});

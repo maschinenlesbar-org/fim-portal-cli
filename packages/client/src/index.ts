@@ -45,6 +45,7 @@ export {
   limitProblem,
   nonEmptyProblem,
   nonNegativeIntProblem,
+  normalizeText,
   oneOfProblem,
   pathSegment,
   pathSegmentProblem,

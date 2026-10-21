@@ -12,6 +12,7 @@ import {
   assertPagination,
   assertValid,
   detaillierungsstufeProblem,
+  normalizeText,
   pathSegment,
   xzufiSourceProblem,
 } from "./validate.js";
@@ -95,9 +96,9 @@ class SchemasResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: SchemaSearchParams = {}, options: FilterOptions = {}): Promise<PaginatedResult<SchemaOut>> {
-    assertParams(params, SCHEMA_SEARCH_PARAMS, "schemas.search", options);
+    const query = assertParams(params, SCHEMA_SEARCH_PARAMS, "schemas.search", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v1/schemas", params as QueryParams, "page");
+    return this.e.getJson("/api/v1/schemas", query, "page");
   }
 
   /** All versions of a schema, ascending. */
@@ -124,9 +125,9 @@ class DocumentProfilesResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: DocumentProfileSearchParams = {}, options: FilterOptions = {}): Promise<PaginatedResult<SteckbriefOut>> {
-    assertParams(params, DOCUMENT_PROFILE_SEARCH_PARAMS, "documentProfiles.search", options);
+    const query = assertParams(params, DOCUMENT_PROFILE_SEARCH_PARAMS, "documentProfiles.search", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v1/document-profiles", params as QueryParams, "page");
+    return this.e.getJson("/api/v1/document-profiles", query, "page");
   }
 
   async versions(fimId: string): Promise<SteckbriefOut[]> {
@@ -150,9 +151,9 @@ class FieldsResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: FieldSearchParams = {}, options: FilterOptions = {}): Promise<PaginatedResult<DatenfeldOut>> {
-    assertParams(params, FIELD_SEARCH_PARAMS, "fields.search", options);
+    const query = assertParams(params, FIELD_SEARCH_PARAMS, "fields.search", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v1/fields", params as QueryParams, "page");
+    return this.e.getJson("/api/v1/fields", query, "page");
   }
 
   async versions(namespace: string, fimId: string): Promise<DatenfeldOut[]> {
@@ -176,9 +177,9 @@ class GroupsResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: GroupSearchParams = {}, options: FilterOptions = {}): Promise<PaginatedResult<DatenfeldgruppeOut>> {
-    assertParams(params, GROUP_SEARCH_PARAMS, "groups.search", options);
+    const query = assertParams(params, GROUP_SEARCH_PARAMS, "groups.search", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v1/groups", params as QueryParams, "page");
+    return this.e.getJson("/api/v1/groups", query, "page");
   }
 
   async versions(namespace: string, fimId: string): Promise<DatenfeldgruppeOut[]> {
@@ -202,9 +203,9 @@ class ServiceProfilesResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: LeistungSteckbriefSearchParams = {}, options: FilterOptions = {}): Promise<JsonObject> {
-    assertParams(params, SERVICE_PROFILE_SEARCH_PARAMS, "serviceProfiles.search", options);
+    const query = assertParams(params, SERVICE_PROFILE_SEARCH_PARAMS, "serviceProfiles.search", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/leistung-steckbriefe", params as QueryParams, "page");
+    return this.e.getJson("/api/v0/leistung-steckbriefe", query, "page");
   }
 
   async get(leistungsschluessel: string): Promise<LeistungSteckbrief> {
@@ -228,9 +229,9 @@ class ServiceTextsResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: LeistungStammtextSearchParams = {}, options: FilterOptions = {}): Promise<PaginatedResult<LeistungStammtextOut>> {
-    assertParams(params, SERVICE_TEXT_SEARCH_PARAMS, "serviceTexts.search", options);
+    const query = assertParams(params, SERVICE_TEXT_SEARCH_PARAMS, "serviceTexts.search", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/leistung-stammtexte", params as QueryParams, "page");
+    return this.e.getJson("/api/v0/leistung-stammtexte", query, "page");
   }
 
   async get(redaktionId: string, leistungId: string, source: XzufiSource): Promise<FullLeistungStammtextOut> {
@@ -282,9 +283,9 @@ class XzufiEntityResource<T> {
   ) {}
 
   async list(params: XzufiEntityListParams = {}, options: FilterOptions = {}): Promise<CursorPaginationResult<T>> {
-    assertParams(params, this.params, `${this.name}.list`, options);
+    const query = assertParams(params, this.params, `${this.name}.list`, options);
     assertPagination(params ?? {});
-    return this.e.getJson(this.listPath, params as QueryParams, "cursor");
+    return this.e.getJson(this.listPath, query, "cursor");
   }
 
   async downloadXzufi(redaktionId: string, id: string): Promise<RawResponse> {
@@ -297,9 +298,9 @@ class ProcessClassesResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: ProcessClassSearchParams = {}, options: FilterOptions = {}): Promise<JsonObject> {
-    assertParams(params, PROCESS_CLASS_SEARCH_PARAMS, "processClasses.search", options);
+    const query = assertParams(params, PROCESS_CLASS_SEARCH_PARAMS, "processClasses.search", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/processclasses", params as QueryParams, "page");
+    return this.e.getJson("/api/v0/processclasses", query, "page");
   }
 
   async get(id: string, version: string): Promise<ProcessClass> {
@@ -324,9 +325,9 @@ class ProcessesResource {
   constructor(private readonly e: RequestEngine) {}
 
   async search(params: ProcessSearchParams = {}, options: FilterOptions = {}): Promise<JsonObject> {
-    assertParams(params, PROCESS_SEARCH_PARAMS, "processes.search", options);
+    const query = assertParams(params, PROCESS_SEARCH_PARAMS, "processes.search", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/processes", params as QueryParams, "page");
+    return this.e.getJson("/api/v0/processes", query, "page");
   }
 
   async get(id: string, version: string, stufe: Detaillierungsstufe, kodierung: string): Promise<Process> {
@@ -390,9 +391,9 @@ class CodeListsResource {
   constructor(private readonly e: RequestEngine) {}
 
   async list(params: Pagination = {}, options: FilterOptions = {}): Promise<PaginatedResult<CodeList>> {
-    assertParams(params, CODE_LIST_PARAMS, "codeLists.list", options);
+    const query = assertParams(params, CODE_LIST_PARAMS, "codeLists.list", options);
     assertPagination(params ?? {});
-    return this.e.getJson("/api/v0/code-lists", params as QueryParams, "page");
+    return this.e.getJson("/api/v0/code-lists", query, "page");
   }
 }
 
@@ -413,7 +414,9 @@ class ToolsResource {
    */
   async searchCsvDownload(params: SearchCsvParams, options: FilterOptions = {}): Promise<RawResponse> {
     assertSearchCsvParams(params, options);
-    return this.e.getRaw("/tools/search-csv-download", "text/csv", params as QueryParams);
+    // The search text goes out as the portal matches it; the filters are codes, sent as given.
+    const query = typeof params.term === "string" ? { ...params, term: normalizeText(params.term) } : params;
+    return this.e.getRaw("/tools/search-csv-download", "text/csv", query as QueryParams);
   }
 }
 

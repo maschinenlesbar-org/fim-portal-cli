@@ -300,6 +300,14 @@ What the library rejects with `FimValidationError`, before any request:
   would turn `schemas.versions("")` into the search collection and
   `schemas.get("S1", "")` into the versions list, returned as the requested object.
   `RequestEngine.buildUrl` also rejects `.`/`..` and any empty segment.
+- **Text filters, canonical.** The parameters the portal searches as text (the `text` kind
+  of the tables in `filters.ts`: `name`, `fts_query`, `bezeichnung`, `stichwort`, `bezug`,
+  `bezug_unterelemente`, `Versionshinweis`, `status_gesetzt_durch`, `title`,
+  `leistungsbezeichnung`, `leistungsbezeichnung2`, `rechtsgrundlagen`, and the CSV export's
+  `term`) are sent trimmed and in NFC (`normalizeText`, exported): `assertParams` returns the
+  parameters as sent, a copy, the caller's object unchanged. One blank once trimmed is
+  refused like any blank value. Codes, keys, ids and dates (`nummernkreis`,
+  `leistungsschluessel`, `ozg_id`, `redaktion_id`, `lagen_portalverbund`) are sent as given.
 - **Unknown parameters and wrong value types.** Every search and list call checks
   its parameters against its table in [`filters.ts`](packages/client/src/filters.ts)
   (`assertParams`, tables such as `SCHEMA_SEARCH_PARAMS`, read from `openapi.json`):

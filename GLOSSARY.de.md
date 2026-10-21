@@ -246,6 +246,15 @@ der Bibliothek (`FimPortalClient`) mit einem `FimValidationError`. Dasselbe gilt
 leere ID oder Version im Pfad: Sie würde aus der Anfrage nach einem Objekt die Suche oder
 die Versionsliste machen.
 
+**Textfilter.** Die Filter, die das Portal als Text durchsucht (`--name`, `--fts-query`,
+`--bezeichnung`, `--stichwort`, `--bezug`, `--bezug-unterelemente`, `--versionshinweis`,
+`--status-gesetzt-durch`, `--title`, `--leistungsbezeichnung`, `--leistungsbezeichnung2`,
+`--rechtsgrundlagen` und `search-csv --term`), werden ohne umgebenden Leerraum und in
+zusammengesetztem Unicode (NFC) gesendet: Ein Wert mit einem mitkopierten Leerzeichen am Ende
+oder ein zerlegtes „Müller" (u plus kombinierendes Trema, wie in macOS-Dateinamen) fand
+nichts. Codes, Schlüssel und IDs (`--nummernkreis`, `--leistungsschluessel`, `--ozg-id`, eine
+FIM-ID) und Datumsangaben werden unverändert gesendet.
+
 **order_by.** Sortierung der Ergebnisse. Die zulässigen Werte hängen von der Ressource ab –
 die Datenfelder-Ressourcen teilen sich einen Satz (`relevance`, `id_asc`, `name_asc`, …);
 Leistungen haben eigene Sätze (u. a. `relevance`, `titel_asc`). `relevance` ordnet die
