@@ -548,7 +548,10 @@ everything that drives the CLI is in `apps/cli/test/`.
   file without `--force` and a missing directory cost no request; `/dev/null`, a FIFO and
   `/dev/stdout` are written in place; `--force` through a dangling link creates its file; a
   255-byte name is written; a signal leaves no claim or temporary file; 30 s, it starts a
-  process).
+  process) and P27 (`conformance-p27-big-and-odd-answers`: a large flat answer prints with
+  `--compact` in a 256 MB heap, 20 M DEL characters print escaped in 512 MB and 90 MB of them is an
+  ERROR record of `fim-portal.output`, never a crash; a lone surrogate or invalid UTF-8 becomes
+  U+FFFD with a WARN of `fim-portal.api`; it starts processes, 30 s).
 - **`output.test.ts`** — `-o` and `--force` against real files in a temp directory: refused
   targets, atomic replace, mode and symlinks, a file that appears during the request.
 - **`parity.test.ts`** — the same input through the CLI and the library (`parity()`): both reject
