@@ -75,6 +75,7 @@ new FimPortalClient({
   transport: customTransport,  // inject your own HTTP transport (see below)
   onRetry: (event) => {},      // told about each retry, before the wait
   onWarning: (message) => {},  // told when text in an answer was replaced with U+FFFD
+  bigIntegerKeys: new Set(["_version_"]), // members delivered as their exact literal, a string
 });
 ```
 
@@ -480,7 +481,9 @@ not with the double's exact binary value: `12345678901234567890` prints as
 server printed in its shortest form) print as the same number and pass. Below 2^53 a decimal
 fraction keeps a double's usual precision, as JSON means it. No
 field of the API is a number that large (ids, keys and cursors are strings or small
-integers). `getRaw` refuses an HTML page (by Content-Type, or a body that starts
+integers), so the client declares no `bigIntegerKeys`; a library caller may: a declared
+member's number is delivered as its exact literal, as a string, whatever its size (`scanNumbers`,
+one linear pass that skips strings, no reviver). `getRaw` refuses an HTML page (by Content-Type, or a body that starts
 `<!doctype html`/`<html`) answered to a download, so `-o` doesn't save a maintenance
 page over the user's file.
 
@@ -531,8 +534,9 @@ everything that drives the CLI is in `apps/cli/test/`.
   query codes and dates, one id of each kind in a path, the enums and sort keys and the repeatable
   options, on the CLI and in the library; both refuse it before any request, exit 1 here, showing
   an invisible character escaped, or both send it canonical: text and tokens trimmed and NFC, an
-  id never with a `/`, a list item by item), P25 (`conformance-p25-response-corpus`: a number a double can't carry is a
-  parse error, exit 1, on `schemas get`) and P26 (`conformance-p26-output-integrity`: the built
+  id never with a `/`, a list item by item), P25 (`conformance-p25-response-corpus`: a number a double can't carry, a subnormal that
+  prints changed included, is a parse error, exit 1, on `schemas get`; every answer error names
+  the request on both sides; a declared big-integer member, none here, is its exact literal) and P26 (`conformance-p26-output-integrity`: the built
   bin under `ulimit -f` keeps the old `-o` file whole and leaves no temporary file, and an
   existing file without `--force` costs no request; 30 s, it starts a process).
 - **`output.test.ts`** — `-o` and `--force` against real files in a temp directory: refused
