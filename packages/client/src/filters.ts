@@ -47,7 +47,7 @@ export interface FilterOptions {
    * `tools.searchCsvDownload` it also lets through a filter for another resource and a
    * value outside the known domain, which the CSV export ignores in the same way.
    */
-  allowUnknownFilters?: boolean;
+  allowUnknownFilters?: boolean | undefined;
 }
 
 /**

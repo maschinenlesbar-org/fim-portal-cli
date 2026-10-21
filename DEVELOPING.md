@@ -76,6 +76,12 @@ new FimPortalClient({
 });
 ```
 
+Every optional field of the option and parameter interfaces (`EngineOptions`, `FilterOptions`,
+the `*SearchParams`, `Pagination`, `XzufiEntityListParams`, `SearchCsvParams`) is declared
+`?: T | undefined`: `undefined` means omitted (the default, no filter), so
+`new FimPortalClient({ baseUrl: process.env.FIM_BASE_URL })` compiles in a project that sets
+`exactOptionalPropertyTypes` too.
+
 ### Resource groups
 
 `client.schemas`, `.documentProfiles`, `.fields`, `.groups`, `.serviceProfiles`,
@@ -449,6 +455,8 @@ everything that drives the CLI is in `apps/cli/test/`.
 - **`http.test.ts`** — the default transport against a real loopback `http.createServer`.
 - **`engine.test.ts`** — URL building, JSON/raw decoding, error mapping, 429/503 retry — mocked transport.
 - **`client.test.ts`** — every endpoint's method/URL mapping + query serialisation — mocked transport.
+- **`types.test.ts`** — a consumer compiled by `tsc` with `exactOptionalPropertyTypes` may pass
+  `undefined` for every option and parameter, and `undefined` means the default at run time.
 - **`validate.test.ts`** — the input rules, `assertValid`, and how `run()` reports a `FimValidationError`.
 - **`filters.test.ts`** — unknown and misspelled parameters, value types, the CSV export's filter checks,
   `allowUnknownFilters`, and repeated CLI options (P10).

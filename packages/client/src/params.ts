@@ -42,17 +42,17 @@ export const LIMIT_MAX = 200;
  */
 export interface Pagination {
   /** A non-negative safe integer. */
-  offset?: number;
+  offset?: number | undefined;
   /** An integer in LIMIT_MIN..LIMIT_MAX (1..200), defaults to 200 server-side. */
-  limit?: number;
+  limit?: number | undefined;
 }
 
 /** Cursor pagination shared by the v0 XZuFi entity listings. */
 export interface CursorPagination {
   /** A non-negative safe integer: the `next_cursor` of the previous page. */
-  cursor?: number;
+  cursor?: number | undefined;
   /** An integer in LIMIT_MIN..LIMIT_MAX (1..200). */
-  limit?: number;
+  limit?: number | undefined;
 }
 
 /**
@@ -61,119 +61,119 @@ export interface CursorPagination {
  * ignores it upstream, so `specializations.list` rejects it.
  */
 export interface XzufiEntityListParams extends CursorPagination {
-  fts_query?: string;
+  fts_query?: string | undefined;
 }
 
 /** Fields common to the four XDatenfelder v1 search endpoints. */
 interface DatenfelderCommonSearch extends Pagination {
-  name?: string;
-  nummernkreis?: string[];
-  freigabe_status?: FreigabeStatus[];
-  gueltig_am?: string;
-  status_gesetzt_durch?: string;
-  status_gesetzt_seit?: string;
-  status_gesetzt_bis?: string;
-  bezug?: string;
+  name?: string | undefined;
+  nummernkreis?: string[] | undefined;
+  freigabe_status?: FreigabeStatus[] | undefined;
+  gueltig_am?: string | undefined;
+  status_gesetzt_durch?: string | undefined;
+  status_gesetzt_seit?: string | undefined;
+  status_gesetzt_bis?: string | undefined;
+  bezug?: string | undefined;
   /** Capitalised as in the API; a lowercase `versionshinweis` would be ignored upstream. */
-  Versionshinweis?: string;
-  updated_since?: string;
-  xdf_version?: XdfVersion;
-  fts_query?: string;
-  is_latest?: boolean;
-  order_by?: DatenfelderSearchOrder;
+  Versionshinweis?: string | undefined;
+  updated_since?: string | undefined;
+  xdf_version?: XdfVersion | undefined;
+  fts_query?: string | undefined;
+  is_latest?: boolean | undefined;
+  order_by?: DatenfelderSearchOrder | undefined;
 }
 
 export interface SchemaSearchParams extends DatenfelderCommonSearch {
-  bezug_unterelemente?: string;
-  bezeichnung?: string;
-  stichwort?: string;
-  suche_nur_in?: SchemaSucheIn;
+  bezug_unterelemente?: string | undefined;
+  bezeichnung?: string | undefined;
+  stichwort?: string | undefined;
+  suche_nur_in?: SchemaSucheIn | undefined;
 }
 
 export interface DocumentProfileSearchParams extends Pagination {
-  name?: string;
-  freigabe_status?: FreigabeStatus[];
-  status_gesetzt_durch?: string;
-  status_gesetzt_seit?: string;
-  status_gesetzt_bis?: string;
-  bezeichnung?: string;
-  dokumentart?: Dokumentart;
-  nummernkreis?: string[];
-  bezug?: string;
-  fts_query?: string;
-  suche_nur_in?: SteckbriefSucheIn;
+  name?: string | undefined;
+  freigabe_status?: FreigabeStatus[] | undefined;
+  status_gesetzt_durch?: string | undefined;
+  status_gesetzt_seit?: string | undefined;
+  status_gesetzt_bis?: string | undefined;
+  bezeichnung?: string | undefined;
+  dokumentart?: Dokumentart | undefined;
+  nummernkreis?: string[] | undefined;
+  bezug?: string | undefined;
+  fts_query?: string | undefined;
+  suche_nur_in?: SteckbriefSucheIn | undefined;
   /** Capitalised as in the API; a lowercase `versionshinweis` would be ignored upstream. */
-  Versionshinweis?: string;
-  updated_since?: string;
-  xdf_version?: XdfVersion;
-  stichwort?: string;
-  is_latest?: boolean;
-  order_by?: DatenfelderSearchOrder;
+  Versionshinweis?: string | undefined;
+  updated_since?: string | undefined;
+  xdf_version?: XdfVersion | undefined;
+  stichwort?: string | undefined;
+  is_latest?: boolean | undefined;
+  order_by?: DatenfelderSearchOrder | undefined;
 }
 
 export interface FieldSearchParams extends DatenfelderCommonSearch {
-  suche_nur_in?: FeldSucheIn;
-  feldart?: Feldart;
-  datentyp?: Datentyp;
+  suche_nur_in?: FeldSucheIn | undefined;
+  feldart?: Feldart | undefined;
+  datentyp?: Datentyp | undefined;
 }
 
 export interface GroupSearchParams extends DatenfelderCommonSearch {
-  suche_nur_in?: GruppeSucheIn;
+  suche_nur_in?: GruppeSucheIn | undefined;
 }
 
 export interface LeistungSteckbriefSearchParams extends Pagination {
-  leistungstyp?: LeistungsTyp[];
-  typisierung?: LeistungsTypisierung[];
-  fts_query?: string;
-  suche_nur_in?: LeistungSucheIn;
-  title?: string;
-  leistungsbezeichnung?: string;
-  leistungsbezeichnung2?: string;
-  leistungsschluessel?: string;
-  rechtsgrundlagen?: string;
-  freigabe_status?: FreigabeStatus[];
-  einheitlicher_ansprechpartner?: boolean;
-  updated_since?: string;
-  lagen_portalverbund?: string;
-  sdg?: SDG[];
-  sdg_relevant?: boolean;
-  sprache?: Sprache;
-  leistungsadressat?: Leistungsadressat[];
-  ozg_themenfeld?: OzgThemenfeld[];
-  ozg_id?: string;
-  vollzugsbehoerde?: Behoerde;
-  order_by?: LeistungSteckbriefSearchOrder;
+  leistungstyp?: LeistungsTyp[] | undefined;
+  typisierung?: LeistungsTypisierung[] | undefined;
+  fts_query?: string | undefined;
+  suche_nur_in?: LeistungSucheIn | undefined;
+  title?: string | undefined;
+  leistungsbezeichnung?: string | undefined;
+  leistungsbezeichnung2?: string | undefined;
+  leistungsschluessel?: string | undefined;
+  rechtsgrundlagen?: string | undefined;
+  freigabe_status?: FreigabeStatus[] | undefined;
+  einheitlicher_ansprechpartner?: boolean | undefined;
+  updated_since?: string | undefined;
+  lagen_portalverbund?: string | undefined;
+  sdg?: SDG[] | undefined;
+  sdg_relevant?: boolean | undefined;
+  sprache?: Sprache | undefined;
+  leistungsadressat?: Leistungsadressat[] | undefined;
+  ozg_themenfeld?: OzgThemenfeld[] | undefined;
+  ozg_id?: string | undefined;
+  vollzugsbehoerde?: Behoerde | undefined;
+  order_by?: LeistungSteckbriefSearchOrder | undefined;
 }
 
 export interface LeistungStammtextSearchParams extends Pagination {
-  leistungsschluessel?: string;
-  redaktion_id?: string;
-  title?: string;
-  leistungsbezeichnung?: string;
-  leistungsbezeichnung2?: string;
-  rechtsgrundlagen?: string;
-  leistungstyp?: LeistungsTyp[];
-  typisierung?: LeistungsTypisierung[];
-  updated_since?: string;
-  lagen_portalverbund?: string;
-  leistungsadressat?: Leistungsadressat[];
-  ozg_themenfeld?: OzgThemenfeld[];
-  ozg_id?: string;
-  vollzugsbehoerde?: Behoerde;
-  einheitlicher_ansprechpartner?: boolean;
-  source?: XzufiSource;
-  fts_query?: string;
-  suche_nur_in?: LeistungSucheIn;
-  order_by?: LeistungStammtextSearchOrder;
+  leistungsschluessel?: string | undefined;
+  redaktion_id?: string | undefined;
+  title?: string | undefined;
+  leistungsbezeichnung?: string | undefined;
+  leistungsbezeichnung2?: string | undefined;
+  rechtsgrundlagen?: string | undefined;
+  leistungstyp?: LeistungsTyp[] | undefined;
+  typisierung?: LeistungsTypisierung[] | undefined;
+  updated_since?: string | undefined;
+  lagen_portalverbund?: string | undefined;
+  leistungsadressat?: Leistungsadressat[] | undefined;
+  ozg_themenfeld?: OzgThemenfeld[] | undefined;
+  ozg_id?: string | undefined;
+  vollzugsbehoerde?: Behoerde | undefined;
+  einheitlicher_ansprechpartner?: boolean | undefined;
+  source?: XzufiSource | undefined;
+  fts_query?: string | undefined;
+  suche_nur_in?: LeistungSucheIn | undefined;
+  order_by?: LeistungStammtextSearchOrder | undefined;
 }
 
 export interface ProcessClassSearchParams extends Pagination {
-  fts_query?: string;
-  freigabe_status?: FreigabeStatus[];
-  operatives_ziel?: OperativesZiel;
-  verfahrensart?: Verfahrensart;
-  handlungsform?: Handlungsform;
-  is_latest?: boolean;
+  fts_query?: string | undefined;
+  freigabe_status?: FreigabeStatus[] | undefined;
+  operatives_ziel?: OperativesZiel | undefined;
+  verfahrensart?: Verfahrensart | undefined;
+  handlungsform?: Handlungsform | undefined;
+  is_latest?: boolean | undefined;
 }
 
 /**
@@ -205,20 +205,20 @@ export type SearchCsvResource = (typeof SearchCsvResourceValues)[number];
  */
 export interface SearchCsvParams {
   resource: SearchCsvResource;
-  term?: string;
-  xdf_version?: string;
-  order_by?: string;
-  feldart?: string;
-  datentyp?: string;
-  dokumentart?: string;
-  sprache?: string;
+  term?: string | undefined;
+  xdf_version?: string | undefined;
+  order_by?: string | undefined;
+  feldart?: string | undefined;
+  datentyp?: string | undefined;
+  dokumentart?: string | undefined;
+  sprache?: string | undefined;
   [filter: string]: string | undefined;
 }
 
 export interface ProcessSearchParams extends Pagination {
-  freigabe_status?: FreigabeStatus[];
-  detaillierungsstufe?: Detaillierungsstufe;
-  anwendungsgebiet?: Anwendungsgebiet;
-  is_musterprozess?: boolean;
-  fts_query?: string;
+  freigabe_status?: FreigabeStatus[] | undefined;
+  detaillierungsstufe?: Detaillierungsstufe | undefined;
+  anwendungsgebiet?: Anwendungsgebiet | undefined;
+  is_musterprozess?: boolean | undefined;
+  fts_query?: string | undefined;
 }
