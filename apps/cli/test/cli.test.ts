@@ -892,3 +892,19 @@ test("a subcommand's value option does not swallow the program's --log-format, i
   assert.ok(cli.err.length > 0 && cli.err.every((line) => line.startsWith("{")), cli.err.join("\n"));
   assert.match((JSON.parse(cli.err[0] ?? "") as Record<string, unknown>)["msg"] as string, /--limit <n>' argument missing/);
 });
+
+test("text in an answer that is not valid is replaced with U+FFFD and a WARN record of fim-portal.api, exit 0 (D2)", async () => {
+  for (const [body, count] of [
+    [Buffer.from('{"name":"x\\ud800y","fim_id":"S1"}'), 1],
+    [Buffer.concat([Buffer.from('{"name":"M'), Buffer.from([0xfc]), Buffer.from('ller","fim_id":"S1"}')]), 1],
+  ] as const) {
+    const cli = makeCli(() => rawResponse(body, "application/json"));
+    assert.equal(await run(["--compact", "schemas", "get", "S1"], cli.deps), 0);
+    const out = cli.out.join("");
+    assert.ok(!/\\ud[89a-f]/i.test(out) && !/[\ud800-\udfff]/u.test(out), out);
+    assert.match(out, /\ufffd/);
+    assert.deepEqual(cli.err.map(untimed), [
+      `WARN  [fim-portal.api] GET https://fimportal.de/api/v1/schemas/S1/latest: ${count} character of the answer was not valid text (invalid bytes or a lone surrogate) and replaced with U+FFFD.`,
+    ]);
+  }
+});

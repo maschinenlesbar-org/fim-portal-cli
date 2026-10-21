@@ -300,7 +300,8 @@ Text (im Stil von log4j) oder mit `--log-format jsonl` als ein JSON-Objekt pro Z
 Bereiche: `cli` (Bedienfehler, Meldungen von commander, unerwartete Fehler), `api` (die
 Antworten der API: ein Fehlerstatus und eine fehlerhafte Antwort — ungültiges JSON, die
 falsche Form, eine Zahl, die sich nicht exakt darstellen lässt, eine HTML-Seite, ein
-unbekannter Zeichensatz), `http` (die Verbindung, die
+unbekannter Zeichensatz; und ein WARN, wenn Text in einer Antwort ungültig war, ungültige Bytes
+oder ein halbes Zeichen, und durch U+FFFD ersetzt wurde, damit `jq` die Ausgabe lesen kann), `http` (die Verbindung, die
 Klartext-Warnung und je Wiederholung eine WARN-Zeile vor dem Warten) und `output` (die Hinweise `Wrote N bytes`, ein Fehler beim Schreiben
 der `-o`-Datei oder nach stdout). Ein Eintrag ist immer eine Zeile; Steuerzeichen darin
 werden maskiert.

@@ -73,6 +73,8 @@ new FimPortalClient({
   maxResponseBytes: 50 << 20,  // abort responses larger than 50 MiB (0 = unlimited)
   userAgent: "my-app/1.0",
   transport: customTransport,  // inject your own HTTP transport (see below)
+  onRetry: (event) => {},      // told about each retry, before the wait
+  onWarning: (message) => {},  // told when text in an answer was replaced with U+FFFD
 });
 ```
 
@@ -216,7 +218,12 @@ own error stays the `cause`.
 
 **Decoding.** A JSON body is decoded by the charset its `Content-Type` declares
 (UTF-8 when it names none) with `TextDecoder`, which also drops a leading byte order
-mark; an unknown charset label is a `FimParseError`. Downloads stay raw bytes. Every error
+mark; an unknown charset label is a `FimParseError`. Text that is not valid is never changed
+silently and never fatal: bytes invalid in the charset, and a lone surrogate written as a JSON
+escape (`\ud800`, which JSON.parse makes half a character and `jq` refuses), become U+FFFD, and the
+engine option `onWarning(message)` is told how many (`GET <url>: 1 character of the answer was not
+valid text (invalid bytes or a lone surrogate) and replaced with U+FFFD.`); the CLI logs it as a
+WARN record of `fim-portal.api`. Downloads stay raw bytes. Every error
 about an answer names the request, `GET <url>: …` with the userinfo redacted
 (`describeUrl`), like a network error: an unknown charset, an empty body, a body that is not
 JSON (`… the answer is not valid JSON (expected JSON, got Content-Type "text/html").`), an

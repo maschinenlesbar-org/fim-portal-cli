@@ -89,14 +89,28 @@ export interface EngineOptions {
    * and reset connection; never when there is no retry. A throw is swallowed.
    */
   onRetry?: ((event: RetryEvent) => void) | undefined;
+  /**
+   * Called with a one-line warning about an answer the engine delivered changed: characters
+   * that were not valid text — invalid bytes in the declared (or default UTF-8) charset, or a
+   * lone surrogate written as a JSON escape — replaced with U+FFFD. The message names the
+   * request and the count (`GET <url>: 2 characters of the answer were not valid text …`).
+   * Without it the replacement is silent. A throw is swallowed. The CLI logs it as a `WARN`
+   * record of `fim-portal.api`.
+   */
+  onWarning?: ((message: string) => void) | undefined;
 }
 
 /** `onRetry` must be a function: a FimValidationError at construction, not a TypeError mid-request. */
 function retryHook(value: unknown): (event: RetryEvent) => void {
+  return hookOption("onRetry", value) as (event: RetryEvent) => void;
+}
+
+/** A hook option must be a function: a FimValidationError at construction, not a TypeError mid-request. */
+function hookOption(name: string, value: unknown): (...args: never[]) => unknown {
   if (typeof value !== "function") {
-    throw new FimValidationError(`Invalid option onRetry: expected a function, got ${value === null ? "null" : typeof value}.`);
+    throw new FimValidationError(`Invalid option ${name}: expected a function, got ${value === null ? "null" : typeof value}.`);
   }
-  return value as (event: RetryEvent) => void;
+  return value as (...args: never[]) => unknown;
 }
 
 /** What `EngineOptions.onRetry` is told about one retry. */
@@ -355,6 +369,7 @@ export class RequestEngine {
   private readonly maxResponseBytes: number;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly onRetry: ((event: RetryEvent) => void) | undefined;
+  private readonly onWarning: ((message: string) => void) | undefined;
 
   constructor(options: EngineOptions = {}) {
     // A JavaScript caller may pass null for "no options"; treat it like undefined rather
@@ -394,6 +409,17 @@ export class RequestEngine {
     );
     this.sleep = options.sleep ?? realSleep;
     this.onRetry = options.onRetry === undefined ? undefined : retryHook(options.onRetry);
+    this.onWarning =
+      options.onWarning === undefined ? undefined : (hookOption("onWarning", options.onWarning) as (message: string) => void);
+  }
+
+  /** Tell `onWarning` about an answer delivered changed. A throwing callback never breaks the request. */
+  private warn(message: string): void {
+    try {
+      this.onWarning?.(message);
+    } catch {
+      // a logging hook is no reason to fail the request
+    }
   }
 
   /** Tell `onRetry` about a retry, then wait. A throwing callback never breaks the request. */
@@ -645,7 +671,10 @@ export class RequestEngine {
     const res = await this.request("GET", path, { query, accept: "application/json" });
     // Every error about the answer names the request (method and URL, userinfo redacted).
     const request = `GET ${this.describeUrl(path, query)}`;
-    const text = decodeBody(res.data, res.contentType, request);
+    const decoded = decodeBody(res.data, res.contentType, request);
+    // A lone surrogate written as a JSON escape becomes U+FFFD too: JSON.parse would make it
+    // half a character, which a JSON printer writes back as `\ud800` and jq refuses.
+    const { json: text, replaced: escapes } = wellFormedEscapes(decoded.text);
     if (text.trim() === "") {
       // A broken answer, not "no results": printed as nothing with exit 0, it would let a
       // script carry on as if the API had found nothing.
@@ -670,6 +699,14 @@ export class RequestEngine {
     const problem = shape === undefined ? undefined : responseShapeProblem(value, shape);
     if (problem !== undefined) {
       throw new FimParseError(`${request}: unexpected response shape (HTTP ${res.status}): ${problem}`);
+    }
+    // Never changed silently: one bad character doesn't sink the answer, and the caller is told.
+    const replaced = decoded.replaced + escapes;
+    if (replaced > 0) {
+      this.warn(
+        `${request}: ${replaced} ${replaced === 1 ? "character" : "characters"} of the answer ${replaced === 1 ? "was" : "were"} ` +
+          "not valid text (invalid bytes or a lone surrogate) and replaced with U+FFFD.",
+      );
     }
     return value as T;
   }
@@ -798,17 +835,90 @@ export function cleanDetail(text: string): string {
  * none). TextDecoder drops a leading byte order mark, which Buffer#toString keeps and
  * JSON.parse then rejects, so a BOM added by a proxy or a backend change cannot turn a
  * valid answer into a parse error, and a Latin-1 body keeps its umlauts. An unknown
- * charset label is a FimParseError naming `request` (`GET <url>`).
+ * charset label is a FimParseError naming `request` (`GET <url>`). Bytes that are not valid in
+ * the charset become U+FFFD, and `replaced` counts them: exactly for UTF-8 and the single-byte
+ * charsets; for UTF-16 a U+FFFD the server sent counts too.
  */
-export function decodeBody(body: Buffer, contentType: string, request: string): string {
+export function decodeBody(body: Buffer, contentType: string, request: string): { text: string; replaced: number } {
   const charset = /;\s*charset\s*=\s*"?([^";\s]+)"?/i.exec(contentType)?.[1] ?? "utf-8";
   let decoder: TextDecoder;
   try {
-    decoder = new TextDecoder(charset);
+    decoder = new TextDecoder(charset, { fatal: true });
   } catch {
     throw new FimParseError(`${request}: unsupported response charset "${cleanDetail(charset)}".`);
   }
-  return decoder.decode(body);
+  try {
+    return { text: decoder.decode(body), replaced: 0 };
+  } catch {
+    // Not valid in the charset: decode with replacement, and count what was replaced.
+    const text = new TextDecoder(decoder.encoding).decode(body);
+    const sent = decoder.encoding === "utf-8" ? countBytes(body, REPLACEMENT_UTF8) : 0;
+    return { text, replaced: countChar(text, 0xfffd) - sent };
+  }
+}
+
+/** U+FFFD in UTF-8. */
+const REPLACEMENT_UTF8 = Buffer.from([0xef, 0xbf, 0xbd]);
+
+/** How often `needle` occurs in `body`. */
+function countBytes(body: Buffer, needle: Buffer): number {
+  let n = 0;
+  for (let at = body.indexOf(needle); at !== -1; at = body.indexOf(needle, at + needle.length)) n++;
+  return n;
+}
+
+/** How often the UTF-16 unit `code` occurs in `text`. */
+function countChar(text: string, code: number): number {
+  let n = 0;
+  for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === code) n++;
+  return n;
+}
+
+/** A JSON escape of a surrogate, `\uD800`–`\uDFFF`, anywhere in a text (a cheap pre-check). */
+const SURROGATE_ESCAPE = /\\u[dD][89a-fA-F][0-9a-fA-F]{2}/;
+
+/** The value of the four hex digits of a `\uXXXX` escape whose `u` is at `at`, or -1. */
+function escapeAt(json: string, at: number): number {
+  if (json.charCodeAt(at) !== 0x75) return -1;
+  const hex = json.slice(at + 1, at + 5);
+  return /^[0-9a-fA-F]{4}$/.test(hex) ? parseInt(hex, 16) : -1;
+}
+
+/**
+ * `json` (decoded answer text) with every lone surrogate written as a JSON escape (`\ud800` not
+ * followed by a low-surrogate escape, or a `\udc00` not preceded by a high one) rewritten as
+ * `\ufffd`, and how many. JSON.parse would make such an escape half a character, which a JSON
+ * printer writes back as `\ud800` and `jq` refuses (the whole output with it). A raw lone
+ * surrogate cannot occur: TextDecoder never makes one. One linear pass, and only when the text
+ * holds a surrogate escape at all; the text is copied only when one is lone.
+ */
+function wellFormedEscapes(json: string): { json: string; replaced: number } {
+  if (!SURROGATE_ESCAPE.test(json)) return { json, replaced: 0 };
+  let out = "";
+  let copied = 0;
+  let replaced = 0;
+  for (let i = 0; i < json.length; i++) {
+    if (json.charCodeAt(i) !== 0x5c) continue;
+    const code = escapeAt(json, i + 1);
+    if (code < 0xd800 || code > 0xdfff) {
+      i++; // an escape of another kind (\", \\, \n, \u0041): skip its second character
+      continue;
+    }
+    const pairedLow = code <= 0xdbff && json.charCodeAt(i + 6) === 0x5c && isLowSurrogate(escapeAt(json, i + 7));
+    if (pairedLow) {
+      i += 11;
+      continue;
+    }
+    out += json.slice(copied, i) + "\\ufffd";
+    copied = i + 6;
+    replaced++;
+    i += 5;
+  }
+  return replaced === 0 ? { json, replaced } : { json: out + json.slice(copied), replaced };
+}
+
+function isLowSurrogate(code: number): boolean {
+  return code >= 0xdc00 && code <= 0xdfff;
 }
 
 /** A JSON number token, matched at a given position (sticky). */
