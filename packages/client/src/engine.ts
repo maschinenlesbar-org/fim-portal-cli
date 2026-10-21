@@ -555,7 +555,7 @@ export class RequestEngine {
       // The size cap holds whatever the transport did: the default one aborts early, a
       // custom one may have read everything.
       if (this.maxResponseBytes > 0 && body.byteLength > this.maxResponseBytes) {
-        throw new FimNetworkError(sizeLimitMessage(this.maxResponseBytes));
+        throw new FimNetworkError(`${method} ${redactUrl(url)} failed: ${sizeLimitMessage(this.maxResponseBytes)}`);
       }
 
       const retryable = status === 429 || status === 503;
@@ -587,22 +587,29 @@ export class RequestEngine {
   }
 
   /**
-   * A transport failure as the library's error. The default transport rejects with
-   * FimNetworkError only, which passes through; an injected one may throw anything — a
-   * plain Error, fetch's TypeError, a string, null. That becomes a FimNetworkError naming
-   * the request (URL redacted), with the original as `cause`, so a caller (and the CLI)
-   * can rely on every failure being a FimError. Any other FimError passes through.
+   * A transport failure as the library's error, naming the request:
+   * `<METHOD> <url> failed: <reason>` (URL redacted), with the original as `cause`. The
+   * default transport rejects with FimNetworkError only — a timeout, the size cap, a refused
+   * connection, a DNS failure — and the engine's own deadline does too; their messages carry
+   * no URL, so a caller making several calls could not tell which one failed. An injected
+   * transport may throw anything — a plain Error, fetch's TypeError, a string, null — and
+   * that becomes the same FimNetworkError, so a caller (and the CLI) can rely on every
+   * failure being a FimError. A message that already names the request is kept (scrubbed);
+   * any other FimError passes through.
    */
   private toNetworkError(method: string, url: string, cause: unknown): FimError {
     if (cause instanceof FimError && !(cause instanceof FimNetworkError)) return cause;
+    const prefix = `${method} ${redactUrl(url)} failed: `;
     if (cause instanceof FimNetworkError) {
-      // The default transport's own errors carry no URL; scrub one that does anyway.
-      const scrubbed = this.scrubCause(cause);
-      if (scrubbed === cause) return cause;
-      return new FimNetworkError(this.scrub(cause.message), { cause: this.scrubCause(cause.cause) });
+      // Scrub anyway, in case a custom transport built the text from a server's.
+      const message = this.scrub(cause.message);
+      if (!message.startsWith(prefix)) return new FimNetworkError(`${prefix}${message}`, { cause: this.scrubCause(cause) });
+      const inner = this.scrubCause(cause.cause);
+      if (message === cause.message && inner === cause.cause) return cause;
+      return new FimNetworkError(message, inner === undefined ? undefined : { cause: inner });
     }
     const reason = cause instanceof Error ? cause.message : String(cause);
-    return new FimNetworkError(`${method} ${redactUrl(url)} failed: ${sanitizeServerText(this.scrub(reason))}`, {
+    return new FimNetworkError(`${prefix}${sanitizeServerText(this.scrub(reason))}`, {
       cause: this.scrubCause(cause),
     });
   }

@@ -209,7 +209,10 @@ checked on the body it returns; headers may come as a plain record in any case, 
 `Headers` object or a `Map`; the body may be a `Buffer`, any `ArrayBuffer` view or an
 `ArrayBuffer` (from any realm). Whatever else a transport throws or returns — a plain
 `Error`, a string, `null`, a response without a valid status — becomes a
-`FimNetworkError` (URL redacted, the original as `cause`).
+`FimNetworkError` (URL redacted, the original as `cause`). Every network failure names the
+request it belongs to, `<METHOD> <url> failed: <reason>` (userinfo redacted): a reset, a
+timeout or the deadline, the size cap, a refused connection, a DNS failure; the transport's
+own error stays the `cause`.
 
 **Decoding.** A JSON body is decoded by the charset its `Content-Type` declares
 (UTF-8 when it names none) with `TextDecoder`, which also drops a leading byte order
@@ -248,8 +251,8 @@ https://fimportal.de/... not followed`.
 default 100 MiB), guarding against unbounded responses. A non-negative integer: the
 engine rejects anything else rather than silently dropping the cap. The default
 transport aborts as soon as the cap is passed; for any transport the engine rejects a
-larger body with `FimNetworkError` (`Response exceeded the size limit of N bytes
-(maxResponseBytes; --max-response-bytes on the CLI)`).
+larger body with `FimNetworkError` (`GET <url> failed: Response exceeded the size limit of N
+bytes (maxResponseBytes; --max-response-bytes on the CLI)`).
 
 **Query builder.** [`buildQueryString`](packages/client/src/query.ts) — a dependency-free
 serialiser: omits `undefined`/`null`, repeats keys for arrays, renders booleans as

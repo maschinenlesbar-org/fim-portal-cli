@@ -654,7 +654,7 @@ test("a transport-level network error maps to exit 1 with a clean Error message"
   const code = await run(["--max-retries", "0", "schemas", "search"], deps);
   assert.equal(code, 1);
   assert.equal(out.length, 0);
-  assert.match(untimed(err.join("\n")), /^ERROR \[fim-portal\.http\] connection reset/);
+  assert.match(untimed(err.join("\n")), /^ERROR \[fim-portal\.http\] GET https:\/\/fimportal\.de\/api\/v1\/schemas failed: connection reset/);
 });
 
 test("a failed -o write degrades to exit 1 with a clean ERROR record (not Unexpected error)", async () => {

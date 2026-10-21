@@ -575,3 +575,36 @@ test("a number a double carries exactly, and a decimal fraction below 2^53, pass
     assert.deepEqual(await engine.getJson("/x"), { n: value, s: "1e400 12345678901234567890" }, literal);
   }
 });
+
+test("a timeout, the size cap, a refused connection and a DNS failure name the request, the original as cause", async () => {
+  const base = "https://user:secret@example.test";
+  const prefix = "GET https://***@example.test/api/v1/schemas?name=x failed: ";
+  const enotfound = Object.assign(new Error("getaddrinfo ENOTFOUND example.test"), { code: "ENOTFOUND" });
+  const failures: Array<[string, unknown]> = [
+    ["Request timed out after 500ms", new FimNetworkError("Request timed out after 500ms")],
+    ["Response exceeded the size limit of 10 bytes", new FimNetworkError("Response exceeded the size limit of 10 bytes")],
+    ["connect ECONNREFUSED 127.0.0.1:1", new FimNetworkError("connect ECONNREFUSED 127.0.0.1:1", { cause: Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:1"), { code: "ECONNREFUSED" }) })],
+    ["getaddrinfo ENOTFOUND example.test", new FimNetworkError("getaddrinfo ENOTFOUND example.test", { cause: enotfound })],
+  ];
+  for (const [reason, thrown] of failures) {
+    const engine = new RequestEngine({ baseUrl: base, maxRetries: 0, transport: async () => { throw thrown; } });
+    await assert.rejects(
+      engine.getJson("/api/v1/schemas", { name: "x" }),
+      (e: unknown) => e instanceof FimNetworkError && e.message === `${prefix}${reason}` && e.cause === thrown,
+      reason,
+    );
+  }
+  // The engine's own deadline and its own size check name the request too.
+  const hanging = new RequestEngine({ baseUrl: base, timeoutMs: 5, transport: () => new Promise(() => {}) });
+  await assert.rejects(hanging.getJson("/api/v1/schemas", { name: "x" }), (e: unknown) => e instanceof FimNetworkError && e.message === `${prefix}Request exceeded deadline of 5ms`);
+  const big = new RequestEngine({ baseUrl: base, maxResponseBytes: 4, transport: async () => jsonResponse({ items: [] }) });
+  await assert.rejects(
+    big.getJson("/api/v1/schemas", { name: "x" }),
+    (e: unknown) => e instanceof FimNetworkError && e.message === `${prefix}Response exceeded the size limit of 4 bytes (maxResponseBytes; --max-response-bytes on the CLI)`,
+  );
+});
+
+test("a refused connection on loopback names the request (default transport)", async () => {
+  const engine = new RequestEngine({ baseUrl: "http://127.0.0.1:1", maxRetries: 0 });
+  await assert.rejects(engine.getJson("/x"), (e: unknown) => e instanceof FimNetworkError && /^GET http:\/\/127\.0\.0\.1:1\/x failed: .*ECONNREFUSED/.test(e.message) && e.cause instanceof FimNetworkError);
+});
