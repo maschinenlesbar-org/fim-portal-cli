@@ -495,6 +495,16 @@ everything that drives the CLI is in `apps/cli/test/`.
   (`conformance-p21-readme-links`: README.md ships in the npm tarball, so a relative link in it
   must point to a file `package.json` `files` ships; any other document is linked by its absolute
   `https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/<path>` URL).
+  The kit round of 2026-10-21 added three, their bodies copied from the create-cli template:
+  P24 (`conformance-p24-input-corpus`: a corpus of tricky values through every text filter and
+  one id of each kind in a path, on the CLI and in the library; both refuse it before any
+  request, exit 1 here, or both send it canonical: text trimmed and NFC, an id trimmed, never
+  with a `/`), P25 (`conformance-p25-response-corpus`: a number a double can't carry is a
+  parse error, exit 1, on `schemas get`) and P26 (`conformance-p26-output-integrity`: the built
+  bin under `ulimit -f` keeps the old `-o` file whole and leaves no temporary file, and an
+  existing file without `--force` costs no request; 30 s, it starts a process).
+- **`output.test.ts`** — `-o` and `--force` against real files in a temp directory: refused
+  targets, atomic replace, mode and symlinks, a file that appears during the request.
 - **`parity.test.ts`** — the same input through the CLI and the library (`parity()`): both reject
   without a request, or both send the identical request.
 - **`cli.test.ts`** — end-to-end command parsing, rendering, file output and exit codes — mocked client.
