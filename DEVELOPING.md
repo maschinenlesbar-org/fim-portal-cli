@@ -223,7 +223,10 @@ silently and never fatal: bytes invalid in the charset, and a lone surrogate wri
 escape (`\ud800`, which JSON.parse makes half a character and `jq` refuses), become U+FFFD, and the
 engine option `onWarning(message)` is told how many (`GET <url>: 1 character of the answer was not
 valid text (invalid bytes or a lone surrogate) and replaced with U+FFFD.`); the CLI logs it as a
-WARN record of `fim-portal.api`. Downloads stay raw bytes. Every error
+WARN record of `fim-portal.api`. A body too large for one string (512 MB and more, possible with
+the size cap lifted) is a `FimParseError` too, `GET <url>: the answer is too large to read as text
+(N bytes; …)`, and an error status with such a body keeps its `FimApiError` without the body.
+Downloads stay raw bytes. Every error
 about an answer names the request, `GET <url>: …` with the userinfo redacted
 (`describeUrl`), like a network error: an unknown charset, an empty body, a body that is not
 JSON (`… the answer is not valid JSON (expected JSON, got Content-Type "text/html").`), an
