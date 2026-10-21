@@ -373,7 +373,7 @@ test("a JSON body is decoded by its declared charset, BOM dropped; an unknown ch
     assert.deepEqual(await engine.getJson("/x"), { name: text }, charset);
   }
   const engine = new RequestEngine({ transport: async () => rawResponse("{}", "application/json; charset=x-klingon") });
-  await assert.rejects(engine.getJson("/x"), (e: unknown) => e instanceof FimParseError && /Unsupported response charset "x-klingon"/.test((e as Error).message));
+  await assert.rejects(engine.getJson("/x"), (e: unknown) => e instanceof FimParseError && /^GET https:\/\/fimportal\.de\/x: unsupported response charset "x-klingon"\.$/.test((e as Error).message));
 });
 
 test("server text in an error message is cut at 500 characters; the body keeps it all", async () => {
@@ -559,7 +559,7 @@ test("a number JSON.parse can't carry exactly is a FimParseError, never a change
       engine.getJson("/api/v1/schemas"),
       (e: unknown) =>
         e instanceof FimParseError &&
-        e.message === `Unexpected response from /api/v1/schemas: the number ${literal} cannot be represented exactly.`,
+        e.message === `GET https://fimportal.de/api/v1/schemas: the number ${literal} cannot be represented exactly.`,
       literal,
     );
   }
@@ -623,3 +623,21 @@ test("a header named __proto__ is an ordinary header, never the prototype of the
   const f = new RequestEngine({ transport: async () => ({ status: 200, headers: fetchLike as unknown as Record<string, string>, body: Buffer.from('{"a":1}') }) });
   assert.deepEqual(await f.getJson("/x"), { a: 1 });
 });
+
+test("an answer error names the request: method and URL, userinfo redacted (D9)", async () => {
+  const base = "https://alice:s3cr3t-pw@fimportal.example";
+  const cases: Array<[() => HttpResponseLike, RegExp, (e: RequestEngine) => Promise<unknown>]> = [
+    [() => ({ status: 200, headers: { "content-type": "text/html" }, body: Buffer.from("<html>") }), /^GET https:\/\/\*\*\*@fimportal\.example\/api\/v1\/schemas\?name=A: the answer is not valid JSON \(expected JSON, got Content-Type "text\/html"\)\.$/, (e) => e.getJson("/api/v1/schemas", { name: "A" })],
+    [() => ({ status: 200, headers: { "content-type": "application/json" }, body: Buffer.from("  ") }), /^GET https:\/\/\*\*\*@fimportal\.example\/x: empty response body\.$/, (e) => e.getJson("/x")],
+    [() => ({ status: 200, headers: { "content-type": "application/json" }, body: Buffer.from("[1e400]") }), /^GET https:\/\/\*\*\*@fimportal\.example\/x: the number 1e400 cannot be represented exactly\.$/, (e) => e.getJson("/x")],
+    [() => ({ status: 200, headers: { "content-type": "application/json" }, body: Buffer.from("null") }), /^GET https:\/\/\*\*\*@fimportal\.example\/x: unexpected response shape \(HTTP 200\): expected an object, got null\.$/, (e) => e.getJson("/x", undefined, "record")],
+    [() => ({ status: 200, headers: { "content-type": "application/json; charset=x-klingon" }, body: Buffer.from("{}") }), /^GET https:\/\/\*\*\*@fimportal\.example\/x: unsupported response charset "x-klingon"\.$/, (e) => e.getJson("/x")],
+    [() => ({ status: 200, headers: { "content-type": "text/html" }, body: Buffer.from("<html>") }), /^GET https:\/\/\*\*\*@fimportal\.example\/x\.xml: expected application\/xml, got an HTML page \(Content-Type "text\/html"\)\.$/, (e) => e.getRaw("/x.xml", "application/xml")],
+  ];
+  for (const [respond, message, call] of cases) {
+    const engine = new RequestEngine({ baseUrl: base, transport: async () => respond() });
+    await assert.rejects(call(engine), (e: unknown) => e instanceof FimParseError && message.test(e.message) && !e.message.includes("s3cr3t"), String(message));
+  }
+});
+
+type HttpResponseLike = { status: number; headers: Record<string, string>; body: Buffer };

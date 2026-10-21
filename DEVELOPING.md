@@ -216,7 +216,11 @@ own error stays the `cause`.
 
 **Decoding.** A JSON body is decoded by the charset its `Content-Type` declares
 (UTF-8 when it names none) with `TextDecoder`, which also drops a leading byte order
-mark; an unknown charset label is a `FimParseError`. Downloads stay raw bytes.
+mark; an unknown charset label is a `FimParseError`. Downloads stay raw bytes. Every error
+about an answer names the request, `GET <url>: …` with the userinfo redacted
+(`describeUrl`), like a network error: an unknown charset, an empty body, a body that is not
+JSON (`… the answer is not valid JSON (expected JSON, got Content-Type "text/html").`), an
+inexact number, the wrong shape, an HTML page answered to a download.
 
 **RawResponse.** The result of a download method: `{ data: Buffer, contentType,
 status }` — raw bytes, never lossily decoded.
@@ -453,9 +457,9 @@ with an `items` array and a numeric `total_count`, a cursor listing an object wi
 `items` array, a `versions` call an array, and a single record a non-empty object that is not
 the error envelope `{"detail": …}` (an object whose one key is `detail`).
 Anything else — `null`, `{}`, an error envelope, a bare string — is a `FimParseError`
-(`Unexpected response from <path> (HTTP 200): …`), never printed as data or read as
+(`GET <url>: unexpected response shape (HTTP 200): …`), never printed as data or read as
 "nothing found". A number a double can't carry exactly is a `FimParseError` too
-(`Unexpected response from <path>: the number <N> cannot be represented exactly.`): one
+(`GET <url>: the number <N> cannot be represented exactly.`): one
 out of range (`1e400`, which JSON.parse makes `Infinity`, printed as `null`), one past 2^53
 in any written form (`12345678901234567890`, `…890.0`, `9007199254740993e0`,
 `9007199254740992.5`), which it rounds, and a non-zero one too small (`1e-400`, which becomes

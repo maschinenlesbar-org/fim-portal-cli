@@ -478,6 +478,22 @@ export class RequestEngine {
   }
 
   /**
+   * The request URL as error messages show it: absolute (so a message names the host that gave
+   * a bad answer, which matters with a custom base URL), userinfo redacted and cut at
+   * MAX_MESSAGE_VALUE_LENGTH characters. It never throws: describing a URL for a message does
+   * not validate it (buildUrl does).
+   */
+  describeUrl(path: string, query?: QueryParams): string {
+    let url: string;
+    try {
+      url = this.buildUrl(path, query);
+    } catch {
+      url = `${this.#baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+    }
+    return cutForMessage(redactUrl(url));
+  }
+
+  /**
    * Call the transport under the overall deadline (`timeoutMs`): the request gets an
    * AbortSignal that fires at the deadline, and the call rejects then whether the transport
    * stops or not — a custom transport (fetch, a node:http wrapper) that ignores `timeoutMs`
@@ -627,7 +643,14 @@ export class RequestEngine {
    */
   async getJson<T>(path: string, query?: QueryParams, shape?: ResponseShape): Promise<T> {
     const res = await this.request("GET", path, { query, accept: "application/json" });
-    const text = decodeBody(res.data, res.contentType, path);
+    // Every error about the answer names the request (method and URL, userinfo redacted).
+    const request = `GET ${this.describeUrl(path, query)}`;
+    const text = decodeBody(res.data, res.contentType, request);
+    if (text.trim() === "") {
+      // A broken answer, not "no results": printed as nothing with exit 0, it would let a
+      // script carry on as if the API had found nothing.
+      throw new FimParseError(`${request}: empty response body.`);
+    }
     let value: unknown;
     try {
       value = JSON.parse(text);
@@ -635,20 +658,18 @@ export class RequestEngine {
       // An HTML maintenance or proxy page is the usual non-JSON answer: name its type,
       // so it reads as an upstream problem rather than a client bug.
       const type = res.contentType.split(";")[0]?.trim() ?? "";
-      const hint = type !== "" && !/json/i.test(type) ? `: expected JSON, got Content-Type "${cleanDetail(type)}"` : "";
-      throw new FimParseError(`Failed to parse JSON response from ${cutForMessage(path)}${hint}`, { cause });
+      const hint = type !== "" && !/json/i.test(type) ? ` (expected JSON, got Content-Type "${cleanDetail(type)}")` : "";
+      throw new FimParseError(`${request}: the answer is not valid JSON${hint}.`, { cause });
     }
     // JSON.parse rounds and overflows numbers silently: refuse the answer rather than print a
     // changed value.
     const inexact = firstInexactNumber(text);
     if (inexact !== undefined) {
-      throw new FimParseError(
-        `Unexpected response from ${cutForMessage(path)}: the number ${cutForMessage(inexact)} cannot be represented exactly.`,
-      );
+      throw new FimParseError(`${request}: the number ${cutForMessage(inexact)} cannot be represented exactly.`);
     }
     const problem = shape === undefined ? undefined : responseShapeProblem(value, shape);
     if (problem !== undefined) {
-      throw new FimParseError(`Unexpected response from ${cutForMessage(path)} (HTTP ${res.status}): ${problem}`);
+      throw new FimParseError(`${request}: unexpected response shape (HTTP ${res.status}): ${problem}`);
     }
     return value as T;
   }
@@ -656,15 +677,16 @@ export class RequestEngine {
   /**
    * Perform a GET returning the raw bytes (XML / PDF / CSV downloads). An HTML page
    * answered with a 2xx (a maintenance or login page, a proxy's error page) is a
-   * FimParseError, not a download: no endpoint serves HTML, and the CLI would
-   * otherwise save it over the user's file with exit 0.
+   * FimParseError naming the request, not a download: no endpoint serves HTML, and the CLI
+   * would otherwise save it over the user's file with exit 0.
    */
   async getRaw(path: string, accept: string, query?: QueryParams): Promise<RawResponse> {
     const res = await this.request("GET", path, { query, accept });
     if (isHtml(res)) {
       throw new FimParseError(
-        `Unexpected response from ${cutForMessage(path)} (HTTP ${res.status}): expected ${accept}, got an HTML page` +
-          (res.contentType === "" ? "" : ` (Content-Type "${cleanDetail(res.contentType)}")`),
+        `GET ${this.describeUrl(path, query)}: expected ${accept}, got an HTML page` +
+          (res.contentType === "" ? "" : ` (Content-Type "${cleanDetail(res.contentType)}")`) +
+          ".",
       );
     }
     return res;
@@ -776,15 +798,15 @@ export function cleanDetail(text: string): string {
  * none). TextDecoder drops a leading byte order mark, which Buffer#toString keeps and
  * JSON.parse then rejects, so a BOM added by a proxy or a backend change cannot turn a
  * valid answer into a parse error, and a Latin-1 body keeps its umlauts. An unknown
- * charset label is a FimParseError.
+ * charset label is a FimParseError naming `request` (`GET <url>`).
  */
-export function decodeBody(body: Buffer, contentType: string, path: string): string {
+export function decodeBody(body: Buffer, contentType: string, request: string): string {
   const charset = /;\s*charset\s*=\s*"?([^";\s]+)"?/i.exec(contentType)?.[1] ?? "utf-8";
   let decoder: TextDecoder;
   try {
     decoder = new TextDecoder(charset);
   } catch {
-    throw new FimParseError(`Unsupported response charset "${cleanDetail(charset)}" from ${cutForMessage(path)}.`);
+    throw new FimParseError(`${request}: unsupported response charset "${cleanDetail(charset)}".`);
   }
   return decoder.decode(body);
 }

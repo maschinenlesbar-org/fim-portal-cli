@@ -243,7 +243,7 @@ test("a 2xx JSON body without the documented shape is a FimParseError, never dat
       const { client } = clientReturning(body);
       await assert.rejects(
         call(client),
-        (e: unknown) => e instanceof FimParseError && /Unexpected response from/.test(e.message),
+        (e: unknown) => e instanceof FimParseError && /^GET https:\/\/fimportal\.de\/\S*: unexpected response shape/.test(e.message),
         `${label}: ${JSON.stringify(body)}`,
       );
     }
@@ -268,7 +268,7 @@ test("an error envelope ({detail}) answered with a 2xx to a record is a FimParse
     ] as const) {
       await assert.rejects(
         call(clientReturning(body).client),
-        (e: unknown) => e instanceof FimParseError && /\(HTTP 200\): expected a record/.test(e.message) && said.test(e.message),
+        (e: unknown) => e instanceof FimParseError && /^GET https:\/\/fimportal\.de\/\S+: unexpected response shape \(HTTP 200\): expected a record/.test(e.message) && said.test(e.message),
         `${label}: ${JSON.stringify(body)}`,
       );
     }
