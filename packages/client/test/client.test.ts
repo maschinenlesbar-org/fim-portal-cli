@@ -330,3 +330,21 @@ test("a text filter that is blank once trimmed is refused before any request", a
     assert.equal(mt.calls.length, 0);
   }
 });
+
+// ---- path ids: trimmed, never a "/" ----
+
+test("a path id is sent trimmed; one with a \"/\", or a dot segment once trimmed, is refused before any request", async () => {
+  const mt = makeMockTransport(() => jsonResponse([{ id: "a1" }]));
+  const client = new FimPortalClient({ transport: mt.transport });
+  await client.schemas.versions(" S1\n");
+  assert.equal(mt.last().url, `${BASE}/api/v1/schemas/S1`);
+  await client.serviceTexts.get(" R1 ", "\tL1", "leika").catch(() => {});
+  assert.equal(mt.last().url, `${BASE}/api/v0/leistung-stammtexte/R1/L1/leika`);
+  const before = mt.calls.length;
+  for (const id of ["S1/../S2", "S1/", "/S1", " .. ", "."]) {
+    await assert.rejects(client.schemas.versions(id), FimValidationError, JSON.stringify(id));
+    await assert.rejects(client.fields.versions(id, "F1"), FimValidationError, JSON.stringify(id));
+  }
+  await assert.rejects(client.schemas.versions("S1/x"), /Invalid fimId: An id cannot contain "\/"/);
+  assert.equal(mt.calls.length, before);
+});

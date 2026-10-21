@@ -312,7 +312,10 @@ What the library rejects with `FimValidationError`, before any request:
   code or Kodierung (`pathSegment`/`pathSegmentProblem`): an empty last segment
   would turn `schemas.versions("")` into the search collection and
   `schemas.get("S1", "")` into the versions list, returned as the requested object.
-  `RequestEngine.buildUrl` also rejects `.`/`..` and any empty segment.
+  `RequestEngine.buildUrl` also rejects `.`/`..` and any empty segment. A path id is sent
+  trimmed (an id pasted with a trailing newline named no object), and one with a `/` is
+  refused: the client percent-encodes it, but the server decodes `%2F` before routing, so
+  `schemas.versions("S1/../S2")` could fetch S2; no FIM id, version, key or code has one.
 - **Text filters, canonical.** The parameters the portal searches as text (the `text` kind
   of the tables in `filters.ts`: `name`, `fts_query`, `bezeichnung`, `stichwort`, `bezug`,
   `bezug_unterelemente`, `Versionshinweis`, `status_gesetzt_durch`, `title`,

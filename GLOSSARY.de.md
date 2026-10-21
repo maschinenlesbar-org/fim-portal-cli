@@ -244,7 +244,8 @@ Filter und antwortet mit dem ungefilterten Ergebnis. Ein leerer Wert (`""` oder 
 Leerraum) wird deshalb vor jeder Anfrage zurückgewiesen: von der CLI als Bedienfehler, von
 der Bibliothek (`FimPortalClient`) mit einem `FimValidationError`. Dasselbe gilt für eine
 leere ID oder Version im Pfad: Sie würde aus der Anfrage nach einem Objekt die Suche oder
-die Versionsliste machen.
+die Versionsliste machen. Eine ID oder Version wird ohne umgebenden Leerraum gesendet, eine
+mit `/` zurückgewiesen: Der Server läse ihn als Pfadtrenner.
 
 **Textfilter.** Die Filter, die das Portal als Text durchsucht (`--name`, `--fts-query`,
 `--bezeichnung`, `--stichwort`, `--bezug`, `--bezug-unterelemente`, `--versionshinweis`,

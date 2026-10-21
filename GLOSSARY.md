@@ -243,7 +243,8 @@ and answers with the unfiltered result. So a blank value (`""` or whitespace onl
 is rejected before any request: by the CLI as a usage error, and by the library
 (`FimPortalClient`) with a `FimValidationError`. The same goes for a blank id or
 version in a path: it would turn a request for one object into the search or the
-versions list.
+versions list. An id or version is sent trimmed, and one with a `/` is refused: the server
+would read it as a path separator.
 
 **Text filters.** The filters the portal searches as text (`--name`, `--fts-query`,
 `--bezeichnung`, `--stichwort`, `--bezug`, `--bezug-unterelemente`, `--versionshinweis`,

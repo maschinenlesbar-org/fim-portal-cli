@@ -83,21 +83,29 @@ const queryScalarProblem: Problem<unknown> = (value) => {
 
 /**
  * A path id (a FIM id, version, namespace, Leistungsschlüssel, language code, …)
- * must be a non-blank string. An empty last segment turns
- * `/api/v1/schemas/<id>` into `/api/v1/schemas/` (the search collection) and
- * `/api/v1/schemas/S1/<version>` into the versions list, which the library would
- * return as the requested object; an empty middle segment requests `//`.
+ * must be a string that is not blank once trimmed, as the client sends it. An empty
+ * last segment turns `/api/v1/schemas/<id>` into `/api/v1/schemas/` (the search
+ * collection) and `/api/v1/schemas/S1/<version>` into the versions list, which the
+ * library would return as the requested object; an empty middle segment requests `//`.
+ * A `/` is refused too: the client percent-encodes it, but the server decodes `%2F`
+ * back to `/` before routing, so `versions("S1/../S2")` could fetch S2 and `"S1/"` pass
+ * for `"S1"`; no FIM id, version, key or code has one. (`"."` and `".."`, trimmed or
+ * not, pass encoding unchanged and are rejected by RequestEngine.buildUrl.)
  */
-export const pathSegmentProblem: Problem<string> = (value) =>
-  typeof value !== "string" || isBlank(value) ? "Expected a non-empty value." : undefined;
+export const pathSegmentProblem: Problem<string> = (value) => {
+  if (typeof value !== "string" || isBlank(value)) return "Expected a non-empty value.";
+  const id = value.trim();
+  return id.includes("/") ? 'An id cannot contain "/": the API reads it as a path separator.' : undefined;
+};
 
 /**
- * Validate one path id (pathSegmentProblem) and percent-encode it for the request
- * path. Throws `FimValidationError` (`Invalid <name>: ...`) for a blank id. "." and
- * ".." pass through encoding unchanged and are rejected by RequestEngine.buildUrl.
+ * Validate one path id (pathSegmentProblem) and percent-encode it, trimmed, for the
+ * request path: a value pasted with a trailing newline or space named no object.
+ * Throws `FimValidationError` (`Invalid <name>: ...`) for a blank id and one with a `/`.
+ * "." and ".." pass through encoding unchanged and are rejected by RequestEngine.buildUrl.
  */
 export function pathSegment(name: string, value: string): string {
-  return encodeURIComponent(assertValid(name, value, pathSegmentProblem));
+  return encodeURIComponent(assertValid(name, value, pathSegmentProblem).trim());
 }
 
 /**
