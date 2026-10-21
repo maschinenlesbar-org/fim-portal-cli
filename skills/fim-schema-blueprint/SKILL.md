@@ -157,5 +157,6 @@ Rules:
 
   The same `xdf` download exists for `document-profiles`, `fields` and `groups` —
   but **`fields` and `groups` take a `<namespace>` argument before the id**
-  (`fim-portal -o f.xml fields xdf baukasten F00000000013`).
+  (`fim-portal -o f.xml fields xdf baukasten F00000000013`). If the file exists,
+  an existing file is refused (`Refusing to overwrite existing file …`, exit 1, before any request): ask the user whether to replace it, then add `--force`, or pick another name.
 - Don't invent constraints; if a `regel` matters, fetch it rather than guessing.

@@ -118,7 +118,8 @@ Don't fetch all of them — there can be 10–20+. Instead:
   ```
 
   The last arg is a **language code** (`de-DE`, `en-GB`, …), distinct from the
-  `--sprache` *search* filter (`Deutsch`, `Englisch`). Don't pipe a PDF to stdout.
+  `--sprache` *search* filter (`Deutsch`, `Englisch`). Don't pipe a PDF to stdout. If
+  `leistung.pdf` exists, an existing file is refused (`Refusing to overwrite existing file …`, exit 1, before any request): ask the user whether to replace it, then add `--force`, or pick another name.
 
 ## Step 5 — Brief the user
 

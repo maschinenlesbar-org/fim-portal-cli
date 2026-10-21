@@ -145,6 +145,7 @@ Rules:
 - State `total_count` and warn when a bare type filter returns thousands — push the
   user to add `--fts-query`/`--name` rather than paging blindly.
 - Offer next steps: `fields get <namespace> <id>` for full detail, `fields xdf
-  <namespace> <id> -o f.xml` for the XML, or `groups …` if a field bundle fits better.
+  <namespace> <id> -o f.xml` for the XML (if `f.xml` exists, an existing file is refused (`Refusing to overwrite existing file …`, exit 1, before any request): ask the user whether to replace it, then add `--force`, or pick another name), or
+  `groups …` if a field bundle fits better.
 - Don't recommend a field below status `5` (e.g. `3` Entwurf) as "the" field without
   flagging it's unreleased, and never recommend an `inaktiv` (`7`) one.
