@@ -451,7 +451,11 @@ What the library rejects with `FimValidationError`, before any request:
 exported) and replaces it with `***` in everything it prints — commander's usage
 errors, which echo rejected values (`argument '<url>' is invalid`, `unknown command
 '<url>'`), and the help that follows them — so a password with spaces, quotes, `#`,
-`?` or `/` is caught as well as an ordinary one. Only a value that starts with a scheme
+`?` or `/` is caught as well as an ordinary one. A URL counts wherever it starts inside an
+argument (`urlsWithin`: each `://` found with indexOf, its scheme by walking back, at most 64
+per argument), since a text filter or an id is sent trimmed: a padded `" https://u:pw@host"`,
+one after a dash or inside a phrase reached the request URL of an error record (percent-encoded,
+also replaced) and the refusals that quote it. Only a URL with a scheme
 counts (a bare `a:b@c` is a file name, a search text or a User-Agent as often as a
 credential: `-o run:2026-10-09@x.json` stays as it is), except as the `--base-url` value,
 where a `user:password@host` typed without its scheme is still a credential. On stderr the log replaces them in

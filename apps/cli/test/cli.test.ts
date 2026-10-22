@@ -949,3 +949,67 @@ test("terminal controls are escaped in chunks: the same text as one pass, across
   assert.deepEqual(JSON.parse(out[0]!), { text });
 });
 
+
+// T15 of the 2026-10-21 fix round (jobsuche-cli 28be809, ladesaeulenregister-cli 001c48d,
+// abgeordnetenwatch-cli 6d136ad): a URL with a password anywhere in an argument — a text filter,
+// padded, after a dash, inside a phrase, an id, a rejected option value, commander's echo — must
+// never reach stderr, neither raw in a refusal or note nor percent-encoded in the request URL of
+// an error record.
+test("a password in a URL inside any argument is redacted on stderr, raw or percent-encoded (T15)", async () => {
+  const url = "https://bob:s3cretpw@host.example/x";
+  const argvs = [
+    ["schemas", "search", "--name", url],
+    ["schemas", "search", "--name", ` ${url}`],
+    ["schemas", "search", "--bezeichnung", `Antrag ${url}`],
+    ["schemas", "search", "--fts-query", ` -${url}`],
+    ["schemas", "search", "--stichwort", `\t${url}`],
+    ["schemas", "search", "--nummernkreis", ` ${url}`],
+    ["schemas", "search", "--freigabe-status", ` ${url}`],
+    ["schemas", "search", "--gueltig-am", `2024 ${url}`],
+    ["schemas", "search", "--updated-since", ` ${url}`],
+    ["schemas", "search", "--xdf-version", ` ${url}`],
+    ["schemas", "search", "--limit", ` ${url}`],
+    ["fields", "search", "--name", ` ${url}`],
+    ["groups", "search", "--bezug", `x ${url}`],
+    ["processes", "search", "--name", ` ${url}`],
+    ["service-profiles", "search", "--name", ` ${url}`],
+    ["search-csv", "--resource", "schema", "--term", ` ${url}`],
+    ["schemas", "get", ` ${url}`],
+    ["schemas", "get", `S1 ${url}`],
+    ["schemas", "get", "S1", ` ${url}`],
+    ["fields", "get", ` ${url}`, "F1"],
+    ["processes", "get", ` ${url}`, "1", "101", "x"],
+    ["schemas", "search", "-o", `-${url}`],
+    ["schemas", ` ${url}`],
+    [` ${url}`],
+    ["schemas", "search", "--name", url, "--bogus"],
+    ["schemas", "search", `--name= ${url}`],
+    ["--timeout", ` ${url}`, "schemas", "search"],
+  ];
+  const answers: Array<() => HttpResponse> = [
+    () => jsonResponse({ detail: `not found: ${url}` }, 404),
+    () => jsonResponse({}, 500),
+    () => rawResponse("busy", "text/plain", 503),
+    () => {
+      throw Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" });
+    },
+  ];
+  for (const argv of argvs) {
+    for (const answer of answers) {
+      const cli = makeCli(answer);
+      await run(["--max-retries", "0", ...argv], cli.deps);
+      const err = cli.err.join("\n");
+      assert.ok(err.length > 0, JSON.stringify(argv));
+      assert.doesNotMatch(err, /s3cretpw|bob%3As3/, `${JSON.stringify(argv)}: ${err}`);
+    }
+  }
+});
+
+test("the URL search of the redaction is linear: a 1 MB argument without '://' is quick (T15)", async () => {
+  for (const big of ["a".repeat(1 << 20), "a:/".repeat(350_000), `${"a".repeat(1 << 20)}://`]) {
+    const cli = makeCli(() => jsonResponse({}, 404));
+    const started = performance.now();
+    await run(["--max-retries", "0", "schemas", "search", "--name", big], cli.deps);
+    assert.ok(performance.now() - started < 1500, `${big.length} characters took ${Math.round(performance.now() - started)} ms`);
+  }
+});
