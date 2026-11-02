@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { TextDecoder } from "node:util";
 import { MAX_RETRIES, MAX_RETRY_AFTER_MS, RequestEngine, bigIntegerKeysOption, cleartextProblem, firstInexactNumber, parseRetryAfter, sanitizeServerText, scanNumbers } from "../src/engine.js";
 import { MAX_TIMEOUT_MS } from "../src/http.js";
-import { FimApiError, FimNetworkError, FimParseError, FimValidationError, TextBuilder, cutForMessage, cutText, redactUrl, redactUrlUserinfo, toWellFormed } from "../src/errors.js";
+import { FimApiError, FimNetworkError, FimParseError, FimValidationError, TextBuilder, cutForMessage, cutText, echoedCredentialForms, redactUrl, redactUrlUserinfo, toWellFormed } from "../src/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
 const noSleep = async (): Promise<void> => {};
@@ -775,4 +775,32 @@ test("a TextBuilder joins its pieces in order across batches", () => {
   }
   assert.equal(b.toString(), expected.join(""));
   assert.equal(new TextBuilder().toString(), "");
+});
+
+test("echoedCredentialForms treats a userinfo without a password as a token (Basic `TOKEN:`)", () => {
+  const basic = (pair: string): string => Buffer.from(pair, "utf8").toString("base64");
+  assert.deepEqual(echoedCredentialForms("alice:s3cret"), [basic("alice:s3cret"), "alice:s3cret", "s3cret"]);
+  assert.deepEqual(echoedCredentialForms("T0ken"), [basic("T0ken:"), "T0ken:", "T0ken"]);
+  assert.deepEqual(echoedCredentialForms("T0ken:"), [basic("T0ken:"), "T0ken:", "T0ken"]);
+  assert.deepEqual(echoedCredentialForms("T%C3%B6k"), [basic("Tök:"), "Tök:"]); // short: not alone
+  assert.deepEqual(echoedCredentialForms(":pw12"), [basic(":pw12"), ":pw12", "pw12"]);
+  assert.deepEqual(echoedCredentialForms(""), []);
+  assert.deepEqual(echoedCredentialForms(":"), []);
+});
+
+test("a userinfo without a password is a token: scrubbed from library errors in every echoed form", async () => {
+  const TOKEN = "T0kenS3cret";
+  const basic = Buffer.from(`${TOKEN}:`, "utf8").toString("base64");
+  for (const baseUrl of [`https://${TOKEN}@mirror.example`, `https://${TOKEN}:@mirror.example`]) {
+    for (const echo of [`bad token ${TOKEN}`, `Authorization: Basic ${basic}`, `user ${TOKEN}: unknown`]) {
+      const engine = new RequestEngine({ baseUrl, maxRetries: 0, transport: makeMockTransport(() => jsonResponse({ detail: echo }, 401)).transport });
+      await assert.rejects(engine.getJson("/x"), (err: unknown) => {
+        assert.ok(err instanceof FimApiError && /^HTTP 401 /.test(err.message), String(err));
+        for (const text of [err.message, String(err.detail), err.body]) {
+          assert.ok(!text.includes(TOKEN) && !text.includes(basic), `${baseUrl} ${echo}: ${text}`);
+        }
+        return true;
+      });
+    }
+  }
 });

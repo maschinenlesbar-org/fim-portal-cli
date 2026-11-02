@@ -820,6 +820,21 @@ test("the CLI's userinfo redaction of stdout is linear in the answer (security a
   assert.ok(ms < 1500, `${Math.round(ms)} ms`);
 });
 
+test("a token in --base-url is redacted from what the CLI prints, on stderr and stdout (security audit 2026-10-27, E)", async () => {
+  const TOKEN = "T0kenS3cret";
+  const basic = Buffer.from(`${TOKEN}:`, "utf8").toString("base64");
+  const base = `https://${TOKEN}@mirror.example`;
+  // An error answer that echoes the token: stderr.
+  const failed = makeCli(() => jsonResponse({ detail: `bad token ${TOKEN}` }, 401));
+  assert.notEqual(await run(["--base-url", base, "--max-retries", "0", "schemas", "get", "S1"], failed.deps), 0);
+  assert.ok(!failed.err.join("\n").includes(TOKEN), failed.err.join("\n"));
+  // A 2xx answer that echoes the Basic value and `TOKEN:`: stdout.
+  const echoed = makeCli(() => jsonResponse({ fim_id: "S1", x: `Basic ${basic} for ${TOKEN}:x` }));
+  assert.equal(await run(["--base-url", base, "schemas", "get", "S1"], echoed.deps), 0, echoed.err.join("\n"));
+  const out = echoed.out.join("\n");
+  assert.ok(!out.includes(basic) && !out.includes(`${TOKEN}:`), out);
+});
+
 test("redactUrlUserinfo hides the userinfo of every URL in a line and leaves other text alone", () => {
   assert.equal(
     redactUrlUserinfo("argument 'ftp://user:s3cret@h.example' is invalid; also http://a@b@c.example/x?y=u@v"),

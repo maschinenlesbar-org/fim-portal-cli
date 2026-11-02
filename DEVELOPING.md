@@ -468,12 +468,14 @@ so a password holding DEL, C1 or bidi characters is found in its raw form, and t
 record's frame (time, level, topic) is never touched; `io.out` (stdout) is redacted as a
 whole. The forms a server echoes a userinfo back in are replaced too: the `Basic` value
 and the decoded `user:password` on stdout and stderr, the password alone (4 characters or
-more) on stderr only, since it may well occur in the data. `redactUrl` falls back to the same
+more) on stderr only, since it may well occur in the data. A userinfo without a password
+(`https://TOKEN@host`, `https://TOKEN:@host`) is a token: Node sends it as Basic `TOKEN:`, so
+its forms are that Basic value, `TOKEN:`, and the token alone in place of the password. `redactUrl` falls back to the same
 text-based cut (`redactCredentials`) for a value that doesn't parse as a URL. In the
 library, the engine keeps the base URL in a real `#private` field, so
 `console.log(client)`, `util.inspect` and `JSON.stringify` never show it, and it
 scrubs the base URL's userinfo (raw and percent-decoded), and the forms a server echoes
-it back in (the `Basic` value, the decoded `user:password`, the password alone from 4
+it back in (the `Basic` value, the decoded `user:password`, the password, or a token's user name, alone from 4
 characters: `echoedCredentialForms`), from error bodies and details, transport error text
 and the `cause` chain it attaches.
 
