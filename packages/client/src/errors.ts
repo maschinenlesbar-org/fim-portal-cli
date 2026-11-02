@@ -269,7 +269,10 @@ export class FimError extends Error {
  * The API responded with a non-2xx status code. `detail` holds the parsed
  * `detail` field of the API's `ErrorMessage` body when present. For a 3xx — the
  * client does not follow redirects — `location` holds the redirect target
- * (absolute, sanitised, userinfo redacted) and the message names it.
+ * (absolute, sanitised, userinfo redacted) and the message names it. `body` is the
+ * body as sent with the base URL's credentials scrubbed; when it is JSON whose escapes hid
+ * an echoed credential from that scrub, it is the decoded JSON written again
+ * (`JSON.stringify`) with the credential replaced by `***` (`""` if too deeply nested to write).
  */
 export class FimApiError extends FimError {
   readonly status: number;

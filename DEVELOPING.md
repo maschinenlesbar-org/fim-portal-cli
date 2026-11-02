@@ -476,8 +476,16 @@ library, the engine keeps the base URL in a real `#private` field, so
 `console.log(client)`, `util.inspect` and `JSON.stringify` never show it, and it
 scrubs the base URL's userinfo (raw and percent-decoded), and the forms a server echoes
 it back in (the `Basic` value, the decoded `user:password`, the password, or a token's user name, alone from 4
-characters: `echoedCredentialForms`), from error bodies and details, transport error text
-and the `cause` chain it attaches.
+characters: `echoedCredentialForms`, each also percent-encoded as in a URL), from error bodies
+and details, transport error text and the `cause` chain it attaches. The userinfo is taken as
+typed and as WHATWG sends it in the request URL (`p"ä` goes out as `p%22%C3%A4`). Decoded server
+text is scrubbed again after `JSON.parse`, before it is cleaned and cut: an error's `detail` (a
+JSON escape, `\"` or `\u00e4`, hid the echo from the scrub of the body as sent) and the detail of a
+2xx error envelope quoted in the `FimParseError` (`responseShapeProblem`'s `scrub`).
+`FimApiError.body` stays the body as sent, scrubbed, unless it is JSON with an escape whose
+decoded text still holds an echoed form: then it is that JSON written again (`JSON.stringify`,
+other escapes, no insignificant whitespace) with the forms replaced by `***`, and `""` for one
+nested too deeply to write again (`scrubBody`).
 
 **Response shape (2xx).** `getJson` checks the documented envelope of every JSON
 answer (`responseShapeProblem`): a search or `codeLists.list` must return an object

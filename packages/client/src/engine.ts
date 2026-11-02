@@ -385,8 +385,9 @@ export class RequestEngine {
   readonly #credentials: string[];
   /**
    * The forms a server echoes that userinfo back in (the Basic value, the decoded
-   * `user:password`, the password alone), longest first, so a password never leaves half
-   * of the `user:password` around it.
+   * `user:password`, the password or token alone; `echoedCredentialForms`), each also
+   * percent-encoded as in a URL, longest first, so a password never leaves half of the
+   * `user:password` around it.
    */
   readonly #echoed: string[];
   private readonly transport: Transport;
@@ -408,16 +409,18 @@ export class RequestEngine {
     // Checked on the raw value, before the slash strip: buildUrl concatenates it.
     // Only undefined selects the default.
     this.#baseUrl = options.baseUrl === undefined ? DEFAULT_BASE_URL : validateBaseUrl(options.baseUrl);
-    this.#credentials = credentialsIn(this.#baseUrl).flatMap((raw) => {
+    // The userinfo as typed and as WHATWG sends it (it percent-encodes some of its characters,
+    // and a server echoes the request URL in that spelling).
+    const userinfos = [...new Set([...credentialsIn(this.#baseUrl), ...credentialsIn(new URL(this.#baseUrl).href)])];
+    this.#credentials = userinfos.flatMap((raw) => {
       try {
         return [raw, decodeURIComponent(raw)];
       } catch {
         return [raw];
       }
     });
-    this.#echoed = credentialsIn(this.#baseUrl)
-      .flatMap(echoedCredentialForms)
-      .sort((a, b) => b.length - a.length);
+    // Longest first, so a password never leaves half of the user:password around it.
+    this.#echoed = [...new Set(userinfos.flatMap(echoedCredentialForms).flatMap(urlSpellings))].sort((a, b) => b.length - a.length);
     this.transport = options.transport ?? nodeHttpTransport;
     // Only undefined selects the default; a blank or unsendable value is refused
     // here rather than sent blank or failing late with Node's raw TypeError.
@@ -476,6 +479,32 @@ export class RequestEngine {
    */
   private scrub(text: string): string {
     return this.#credentials.length === 0 ? text : redactSecrets(redactCredentials(text, this.#credentials), this.#echoed);
+  }
+
+  /**
+   * An error body, already scrubbed as sent, as `FimApiError.body` keeps it: when it is
+   * JSON with an escape in it, checked decoded too. An escape (`\"`, `\u00e4`) hides an echoed
+   * credential from the scrub of the text as sent, while a caller who parses the body sees it. Such
+   * a body is kept as the decoded JSON written again (`JSON.stringify`, one spelling per character)
+   * with the credential scrubbed in that spelling. A body that doesn't parse is text nobody
+   * decodes, and stays as sent; one too deeply nested to write again is left out.
+   */
+  private scrubBody(scrubbed: string): string {
+    if (this.#echoed.length === 0 || !scrubbed.includes("\\")) return scrubbed;
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(scrubbed);
+    } catch {
+      return scrubbed;
+    }
+    let rewritten: string;
+    try {
+      rewritten = JSON.stringify(decoded);
+    } catch {
+      return "";
+    }
+    const spelled = this.#echoed.map((form) => JSON.stringify(form).slice(1, -1));
+    return spelled.some((form) => rewritten.includes(form)) ? redactSecrets(rewritten, spelled) : scrubbed;
   }
 
   /**
@@ -728,7 +757,8 @@ export class RequestEngine {
     if (inexact !== undefined) {
       throw new FimParseError(`${request}: the number ${cutForMessage(inexact)} cannot be represented exactly.`);
     }
-    const problem = shape === undefined ? undefined : responseShapeProblem(value, shape);
+    // A 2xx error envelope quotes decoded server text: the credentials are scrubbed from it.
+    const problem = shape === undefined ? undefined : responseShapeProblem(value, shape, (t) => this.scrub(t));
     if (problem !== undefined) {
       throw new FimParseError(`${request}: unexpected response shape (HTTP ${res.status}): ${problem}`);
     }
@@ -788,7 +818,9 @@ export class RequestEngine {
     // endpoint cannot inject terminal escape sequences via the stderr error message.
     // ... and cap its length, so a hostile or buggy body cannot flood stderr with one huge
     // line (FimApiError.body keeps the full text).
-    if (detail !== undefined) detail = cleanDetail(detail);
+    // It is decoded text: scrubbed again (a JSON escape hid the credential from the scrub of
+    // the body as sent), before the cut.
+    if (detail !== undefined) detail = cleanDetail(this.scrub(detail));
     // Redirects are not followed; name the target so the user can fix --base-url.
     const location =
       status >= 300 && status < 400 && locationHeader ? redirectTarget(url, locationHeader) : undefined;
@@ -796,7 +828,7 @@ export class RequestEngine {
       status,
       url,
       method,
-      body: text,
+      body: this.scrubBody(text),
       detail,
       location,
       retries: retry.retries,
@@ -817,8 +849,12 @@ export class RequestEngine {
  */
 export type ResponseShape = "page" | "cursor" | "list" | "record";
 
-/** Why `value` does not have the documented form `shape`, or undefined when it does. */
-export function responseShapeProblem(value: unknown, shape: ResponseShape): string | undefined {
+/**
+ * Why `value` does not have the documented form `shape`, or undefined when it does. The detail
+ * of an error envelope is quoted after `scrub` (the engine passes its credential scrub), before
+ * it is cleaned and cut, so no part of a credential stays.
+ */
+export function responseShapeProblem(value: unknown, shape: ResponseShape, scrub: (text: string) => string = (text) => text): string | undefined {
   const isObject = typeof value === "object" && value !== null && !Array.isArray(value);
   const describe = (): string =>
     value === null ? "null" : Array.isArray(value) ? "an array" : isObject ? "an object" : `a ${typeof value}`;
@@ -832,7 +868,8 @@ export function responseShapeProblem(value: unknown, shape: ResponseShape): stri
       // The portal's (FastAPI's) error envelope is an object whose one key is `detail`; no
       // record is only that. Answered with a 2xx, it is an error, never the record.
       if (keys.length === 1 && keys[0] === "detail") {
-        const detail = formatDetail((value as { detail?: unknown }).detail);
+        const raw = formatDetail((value as { detail?: unknown }).detail);
+        const detail = raw === undefined ? undefined : scrub(raw);
         return detail === undefined || detail === ""
           ? "expected a record, got an error envelope."
           : `expected a record, got an error envelope: ${cleanDetail(detail)}${/[.!?]$/.test(detail) ? "" : "."}`;
@@ -858,6 +895,18 @@ function isHtml(res: RawResponse): boolean {
   if (type === "text/html" || type === "application/xhtml+xml") return true;
   const head = res.data.subarray(0, 512).toString("latin1").replace(/^\uFEFF|^\xEF\xBB\xBF/, "").trimStart().toLowerCase();
   return head.startsWith("<!doctype html") || head.startsWith("<html");
+}
+
+/**
+ * `form` and its spelling in a URL (`encodeURIComponent`): a server that puts a credential into
+ * a URL percent-encodes it. A form that has no such spelling (a lone surrogate) is kept as it is.
+ */
+function urlSpellings(form: string): string[] {
+  try {
+    return [form, encodeURIComponent(form)];
+  } catch {
+    return [form];
+  }
 }
 
 /** Longest server text (in characters) an error message keeps; a longer one ends in "…". */
