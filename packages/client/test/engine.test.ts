@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { TextDecoder } from "node:util";
 import { MAX_RETRIES, MAX_RETRY_AFTER_MS, RequestEngine, bigIntegerKeysOption, cleartextProblem, firstInexactNumber, parseRetryAfter, sanitizeServerText, scanNumbers } from "../src/engine.js";
 import { MAX_TIMEOUT_MS } from "../src/http.js";
-import { FimApiError, FimNetworkError, FimParseError, FimValidationError, cutForMessage, cutText, redactUrl, toWellFormed } from "../src/errors.js";
+import { FimApiError, FimNetworkError, FimParseError, FimValidationError, TextBuilder, cutForMessage, cutText, redactUrl, redactUrlUserinfo, toWellFormed } from "../src/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
 const noSleep = async (): Promise<void> => {};
@@ -745,4 +745,34 @@ test("bigIntegerKeys: a declared member's number is its exact literal as a strin
   // Without declarations the scan is the plain number check.
   assert.equal(firstInexactNumber('{"a":"1e400","b":3e-324}'), "3e-324");
   assert.deepEqual(scanNumbers('{"a":1}'), { json: '{"a":1}', inexact: undefined });
+});
+
+function elapsed(work: () => unknown): number {
+  const start = performance.now();
+  work();
+  return performance.now() - start;
+}
+
+test("redactUrlUserinfo hides every URL's userinfo in one linear pass, however many URLs (T15b)", () => {
+  // The URL regex this replaces (a scheme tried at every word start) takes about 3 s on this.
+  assert.ok(elapsed(() => redactUrlUserinfo("a.".repeat(30_000))) < 1000);
+  assert.equal(redactUrlUserinfo("a -https://u:p@h/x and x-ftp://v@w?q, mail@example.org"), "a -https://***@h/x and x-ftp://***@w?q, mail@example.org");
+  assert.equal(redactUrlUserinfo("1://u:p@h ://u:p@h"), "1://u:p@h ://u:p@h");
+  assert.equal(redactUrlUserinfo("https://h/p?u=a@b"), "https://h/p?u=a@b");
+  for (const text of ["a".repeat(1_000_000), "a.".repeat(500_000), "://".repeat(100_000), `https://${"u".repeat(1_000_000)}`]) {
+    assert.equal(redactUrlUserinfo(text), text);
+  }
+  const many = redactUrlUserinfo("https://u:p@h ".repeat(100_000));
+  assert.equal(many, "https://***@h ".repeat(100_000));
+});
+
+test("a TextBuilder joins its pieces in order across batches", () => {
+  const b = new TextBuilder();
+  const expected: string[] = [];
+  for (let i = 0; i < 40_000; i++) {
+    b.push(String(i), ",");
+    expected.push(String(i), ",");
+  }
+  assert.equal(b.toString(), expected.join(""));
+  assert.equal(new TextBuilder().toString(), "");
 });

@@ -455,7 +455,11 @@ errors, which echo rejected values (`argument '<url>' is invalid`, `unknown comm
 argument (`urlsWithin`: each `://` found with indexOf, its scheme by walking back, at most 64
 per argument), since a text filter or an id is sent trimmed: a padded `" https://u:pw@host"`,
 one after a dash or inside a phrase reached the request URL of an error record (percent-encoded,
-also replaced) and the refusals that quote it. Only a URL with a scheme
+also replaced) and the refusals that quote it. Behind the exact strings, the userinfo of every
+URL in the text is replaced by pattern (`redactUrlUserinfo`, in the client's `errors.ts`): one
+linear pass, each `://` found with indexOf and its scheme by walking back. The scheme regex it
+replaced was tried at every word start and was quadratic on a run of scheme characters
+(`a.a.a.…`) in an answer, which held the CLI for seconds past `--timeout`. Only a URL with a scheme
 counts (a bare `a:b@c` is a file name, a search text or a User-Agent as often as a
 credential: `-o run:2026-10-09@x.json` stays as it is), except as the `--base-url` value,
 where a `user:password@host` typed without its scheme is still a credential. On stderr the log replaces them in

@@ -7,7 +7,7 @@ import type { CliDeps } from "../src/cli/io.js";
 import type { HttpRequest, HttpResponse } from "@maschinenlesbar.org/fim-portal-client/internal/http";
 import { makeMockTransport, jsonResponse, rawResponse, untimed } from "./helpers.js";
 import * as fx from "@maschinenlesbar.org/fim-portal-client/test/fixtures";
-import { FimNetworkError, credentialsIn } from "@maschinenlesbar.org/fim-portal-client/internal/errors";
+import { FimNetworkError, credentialsIn, redactUrlUserinfo } from "@maschinenlesbar.org/fim-portal-client/internal/errors";
 
 function makeCli(responder: (req: HttpRequest) => HttpResponse) {
   const out: string[] = [];
@@ -805,6 +805,27 @@ test("an a:b@c argument (here a User-Agent) is neither a credential in the log n
   assert.match(cli.out.join("\n"), /"name": "run:2026-10-09@x"/);
   assert.deepEqual(credentialsIn("run:2026-10-09@x"), []);
   assert.deepEqual(credentialsIn("https://alice:pw@host"), ["alice:pw"]);
+});
+
+test("the CLI's userinfo redaction of stdout is linear in the answer (security audit 2026-10-27, B)", async () => {
+  // With a URL with userinfo in argv, every stdout text is redacted. 200 000 characters of
+  // `a.a.…` took about 8 s with the scheme regex; the linear pass takes milliseconds.
+  const value = "a.".repeat(100_000);
+  const cli = makeCli(() => rawResponse(`{"fim_id":"S1","x":${JSON.stringify(value)}}`, "application/json"));
+  const start = performance.now();
+  const code = await run(["--base-url", "https://alice:s3cret-Pw@mirror.example", "--compact", "schemas", "get", "S1"], cli.deps);
+  const ms = performance.now() - start;
+  assert.equal(code, 0, cli.err.join("\n"));
+  assert.ok(cli.out.join("\n").includes(value));
+  assert.ok(ms < 1500, `${Math.round(ms)} ms`);
+});
+
+test("redactUrlUserinfo hides the userinfo of every URL in a line and leaves other text alone", () => {
+  assert.equal(
+    redactUrlUserinfo("argument 'ftp://user:s3cret@h.example' is invalid; also http://a@b@c.example/x?y=u@v"),
+    "argument 'ftp://***@h.example' is invalid; also http://***@c.example/x?y=u@v",
+  );
+  assert.equal(redactUrlUserinfo("error: unknown option '--bogus' (mail@example.org)"), "error: unknown option '--bogus' (mail@example.org)");
 });
 
 test("a group without its subcommand, and an unknown help topic, log an ERROR before the help (L5)", async () => {
