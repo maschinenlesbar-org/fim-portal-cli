@@ -359,3 +359,23 @@ test("an -o path that can't be inspected is reported as such, not as an existing
     }
   });
 });
+
+test("a stream target is written only when the descriptor opened is a stream (G2)", async () => {
+  await inTempDir(async (dir) => {
+    // The path was a stream when it was classified and is a regular file (through a link) when
+    // it is opened: without --force it is refused, and the file is not touched.
+    const victim = join(dir, "victim.txt");
+    writeFileSync(victim, "keep me\n");
+    const link = join(dir, "out.json");
+    symlinkSync(victim, link);
+    const real = nodeFilesFor();
+    const switched = { ...real, state: () => "stream" as const };
+    assert.throws(() => switched.write(link, Buffer.from("appended\n"), false), /Refusing to overwrite/);
+    assert.equal(readFileSync(victim, "utf8"), "keep me\n");
+    // Nor is a missing one created.
+    assert.throws(() => switched.write(join(dir, "new.json"), Buffer.from("x"), false));
+    assert.throws(() => statSync(join(dir, "new.json")));
+    // A real stream is still written in place.
+    assert.doesNotThrow(() => real.write("/dev/null", Buffer.from("x"), false));
+  });
+});

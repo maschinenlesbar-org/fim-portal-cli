@@ -288,7 +288,9 @@ not a directory or not writable (or a link loop with `--force`; `OutputFiles.par
 `FimValidationError`s (usage errors, exit 1); `-o -` is stdout. A stream — a character device
 (`/dev/null`), a FIFO, a socket, or a descriptor path (`/dev/stdout`, `/dev/fd/N` from `>(…)`) —
 is written in place (`writeInPlace`, every byte), with no claim, no temporary file and no
-`--force` needed. A file is written atomically (`nodeFiles.write`): without `--force` the name is
+`--force` needed; it is opened without O_CREAT and checked on the descriptor (`fstat`), so a
+path switched to a regular file after it was classified takes the way of a file (refused
+without `--force`) instead of being appended to. A file is written atomically (`nodeFiles.write`): without `--force` the name is
 claimed with an exclusive create (so a file that appeared during the request is refused too, an
 `OutputError`), the data goes to a temporary file beside the target
 (`.<name>.<pid>-<hex>.tmp`, the name shortened to stay within NAME_MAX, 255 bytes), an existing
