@@ -747,6 +747,20 @@ test("bigIntegerKeys: a declared member's number is its exact literal as a strin
   assert.deepEqual(scanNumbers('{"a":1}'), { json: '{"a":1}', inexact: undefined });
 });
 
+test("a number with a long run of zeros is checked in linear time (A)", async () => {
+  // The trailing-zero regex `/0+$/` tried a match at every zero of a run that doesn't end the
+  // literal: 1.<100 000 zeros>1e300 took about 15 s. The zeros are counted with index loops now.
+  const literal = `1.${"0".repeat(100_000)}1e300`;
+  let inexact: string | undefined;
+  assert.ok(elapsed(() => (inexact = firstInexactNumber(`{"x":${literal}}`))) < 1000);
+  assert.equal(inexact, literal);
+  const engine = new RequestEngine({ transport: makeMockTransport(() => rawResponse(`{"x":${literal}}`, "application/json")).transport });
+  await assert.rejects(engine.getJson("/x"), (err: unknown) => err instanceof FimParseError && /cannot be represented exactly/.test(err.message) && err.message.length < 1000);
+  // The same digits and exponent as before: zeros on both ends don't change the value.
+  assert.equal(firstInexactNumber('{"a":100000000000000000000000,"b":0.000000e0,"c":1000.0e20}'), undefined);
+  assert.equal(firstInexactNumber('{"a":12345678901234567890}'), "12345678901234567890");
+});
+
 function elapsed(work: () => unknown): number {
   const start = performance.now();
   work();
