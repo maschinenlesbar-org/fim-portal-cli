@@ -293,7 +293,16 @@ claimed with an exclusive create (so a file that appeared during the request is 
 `OutputError`), the data goes to a temporary file beside the target
 (`.<name>.<pid>-<hex>.tmp`, the name shortened to stay within NAME_MAX, 255 bytes), an existing
 file's mode is kept, and it is renamed over the target; `--force` writes through a chain of
-symlinks to the file they name, creating it when the link dangles (`linkTarget`). On failure
+symlinks to the file they name, creating it when the link dangles (`linkTarget`), but follows
+a link only when the caller or the owner of its directory made it, or nobody else can write to
+that directory (neither sticky nor writable by others): the rule of Linux's
+`fs.protected_symlinks`, checked at every hop, a dangling last one too, since the kernel never
+sees these links. Another user's link in `/tmp` is refused (`… is a link another user made in a
+directory others can write to; it is not followed`): a usage error before the request, an
+`OutputError` when it appears during it. The owners come through `LinkOwners`
+(`nodeFilesFor(owners)`, `nodeFiles` is the process's own), so tests need no second user. A
+path whose state can't be read for another reason than its absence (EACCES on the way) is
+reported as that, never as an existing file that `--force` may replace. On failure
 the temporary file and a claimed name are removed, and so they are on SIGINT, SIGTERM and SIGHUP
 (exit 130, 143, 129; installed at the first file write, never for a stream). An error names the
 user's file, never the temporary one (`reasonOf`). Conformance test P26 checks a write cut short

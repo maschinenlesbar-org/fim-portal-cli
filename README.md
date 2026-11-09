@@ -286,7 +286,9 @@ fim-portal --log-format jsonl -o geburt.xml schemas xdf S07000009 1.0 2>log.json
 > refused, and `--force` without `-o` is a usage error. The write is atomic: the data goes to
 > a temporary file beside the target, renamed over it once complete, so a write cut short (a
 > full disk) leaves the old file as it was and no half-written or temporary file behind.
-> `--force` keeps the old file's mode and writes through a symlink to the file it points at.
+> `--force` keeps the old file's mode and writes through a symlink to the file it points at,
+> unless another user made the link in a directory others can write to (such as `/tmp`): that
+> one is refused (exit `1`), as Linux refuses it to the shell.
 > A file that appears while the request runs is not overwritten either (exit `1`, an `ERROR`
 > record of `fim-portal.output`). An answer that isn't the data asked for
 > fails (exit `1`) without touching the file: an HTML page (a maintenance or proxy
@@ -365,7 +367,7 @@ These apply to every command and may be given **before or after** it:
 | `--compact` | Print JSON on a single line instead of pretty-printed |
 | `--log-format <format>` | How errors, warnings and notes are written to stderr: `text` (default; log4j style, `2026-10-09T14:03:12.481Z WARN  [fim-portal.http] …`) or `jsonl` (one JSON object per line: `ts`, `level`, `topic`, `msg`). stdout is not affected |
 | `-o, --output <file>` | Write the output (JSON or a download) to a file instead of stdout; `-o -` means stdout (any other value starting with a dash is refused as the next option, so write a file named `-x` as `./-x`). An existing file is refused before any request (exit `1`) unless `--force` is given; a directory, and a file whose directory is missing or not writable, are refused either way. The file is written beside the target and renamed over it when complete, so a write cut short (a full disk) or interrupted (Ctrl-C, `SIGTERM`, `SIGHUP`: exit `130`, `143`, `129`) leaves the old file as it was and no half-written or temporary one. A device, a FIFO or the shell's own descriptor (`/dev/null`, `/dev/stdout`, `>(gzip > x.gz)`) is written in place, without `--force` |
-| `--force` | With `-o`: replace an existing file (atomically, keeping its mode; through a symlink to the file it points at, which is created if the link dangles) |
+| `--force` | With `-o`: replace an existing file (atomically, keeping its mode; through a symlink to the file it points at, which is created if the link dangles; never through a link another user made in a directory others can write to) |
 | `--base-url <url>` | API base URL (default `https://fimportal.de`; `https://schema.fim.fitko.net` also works). Must be an `http:`/`https:` URL spelled `http(s)://` and the host, without a query, a fragment, a backslash, whitespace or control characters, and a `%` in a user name or password must be an escape (write a literal `%` as `%25`) — anything else is rejected at parse time (exit `1`) before any request is made. A plain `http:` URL to a host other than loopback (`localhost`, `127.0.0.0/8`, `::1`) logs one warning on stderr before the first request, a `WARN` record of `fim-portal.http` (`requests to <host> are sent unencrypted (http:, not https:)`) (naming the URL's credentials instead when it carries any, never printing them); stdout and the exit code are unchanged. A `user:password@` in it is shown as `***@` in every message; echoed back by a server (the `Basic` value, `user:password`, the password; for a user name without a password, a token, the user name), it is shown as `***` |
 | `--timeout <ms>` | Per-request timeout (default `30000`; at most `2147483647`) |
 | `--user-agent <ua>` | `User-Agent` header value |

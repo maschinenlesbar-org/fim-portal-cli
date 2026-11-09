@@ -368,7 +368,13 @@ export function checkOutputTarget(deps: CliDeps, global: GlobalOptions): void {
   const file = outputFile(global);
   if (file === undefined) return;
   const files = deps.files ?? nodeFiles;
-  const state = files.state(file);
+  let state: ReturnType<typeof files.state>;
+  try {
+    state = files.state(file);
+  } catch (err) {
+    // A path that can't be told (EACCES on the way) is refused as that, before any request.
+    throw new FimValidationError(err instanceof Error ? err.message : String(err));
+  }
   if (state === "directory") throw new FimValidationError(isDirectoryMessage(file));
   if (state === "stream") return;
   if (state === "exists" && global.force !== true) throw new FimValidationError(refuseOverwrite(file));
