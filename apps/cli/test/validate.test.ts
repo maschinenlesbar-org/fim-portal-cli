@@ -277,7 +277,7 @@ test("baseUrlWhitespaceProblem rejects surrounding whitespace and interior white
 // ---- base URL shape (PAT-2) ----
 
 test("baseUrlProblem applies every base-URL rule with the CLI's reasons", () => {
-  for (const v of ["https://fimportal.de", "https://mirror.example/fim/", "http://127.0.0.1:18113", "https://u:p@h.example"]) {
+  for (const v of ["https://fimportal.de", "https://mirror.example/fim/", "http://127.0.0.1:18113", "https://u:p@h.example", "HTTPS://H.example/v1"]) {
     assert.equal(baseUrlProblem(v), undefined, v);
   }
   for (const [v, reason] of [
@@ -290,6 +290,13 @@ test("baseUrlProblem applies every base-URL rule with the CLI's reasons", () => 
     ["https://h.example?", "A base URL cannot have a query (?) or fragment (#)."],
     [" https://h.example", "A base URL cannot have surrounding whitespace."],
     ["https://h.ex\tample", "A base URL cannot contain whitespace or control characters."],
+    ["https://u:pw@a.example\\@b.example", 'A base URL cannot contain a backslash (\\); write "/" instead.'],
+    ["https://h.example/a\\b", 'A base URL cannot contain a backslash (\\); write "/" instead.'],
+    ["https:\\\\h.example", 'A base URL cannot contain a backslash (\\); write "/" instead.'],
+    ["http:h.example", 'Expected an absolute http(s) URL ("https://" and the host).'],
+    ["https:/h.example", 'Expected an absolute http(s) URL ("https://" and the host).'],
+    ["http:///h.example", 'Expected an absolute http(s) URL ("https://" and the host).'],
+    ["http:u:s3cret@h.example", 'Expected an absolute http(s) URL ("https://" and the host).'],
   ] as const) {
     assert.equal(baseUrlProblem(v), reason, JSON.stringify(v));
   }

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { TextDecoder, inspect } from "node:util";
 import { MAX_RETRIES, MAX_RETRY_AFTER_MS, RequestEngine, bigIntegerKeysOption, cleartextProblem, firstInexactNumber, parseRetryAfter, responseShapeProblem, sanitizeServerText, scanNumbers } from "../src/engine.js";
 import { MAX_TIMEOUT_MS } from "../src/http.js";
-import { FimApiError, FimNetworkError, FimParseError, FimValidationError, TextBuilder, cutForMessage, cutText, echoedCredentialForms, redactUrl, redactUrlUserinfo, toWellFormed } from "../src/errors.js";
+import { FimApiError, FimNetworkError, FimParseError, FimValidationError, TextBuilder, credentialsIn, cutForMessage, cutText, echoedCredentialForms, redactUrl, redactUrlUserinfo, toWellFormed } from "../src/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
 const noSleep = async (): Promise<void> => {};
@@ -311,6 +311,77 @@ test("FimApiError.isRetryable reflects 429/503", () => {
   const e2 = new FimApiError({ status: 404, url: "u", method: "GET", body: "" });
   assert.equal(e1.isRetryable, true);
   assert.equal(e2.isRetryable, false);
+});
+
+test("a base URL with a backslash, or a scheme not followed by // and the host, is rejected at construction, never echoing the password (F, F4)", () => {
+  // WHATWG ends an http(s) authority at "\\" and repairs `http:host`, `http:/host` and
+  // `http:///host` silently into `http://host`: the host requested would not be the one typed.
+  const backslash = 'A base URL cannot contain a backslash (\\); write "/" instead.';
+  const form = 'Expected an absolute http(s) URL ("https://" and the host).';
+  for (const [baseUrl, reason] of [
+    ["https://alice:s3cret@api.example\\@evil.example", backslash],
+    ["https://api.example\\evil", backslash],
+    ["https:\\\\alice:s3cret@h.example", backslash],
+    ["http:alice:s3cret@h.example", form],
+    ["https:/alice:s3cret@h.example", form],
+    ["http:///alice:s3cret@h.example", form],
+    ["HTTPS:h.example/v1", form],
+  ] as const) {
+    const mt = makeMockTransport(() => jsonResponse({}));
+    assert.throws(
+      () => new RequestEngine({ transport: mt.transport, baseUrl }),
+      (err: unknown) => err instanceof FimValidationError && err.message === `Invalid baseUrl: ${reason}` && !err.message.includes("s3cret"),
+      baseUrl,
+    );
+    assert.equal(mt.calls.length, 0, baseUrl);
+  }
+  // A spelling the parser keeps as typed stays accepted: an upper-case scheme, an explicit port.
+  for (const baseUrl of ["HTTPS://h.example/v1", "http://alice:pw@h.example:8080"]) {
+    assert.doesNotThrow(() => new RequestEngine({ transport: makeMockTransport(() => jsonResponse({})).transport, baseUrl }), baseUrl);
+  }
+});
+
+test("requests go to the base URL as WHATWG parses it, the reading every check makes (F)", async () => {
+  for (const [baseUrl, sent] of [
+    ["https://API.Example:443/v1", "https://api.example/v1/x"],
+    ["https://alice:pw@api.example/v1/@evil.example", "https://alice:pw@api.example/v1/@evil.example/x"],
+    ["https://h.example/fim//", "https://h.example/fim/x"],
+  ] as const) {
+    const mt = makeMockTransport(() => jsonResponse({}));
+    await new RequestEngine({ transport: mt.transport, baseUrl }).getJson("/x");
+    assert.equal(mt.last().url, sent, baseUrl);
+  }
+});
+
+test("credentialsIn ends the authority of a special scheme at a backslash, as WHATWG does (F)", () => {
+  for (const scheme of ["http", "https", "HTTPS", "ws", "wss", "ftp"]) {
+    assert.deepEqual(credentialsIn(`${scheme}://u:p@a.example\\@b.example/x`), ["u:p"], scheme);
+    assert.equal(new URL(`${scheme}://u:p@a.example\\@b.example/x`).password, "p", scheme);
+  }
+  // Another scheme's authority runs on to "/", "?" or "#".
+  assert.deepEqual(credentialsIn("foo://u:p@a.example\\@b.example/x"), ["u:p@a.example\\"]);
+  assert.deepEqual(credentialsIn("https://u:p@a.example/x\\@y"), ["u:p"]);
+});
+
+test("credentialsIn skips the slashes and backslashes WHATWG skips after a special scheme (F3)", () => {
+  // `http:///u:pw@h`, `https:\\u:pw@h` and `http:u:pw@h` all carry `u:pw` for WHATWG; read
+  // after "://", the userinfo was missed, so a refused --base-url echoed the password in clear.
+  for (const value of [
+    "http:alice:pw@h.example",
+    "http:/alice:pw@h.example",
+    "http:///alice:pw@h.example/x",
+    "https:////alice:pw@h.example",
+    "HTTPS:\\\\alice:pw@h.example",
+    "wss:\\/alice:pw@h.example",
+    "ftp:alice:pw@h.example",
+  ]) {
+    assert.deepEqual(credentialsIn(value), ["alice:pw"], value);
+    assert.equal(new URL(value).password, "pw", value);
+  }
+  // Another scheme needs "//" before an authority: `foo:u:p@h` and `foo:///u:p@h` carry none.
+  assert.deepEqual(credentialsIn("foo:u:p@h.example"), []);
+  assert.deepEqual(credentialsIn("foo:///u:p@h.example"), []);
+  assert.equal(new URL("foo:///u:p@h.example").password, "");
 });
 
 test("a non-http(s) base URL is rejected at construction, before any request", () => {

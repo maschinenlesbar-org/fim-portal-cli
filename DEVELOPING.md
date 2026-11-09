@@ -436,13 +436,21 @@ What the library rejects with `FimValidationError`, before any request:
   `https:`, a query or fragment (request paths are appended as a string, so
   `http://h/?x=1` would request `/?x=1/api/...`), a `%` in the user name or password
   that doesn't start an escape (Node decodes the userinfo for the Authorization header
-  and failed at request time with "URI malformed"; a literal `%` is `%25`),
-  surrounding whitespace, or
+  and failed at request time with "URI malformed"; a literal `%` is `%25`), a backslash
+  (WHATWG ends an http(s) authority at `\`, text-based code read on, so
+  `https://u:pw@a.example\@b.example` was checked as one host and could send its credentials
+  to another), surrounding whitespace, or
   whitespace or a control character anywhere inside (`baseUrlWhitespaceProblem`:
-  `new URL()` trims and strips those silently, but the engine concatenates request
-  paths onto the raw string, so `"https://h/ "` would request `/%20/api/...`). The
-  check runs on the raw `baseUrl`, before trailing slashes are stripped, and the
-  reasons never echo the value. A bad base URL is a configuration error, not a
+  `new URL()` trims and strips those silently, so the URL requested would not be the one
+  typed), and last a scheme not followed by exactly `//` and the host (`http:host`,
+  `http:/host`, `http:///host`, which WHATWG repairs silently into `http://host`: `Expected an
+  absolute http(s) URL ("https://" and the host).`). The check runs on the raw `baseUrl`, and
+  the reasons never echo the value. Requests then go to the base URL as WHATWG parses it
+  (`new URL(baseUrl).href`, trailing slashes stripped), the reading every check makes: the host
+  lower-cased, a default port dropped, the path percent-encoded where WHATWG does it. Error
+  messages show that spelling, and a custom transport receives it. `credentialsIn` reads a
+  userinfo as WHATWG does: after the slashes and backslashes a special scheme skips
+  (`http:///u:pw@h`, `https:\\u:pw@h`, `http:u:pw@h`), up to a backslash too. A bad base URL is a configuration error, not a
   transport failure, so it is a `FimValidationError`, no longer a
   `FimNetworkError`; the default transport's per-hop scheme check, which runs at
   request time, still throws `FimNetworkError`. The CLI's `--base-url` parser

@@ -333,8 +333,12 @@ export const baseUrlWhitespaceProblem: Problem<unknown> = (value) => {
  * are appended as a string, so `http://h/?x=1` would request `/?x=1/api/...` and
  * `http://h/#f` would request `/`); a `%` in the user name or password that starts a
  * valid escape (`%25` for a literal one: Node decodes the userinfo for the Authorization
- * header and failed at request time); then baseUrlWhitespaceProblem. The reasons
- * never echo the value, so credentials in it cannot leak into a message.
+ * header and failed at request time); no backslash (WHATWG ends an http(s) host at one, as at a
+ * `/`, while text-based code reads on, so `https://u:pw@a.example\\@b.example` was checked as
+ * a.example and its credentials could go to b.example); then baseUrlWhitespaceProblem; and
+ * last the scheme followed by exactly `//` and the host (not `http:host`, `http:/host` or
+ * `http:///host`, which WHATWG repairs silently into another URL than the one typed). The
+ * reasons never echo the value, so credentials in it cannot leak into a message.
  * Userinfo is allowed: the repo deliberately sends it.
  */
 export const baseUrlProblem: Problem<unknown> = (value) => {
@@ -349,6 +353,9 @@ export const baseUrlProblem: Problem<unknown> = (value) => {
     return 'Only "http:" and "https:" base URLs are supported.';
   }
   if (/[?#]/.test(value)) return "A base URL cannot have a query (?) or fragment (#).";
+  // WHATWG reads a "\\" in an http(s) URL as "/", so it ends the host: in
+  // `https://u:pw@a.example\\@b.example` every reader of the base URL has to agree where.
+  if (value.includes("\\")) return 'A base URL cannot contain a backslash (\\); write "/" instead.';
   // Node decodes the userinfo into the Authorization header and throws "URI malformed" for a
   // "%" that isn't an escape — at request time, as a network error. Reject it here.
   for (const part of [url.username, url.password]) {
@@ -358,5 +365,10 @@ export const baseUrlProblem: Problem<unknown> = (value) => {
       return 'The user name or password has a "%" that is not followed by two hex digits; write a literal "%" as %25.';
     }
   }
-  return baseUrlWhitespaceProblem(value);
+  const whitespace = baseUrlWhitespaceProblem(value);
+  if (whitespace !== undefined) return whitespace;
+  // WHATWG skips any slashes after "http:" and repairs `http:host`, `http:/host` and
+  // `http:///host` into `http://host` silently: the host requested would not be the one typed.
+  if (!/^https?:\/\/[^/]/i.test(value)) return 'Expected an absolute http(s) URL ("https://" and the host).';
+  return undefined;
 };

@@ -384,6 +384,13 @@ const badBaseUrlCases: Array<[string, string]> = [
   ["https://u:secret@x.example/?q=1", "A base URL cannot have a query (?) or fragment (#)."],
   ["", "Expected a valid absolute URL (e.g. https://fimportal.de)."],
   ["not a url with secret", "Expected a valid absolute URL (e.g. https://fimportal.de)."],
+  // A backslash: WHATWG ends an http(s) authority there, text-based code read on (F).
+  ["https://u:secret@x.example\\@evil.example", 'A base URL cannot contain a backslash (\\); write "/" instead.'],
+  // The scheme not followed by exactly "//" (WHATWG skips slashes and backslashes there, F3/F4).
+  ["http:u:secret@x.example", 'Expected an absolute http(s) URL ("https://" and the host).'],
+  ["http:///u:secret@x.example", 'Expected an absolute http(s) URL ("https://" and the host).'],
+  ["https:\\\\u:secret@x.example", 'A base URL cannot contain a backslash (\\); write "/" instead.'],
+  ["http:///u:secret@x.example/?q=1", "A base URL cannot have a query (?) or fragment (#)."],
 ];
 
 for (const [baseUrl, reason] of badBaseUrlCases) {
@@ -396,6 +403,8 @@ for (const [baseUrl, reason] of badBaseUrlCases) {
     assert.equal(cli.code, 1);
     assert.equal(cli.requests.length, 0);
     assert.match(cli.err, new RegExp(escaped));
+    // A credential in it is never echoed (commander quotes the value it refuses).
+    if (baseUrl.includes("@")) assert.doesNotMatch(cli.err, /secret/);
     assert.equal(lib.ok, false);
     if (!lib.ok) {
       assert.ok(lib.error instanceof FimValidationError, String(lib.error));

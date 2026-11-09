@@ -267,7 +267,8 @@ export function sanitizeServerText(text: string): string {
 
 /**
  * Check a base URL against every rule (baseUrlProblem: parseable, http(s) only, no
- * query or fragment, no whitespace or control characters) and return it with
+ * query or fragment, no backslash, no whitespace or control characters, `//` and the host
+ * after the scheme) and return it with
  * trailing slashes stripped. Throws a FimValidationError
  * (`Invalid baseUrl: <reason>`): a bad base URL is a configuration error, not a
  * transport failure. The RequestEngine constructor runs it on the raw value; the
@@ -434,12 +435,17 @@ export class RequestEngine {
     // A JavaScript caller may pass null for "no options"; treat it like undefined rather
     // than failing with a raw TypeError on the first property read.
     options = options ?? {};
-    // Checked on the raw value, before the slash strip: buildUrl concatenates it.
-    // Only undefined selects the default.
-    this.#baseUrl = options.baseUrl === undefined ? DEFAULT_BASE_URL : validateBaseUrl(options.baseUrl);
+    // Checked on the raw value. Only undefined selects the default.
+    const baseUrl = options.baseUrl === undefined ? DEFAULT_BASE_URL : validateBaseUrl(options.baseUrl);
+    // Requests go to the base URL as WHATWG parses it, the reading every check of it makes (the
+    // host, the cleartext warning, the Authorization header Node derives), not to a text-based
+    // reading of the string: a transport that reads the URL as text reaches the same host.
+    // buildUrl concatenates it, so the trailing slashes go.
+    const href = new URL(baseUrl).href;
+    this.#baseUrl = href.replace(/\/+$/, "");
     // The userinfo as typed and as WHATWG sends it (it percent-encodes some of its characters,
     // and a server echoes the request URL in that spelling).
-    const userinfos = [...new Set([...credentialsIn(this.#baseUrl), ...credentialsIn(new URL(this.#baseUrl).href)])];
+    const userinfos = [...new Set([...credentialsIn(baseUrl), ...credentialsIn(href)])];
     this.#credentials = userinfos.flatMap((raw) => {
       try {
         return [raw, decodeURIComponent(raw)];
