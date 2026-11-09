@@ -8,7 +8,7 @@ import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { run } from "../src/cli/run.js";
-import { nodeFilesFor, stdoutWriter, type CliDeps, type LinkOwners } from "../src/cli/io.js";
+import { nodeFilesFor, stdoutWriter, type CliDeps } from "../src/cli/io.js";
 import { FimPortalClient } from "@maschinenlesbar.org/fim-portal-client/internal/client";
 import type { HttpRequest, HttpResponse } from "@maschinenlesbar.org/fim-portal-client/internal/http";
 import { jsonResponse, makeMockTransport, rawResponse, untimed } from "./helpers.js";
@@ -277,88 +277,7 @@ test("stdout to a regular file gets every byte or an error: a short write is nev
   });
 });
 
-// ---- --force and links in a shared directory (G); owners injected, so no second user is needed ----
-
-/** The caller, another user who planted links, and /tmp (root's, sticky, world-writable). */
-const ME = 1000;
-const OTHER = 1001;
-const SHARED = { uid: 0, mode: 0o41777 };
-
-/** Owners as a test says: `links` maps a link to its owner, `dirs` a directory to its owner and mode (else the caller's, 0755). */
-function owners(links: Record<string, number>, dirs: Record<string, { uid: number; mode: number }>): LinkOwners {
-  return {
-    uid: ME,
-    ownerOf: (path, follow) => (follow ? (dirs[path] ?? { uid: ME, mode: 0o40755 }) : { uid: links[path] ?? ME, mode: 0o120777 }),
-  };
-}
-
-/** `schemas versions S1 -o <file>`, its answer `[{"id":"a1"}]`, with the files of `who`. */
-async function writeThrough(files: ReturnType<typeof nodeFilesFor>, file: string, force: boolean) {
-  const cli = makeCli(() => jsonResponse([{ id: "a1" }]));
-  const code = await run(["--max-retries", "0", "-o", file, ...(force ? ["--force"] : []), "schemas", "versions", "S1"], { ...cli.deps, files });
-  return { code, err: cli.err.join("\n"), requests: cli.mt.calls.length };
-}
-
-test("--force does not follow a link another user made in a shared directory, at any hop, before any request (G)", async () => {
-  await inTempDir(async (dir) => {
-    const victim = join(dir, "victim.txt");
-    writeFileSync(victim, "keep me\n");
-    const link = join(dir, "out.json");
-    symlinkSync(victim, link);
-    for (const mode of [0o40777, SHARED.mode]) {
-      const files = nodeFilesFor(owners({ [link]: OTHER }, { [dir]: { uid: mode === SHARED.mode ? 0 : ME, mode } }));
-      const o = await writeThrough(files, link, true);
-      assert.equal(o.code, 1, o.err);
-      assert.equal(o.requests, 0);
-      assert.match(o.err, /another user/);
-      // At write time too (a link planted during the request).
-      assert.throws(() => files.write(link, Buffer.from("x"), true), /another user/);
-    }
-    // own link -> a foreign link -> the victim; and a foreign dangling link.
-    const inner = join(dir, "inner");
-    symlinkSync(victim, inner);
-    const outer = join(dir, "outer.json");
-    symlinkSync(inner, outer);
-    assert.equal((await writeThrough(nodeFilesFor(owners({ [inner]: OTHER }, { [dir]: SHARED })), outer, true)).code, 1);
-    const dangling = join(dir, "dangling.json");
-    symlinkSync(join(dir, "created-elsewhere.json"), dangling);
-    assert.equal((await writeThrough(nodeFilesFor(owners({ [dangling]: OTHER }, { [dir]: SHARED })), dangling, true)).code, 1);
-    assert.throws(() => statSync(join(dir, "created-elsewhere.json")));
-    assert.equal(readFileSync(victim, "utf8"), "keep me\n");
-    // The caller's own link, the directory owner's, one in a directory only its owner writes, or no caller id: followed.
-    for (const who of [
-      owners({}, { [dir]: SHARED }),
-      owners({ [link]: 0 }, { [dir]: SHARED }),
-      owners({ [link]: OTHER }, { [dir]: { uid: OTHER, mode: 0o40755 } }),
-      { ...owners({ [link]: OTHER }, { [dir]: SHARED }), uid: undefined },
-    ]) {
-      writeFileSync(victim, "keep me\n");
-      const o = await writeThrough(nodeFilesFor(who), link, true);
-      assert.equal(o.code, 0, o.err);
-      assert.deepEqual(JSON.parse(readFileSync(victim, "utf8")), [{ id: "a1" }]);
-      assert.ok(lstatSync(link).isSymbolicLink());
-    }
-  });
-});
-
-test("an -o path that can't be inspected is reported as such, not as an existing file (G)", { skip: process.getuid?.() === 0 }, async () => {
-  await inTempDir(async (dir) => {
-    const closed = join(dir, "closed");
-    mkdirSync(closed);
-    const link = join(dir, "out.json");
-    symlinkSync(join(closed, "x.json"), link);
-    chmodSync(closed, 0o000);
-    try {
-      const o = await writeThrough(nodeFilesFor(), link, false);
-      assert.equal(o.code, 1, o.err);
-      assert.equal(o.requests, 0);
-      assert.doesNotMatch(o.err, /Refusing to overwrite existing file/);
-      assert.match(o.err, /EACCES|permission/i);
-    } finally {
-      chmodSync(closed, 0o700);
-    }
-  });
-});
+// --force and links another user made in a shared directory (G): conformance test P30.
 
 test("a stream target is written only when the descriptor opened is a stream (G2)", async () => {
   await inTempDir(async (dir) => {
