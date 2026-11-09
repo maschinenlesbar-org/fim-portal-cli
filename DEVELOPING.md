@@ -267,7 +267,9 @@ https://fimportal.de/... not followed`.
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
 default 100 MiB), guarding against unbounded responses. A non-negative integer: the
 engine rejects anything else rather than silently dropping the cap. The default
-transport aborts as soon as the cap is passed; for any transport the engine rejects a
+transport aborts as soon as the cap is passed, and joins the body's chunks as they arrive
+(every 1024 chunks or 64 KiB), so its memory follows the bytes, not the number of chunks a
+server splits them into (a Buffer per one-byte chunk held about 210 bytes of heap); for any transport the engine rejects a
 larger body with `FimNetworkError` (`GET <url> failed: Response exceeded the size limit of N
 bytes (maxResponseBytes; --max-response-bytes on the CLI)`).
 
@@ -592,7 +594,8 @@ everything that drives the CLI is in `apps/cli/test/`.
   255-byte name is written; a signal leaves no claim or temporary file; 30 s, it starts a
   process) and P27 (`conformance-p27-big-and-odd-answers`: a large flat answer prints with
   `--compact` in a 256 MB heap, 20 M DEL characters print escaped in 512 MB and 90 MB of them is an
-  ERROR record of `fim-portal.output`, never a crash; a lone surrogate or invalid UTF-8 becomes
+  ERROR record of `fim-portal.output`, never a crash; two million one-byte chunks are read in
+256 MB; a lone surrogate or invalid UTF-8 becomes
   U+FFFD with a WARN of `fim-portal.api`; it starts processes, 30 s).
 - **`output.test.ts`** — `-o` and `--force` against real files in a temp directory: refused
   targets, atomic replace, mode and symlinks, a file that appears during the request.
