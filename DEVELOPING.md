@@ -518,7 +518,10 @@ with `JSON.parse(text) as T`; only its envelope is checked (above), the records
 themselves are deliberately *not* runtime-schema-validated.
 That cast is only safe because every parsed value flows into exactly two sinks:
 `JSON.stringify` re-rendering (stdout) and the human-readable error `detail`
-string (sanitised of control characters in `engine.ts` before it reaches stderr).
+string (sanitised in `engine.ts` before it reaches stderr: `sanitizeServerText` reads at
+most the first 16 384 characters, drops whole terminal escape sequences, the remaining C0/C1
+controls, DEL and every format character (Cf: bidi controls, zero-width characters), and folds
+whitespace to one space, each step one linear regex replace).
 No parsed value is ever used to build a path, URL, header, file operation or a
 follow-up request. Preserve this: if a future feature makes a response value drive
 control flow (auto-pagination that follows a response cursor, response-driven
