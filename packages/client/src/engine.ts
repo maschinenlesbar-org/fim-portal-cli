@@ -849,9 +849,10 @@ export class RequestEngine {
     // It is decoded text: scrubbed again (a JSON escape hid the credential from the scrub of
     // the body as sent), before the cut.
     if (detail !== undefined) detail = cleanDetail(this.scrub(detail));
-    // Redirects are not followed; name the target so the user can fix --base-url.
+    // Redirects are not followed; name the target so the user can fix --base-url, with the
+    // base URL's credentials scrubbed from it.
     const location =
-      status >= 300 && status < 400 && locationHeader ? redirectTarget(url, locationHeader) : undefined;
+      status >= 300 && status < 400 && locationHeader ? redirectTarget(url, locationHeader, (text) => this.scrub(text)) : undefined;
     return new FimApiError({
       status,
       url,
@@ -1211,16 +1212,19 @@ export function firstInexactNumber(json: string): string | undefined {
 }
 
 /**
- * The absolute, printable form of a `Location` header: resolved against the request
- * URL, userinfo redacted, control/bidi characters stripped (it is server text bound
- * for stderr). An unparseable value is shown sanitised as it came.
+ * The absolute, printable form of a `Location` header: the base URL's credentials scrubbed
+ * (`scrub`) as sent, before resolving percent-encodes what is left of them in a new spelling
+ * (`'` as `%27` in a query); resolved against the request URL, userinfo redacted,
+ * control/bidi characters stripped (it is server text bound for stderr). An unparseable value
+ * is shown sanitised as it came.
  */
-function redirectTarget(requestUrl: string, location: string): string | undefined {
+function redirectTarget(requestUrl: string, location: string, scrub: (text: string) => string): string | undefined {
+  const sent = scrub(location);
   let target: string;
   try {
-    target = redactUrl(new URL(location, requestUrl).href);
+    target = redactUrl(new URL(sent, requestUrl).href);
   } catch {
-    target = location;
+    target = sent;
   }
   const clean = cleanDetail(target);
   return clean === "" ? undefined : clean;

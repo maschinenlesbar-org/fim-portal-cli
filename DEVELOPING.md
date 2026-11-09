@@ -259,7 +259,8 @@ a throw in it is swallowed. The CLI's `action()` sets it to log one `WARN` recor
 whole seconds, ms under 1 s). Tests: `test/engine.test.ts`, `test/retry-log.test.ts`.
 
 **Redirects.** Not followed, by design. A 3xx surfaces as a `FimApiError` (exit `1`)
-whose message and `location` field name the redirect target (resolved, userinfo
+whose message and `location` field name the redirect target (the base URL's credentials
+scrubbed from the Location as sent, in its path and query too, then resolved, userinfo
 redacted, sanitised), e.g. `HTTP 301 for GET http://fimportal.de/...: redirect to
 https://fimportal.de/... not followed`.
 

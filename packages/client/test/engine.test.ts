@@ -363,6 +363,30 @@ test("redactUrl hides userinfo and leaves other URLs alone", () => {
   assert.ok(!err.message.includes("u:p"));
 });
 
+test("a credential of the base URL in a redirect's Location is scrubbed, in its path and its query (D2)", async () => {
+  // The Location was resolved and only its own userinfo redacted: the base URL's password in its
+  // path or query reached the message and `location`. Scrubbed as sent, before resolving
+  // percent-encodes what is left of it in a new spelling (`'` as `%27` in a query).
+  const pw = "pä\"s's-W0rd";
+  const basic = Buffer.from(`alice:${pw}`, "utf8").toString("base64");
+  const baseUrl = `https://alice:${encodeURIComponent(pw)}@mirror.example`;
+  const decoded = (text: string): string => text.replace(/(?:%[0-9a-fA-F]{2})+/g, (run) => { try { return decodeURIComponent(run); } catch { return run; } });
+  for (const location of [
+    `https://elsewhere.example/login?user=alice&pw=${encodeURIComponent(pw)}`,
+    `https://elsewhere.example/login?pw=${pw}`,
+    `https://elsewhere.example/${encodeURIComponent(`alice:${pw}`)}/x`,
+    `https://elsewhere.example/auth?basic=${basic}`,
+    `/relative/${pw}`,
+  ]) {
+    const engine = new RequestEngine({ baseUrl, maxRetries: 0, transport: makeMockTransport(() => ({ status: 302, headers: { location }, body: Buffer.alloc(0) })).transport });
+    const err = await engine.getJson("/x").catch((caught: unknown) => caught);
+    assert.ok(err instanceof FimApiError && /^HTTP 302 /.test(err.message), String(err));
+    assert.ok(err.location?.includes("***"), String(err.location));
+    const seen = decoded(`${err.message}\n${err.location}`);
+    for (const secret of [pw, `alice:${pw}`, basic]) assert.ok(!seen.includes(secret), `${location}: ${seen}`);
+  }
+});
+
 test("a 3xx names the redirect target instead of a bare status", async () => {
   const cases: Array<[string | undefined, string]> = [
     ["https://fimportal.de/api/v0/code-lists?limit=1", ": redirect to https://fimportal.de/api/v0/code-lists?limit=1 not followed"],
