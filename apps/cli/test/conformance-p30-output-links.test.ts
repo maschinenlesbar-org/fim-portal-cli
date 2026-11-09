@@ -35,6 +35,8 @@ const HAS_OUTPUT_OPTION = true;
 const outputArgv = (file: string, force: boolean): string[] => ["--max-retries", "0", "-o", file, ...(force ? ["--force"] : []), "schemas", "versions", "S1"];
 /** A 2xx answer for that GET, which the CLI writes as `[{ "id": "a1" }]`. */
 const answer = () => jsonResponse([{ id: "a1" }]);
+/** What the CLI writes to the file for that answer, parsed as JSON (read back after a followed link). */
+const written: unknown = [{ id: "a1" }];
 /** The exit code of a usage error in this repo (commander's default is 1; most repos use 2). */
 const USAGE_EXIT = 1;
 // --------------------------------------------------------------------------------------
@@ -137,7 +139,7 @@ test("P30: --force still follows the caller's own links, the directory owner's, 
     try {
       const o = await runWith(nodeFilesFor(who(t)), outputArgv(t.link, true));
       assert.equal(o.code, 0, `${label}: ${o.err}`);
-      assert.deepEqual(JSON.parse(readFileSync(t.victim, "utf8")), [{ id: "a1" }], label);
+      assert.deepEqual(JSON.parse(readFileSync(t.victim, "utf8")), written, label);
       assert.ok(lstatSync(t.link).isSymbolicLink(), label);
     } finally {
       t.done();
