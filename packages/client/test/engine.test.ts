@@ -1153,20 +1153,33 @@ test("scanNumbers quotes millions of declared members within a small heap", STAR
   assert.equal(out, String(n * 10 + 1));
 });
 
-test("a 16 MB error detail and millions of lone surrogate escapes are handled within a small heap (C)", STARTS_A_PROCESS, () => {
-  // One `+=` per character of a 16 MB detail, and one per lone-surrogate repair (6 million),
-  // each exhausted a 128 MB heap.
+// Each case runs in a process of its own: in one, the first engine (and the 16 MB answer its
+// transport holds) was still alive during the second, and on Node 22 the two together passed
+// the 128 MB heap that each alone stays well under (CI, Linux x64).
+test("a 16 MB error detail is handled within a small heap (C)", STARTS_A_PROCESS, () => {
+  // One `+=` per character of a 16 MB detail exhausted a 128 MB heap.
   const out = withSmallHeap(
     128,
     `const { RequestEngine } = await import(engine);` +
       `const answer = (status, text) => async () => ({ status, headers: { "content-type": "application/json" }, body: Buffer.from(text) });` +
       `const big = new RequestEngine({ maxRetries: 0, transport: answer(500, '{"detail":"' + "x ".repeat(8_000_000) + '"}') });` +
       `const err = await big.getJson("/x").catch((e) => e);` +
+      `process.stdout.write(JSON.stringify([err.status, err.message.length < 1000]));`,
+  );
+  assert.deepEqual(JSON.parse(out), [500, true]);
+});
+
+test("millions of lone surrogate escapes are repaired within a small heap (C)", STARTS_A_PROCESS, () => {
+  // One `+=` per lone-surrogate repair (6 million) exhausted a 128 MB heap.
+  const out = withSmallHeap(
+    128,
+    `const { RequestEngine } = await import(engine);` +
+      `const answer = (status, text) => async () => ({ status, headers: { "content-type": "application/json" }, body: Buffer.from(text) });` +
       `const lone = new RequestEngine({ transport: answer(200, '{"x":"' + "\\\\ud800".repeat(6_000_000) + '"}') });` +
       `const value = await lone.getJson("/x");` +
-      `process.stdout.write(JSON.stringify([err.status, err.message.length < 1000, value.x.length, value.x.slice(0, 2)]));`,
+      `process.stdout.write(JSON.stringify([value.x.length, value.x.slice(0, 2)]));`,
   );
-  assert.deepEqual(JSON.parse(out), [500, true, 6_000_000, "\ufffd\ufffd"]);
+  assert.deepEqual(JSON.parse(out), [6_000_000, "\ufffd\ufffd"]);
 });
 
 test("typedUrlCredentials reads a value meant as a URL whatever its scheme: missing, special without //, mistyped (F7)", () => {
