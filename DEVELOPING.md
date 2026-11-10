@@ -510,6 +510,11 @@ decoded text still holds an echoed form: then it is that JSON written again (`JS
 other escapes, no insignificant whitespace) with the forms replaced by `***`, and `""` for one
 nested too deeply to write again (`scrubBody`).
 
+A base URL (`--base-url`, and the environment variable where the CLI reads one) is read as
+a URL however its scheme is typed (`typedUrlCredentials`): missing (`alice:pw@host`) or
+mistyped (`http//alice:pw@host`, the colon left out, whose userinfo is everything between the
+first slashes and the last `@`), so commander's echo of a refused one shows no password.
+
 **Response shape (2xx).** `getJson` checks the documented envelope of every JSON
 answer (`responseShapeProblem`): a search or `codeLists.list` must return an object
 with an `items` array and a numeric `total_count`, a cursor listing an object with an

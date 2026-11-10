@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { TextDecoder, inspect } from "node:util";
 import { MAX_RETRIES, MAX_RETRY_AFTER_MS, RequestEngine, bigIntegerKeysOption, cleartextProblem, firstInexactNumber, parseRetryAfter, responseShapeProblem, sanitizeServerText, scanNumbers } from "../src/engine.js";
 import { MAX_TIMEOUT_MS } from "../src/http.js";
-import { FimApiError, FimNetworkError, FimParseError, FimValidationError, TextBuilder, credentialsIn, cutForMessage, cutText, echoedCredentialForms, redactUrl, redactUrlUserinfo, toWellFormed } from "../src/errors.js";
+import { FimApiError, FimNetworkError, FimParseError, FimValidationError, TextBuilder, credentialsIn, cutForMessage, cutText, echoedCredentialForms, redactUrl, redactUrlUserinfo, toWellFormed, typedUrlCredentials } from "../src/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
 const noSleep = async (): Promise<void> => {};
@@ -1167,4 +1167,26 @@ test("a 16 MB error detail and millions of lone surrogate escapes are handled wi
       `process.stdout.write(JSON.stringify([err.status, err.message.length < 1000, value.x.length, value.x.slice(0, 2)]));`,
   );
   assert.deepEqual(JSON.parse(out), [500, true, 6_000_000, "\ufffd\ufffd"]);
+});
+
+test("typedUrlCredentials reads a value meant as a URL whatever its scheme: missing, special without //, mistyped (F7)", () => {
+  for (const [value, userinfo] of [
+    ["https://alice:pw@h.example/x", "alice:pw"],
+    ["http:///alice:pw@h.example", "alice:pw"],
+    ["alice:pw@h.example/x", "alice:pw"],
+    ["my_user:pw@h.example", "my_user:pw"],
+    ["T0ken:@h.example", "T0ken:"],
+    ["http//alice:pw@h.example", "alice:pw"],
+    ["https//alice:pw@h.example/v1", "alice:pw"],
+    ["http/alice:pw@h.example", "alice:pw"],
+    ["htp:/alice:pw@h.example", "alice:pw"],
+    ["http\\\\alice:pw@h.example", "alice:pw"],
+    ["http//alice:p/w@h.example", "alice:p/w"],
+  ] as const) {
+    assert.deepEqual(typedUrlCredentials(value), [userinfo], value);
+  }
+  // No "@" after the slashes, or a scheme spelled with "//" and no userinfo: none.
+  for (const value of ["", "h.example/x", "http//h.example/x", "@h.example/x", "http//@h.example", "https://h.example/a@b"]) {
+    assert.deepEqual(typedUrlCredentials(value), [], value);
+  }
 });
