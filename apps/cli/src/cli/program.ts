@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { Command, InvalidArgumentError } from "commander";
 import type { CliDeps } from "./io.js";
 import { defaultIO } from "./io.js";
+import { readContainerLimits } from "./limits.js";
 import { FimPortalClient } from "@maschinenlesbar.org/fim-portal-client/internal/client";
 import { MAX_TIMEOUT_MS } from "@maschinenlesbar.org/fim-portal-client/internal/http";
 import { MAX_RETRIES, MAX_RETRY_AFTER_MS } from "@maschinenlesbar.org/fim-portal-client/internal/engine";
@@ -50,6 +51,8 @@ export const VERSION = readVersion();
 export const defaultDeps: CliDeps = {
   io: defaultIO,
   createClient: (options) => new FimPortalClient(options),
+  // In a container: the memory and pids limits (cgroup), for action()'s checks.
+  limits: () => readContainerLimits(),
 };
 
 /** commander value-parser for `--log-format`. */
