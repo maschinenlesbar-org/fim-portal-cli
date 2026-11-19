@@ -1,0 +1,1884 @@
+{
+  "comment": "What tools/interop/interop.mjs needs that is particular to this repo: the mock upstream's answer per path (under --base-url http://127.0.0.1:<port>; the portal's paths start with /api/v1), how many tools the server lists, and the calls to make with what each must answer. The answers are live ones recorded on 2026-11-19 (the mock answers by path only: a search answers its whole recording), cut to the fields the tools read (packages/client/test/portal.ts).",
+  "answers": {
+    "/api/v1/fields": {
+      "items": [
+        {
+          "namespace": "baukasten",
+          "fim_id": "F00000001839",
+          "fim_version": "1.0.0",
+          "nummernkreis": "00000",
+          "name": "Frühere Staatsangehörigkeit",
+          "definition": null,
+          "bezug": [],
+          "freigabe_status": 6,
+          "freigabe_status_label": "fachlich freigegeben (gold)",
+          "feldart": "select",
+          "datentyp": "text",
+          "xdf_version": "3.0.0",
+          "is_latest": true,
+          "code_list_id": 15830,
+          "fts_match": null
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F00000003381",
+          "fim_version": "1.0.0",
+          "nummernkreis": "00000",
+          "name": "Zweck des Aufenthalts (Schweiz)",
+          "definition": "Staatsangehörige der Schweiz und ihre Familienangehörigen müssen innerhalb von 3 Monaten nach der Einreise ihren Aufenthalt bei der Ausländerbehörde persönlich anzeigen. Bei der Ausländerbehörde wird dabei geprüft, ob ein Freizügigkeitsrecht besteht. Die Nutzung dieses Rechts setzt voraus, dass ein gültiger Arbeitsvertrag oder eine Immatrikulationsbescheinigung vorliegt, Selbstständigkeit besteht oder - bei Nichterwerbstätigen - ausreichende finanzielle Mittel sowie einer Krankenversicherung vorhanden sind. \nDes Weiteren haben Familienangehörige einer Person, die Staatsangehörige der Schweiz ist und ein Aufenthaltsrecht hat, das Recht, bei dieser Person zu wohnen. ",
+          "bezug": [
+            "§ 28 Aufenthaltsverordnung (AufenthV)",
+            "§ 56 Ab. 2 Aufenthaltsverordnung (AufenthV)",
+            "Abkommen zwischen der Europäischen Gemeinschaft und ihren Mitgliedstaaten einerseits und der Schweizerischen Eidgenossenschaft andererseits über die Freizügigkeit"
+          ],
+          "freigabe_status": 6,
+          "freigabe_status_label": "fachlich freigegeben (gold)",
+          "feldart": "select",
+          "datentyp": "text",
+          "xdf_version": "3.0.0",
+          "is_latest": true,
+          "code_list_id": null,
+          "fts_match": null
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F00000003398",
+          "fim_version": "1.0.0",
+          "nummernkreis": "00000",
+          "name": "Status des Antragstellers gemäß Assoziationsabkommen EWG/Türkei",
+          "definition": null,
+          "bezug": [
+            "Art. 6 und 7 ARB 1/80"
+          ],
+          "freigabe_status": 6,
+          "freigabe_status_label": "fachlich freigegeben (gold)",
+          "feldart": "select",
+          "datentyp": "text",
+          "xdf_version": "3.0.0",
+          "is_latest": true,
+          "code_list_id": null,
+          "fts_match": null
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F60000236",
+          "fim_version": "1.4",
+          "nummernkreis": "60000",
+          "name": "Staatsangehörigkeit",
+          "definition": "Die Staatsangehörigkeit beschreibt den/die Staat(en), dem/denen ein Bürger juristisch zugehörig ist (Wahlrecht etc.).",
+          "bezug": [
+            "XOEV.Kernkomponente.NatuerlichePerson.staatsangehoerigkeit vom 31.08.2020;\r\nCodeliste laut XMeld und DSMeld: Codeliste Destatis Staatsangehörigkeit\r\n(urn:de:bund:destatis:bevoelkerungsstatistik:schluessel:staatsangehörigkeit)"
+          ],
+          "freigabe_status": 6,
+          "freigabe_status_label": "fachlich freigegeben (gold)",
+          "feldart": "select",
+          "datentyp": "text",
+          "xdf_version": "2.0",
+          "is_latest": true,
+          "code_list_id": 12451,
+          "fts_match": null
+        }
+      ],
+      "offset": 0,
+      "limit": 20,
+      "count": 4,
+      "total_count": 4
+    },
+    "/api/v1/schemas": {
+      "items": [
+        {
+          "fim_id": "S05000032",
+          "fim_version": "1.1",
+          "nummernkreis": "05000",
+          "name": "Anmeldung erlaubnispflichtiger / anzeigepflichtiger Hund",
+          "bezeichnung": "Anmeldung erlaubnispflichtiger / anzeigepflichtiger Hund",
+          "definition": "Wenn ein gefährlicher Hund oder ein besonders großer Hund (Widerristhöhe von mindestens 40 cm oder ein Gewicht von mindestens 20 kg) gehalten werden soll, werden für die Anmeldung und die ordnungsbehö",
+          "bezug": [
+            "Landeshundgesetz NRW vom 18.12.2002 (LHundG NRW); Verwaltungsvorschriften zum Landeshundgesetz (VV LHundG NRW); Ordnungsbehördliche Verordnung zur Durchführung des Landeshundegesetzes NRW (DVO LHundG "
+          ],
+          "freigabe_status": 5,
+          "freigabe_status_label": "fachlich freigegeben (silber)",
+          "xdf_version": "2.0",
+          "steckbrief_id": "D05000026",
+          "is_latest": true,
+          "fts_match": null
+        },
+        {
+          "fim_id": "S05000034",
+          "fim_version": "1.0",
+          "nummernkreis": "05000",
+          "name": "Abmeldung erlaubnispflichtiger / anzeigepflichtiger Hund",
+          "bezeichnung": "Abmeldung erlaubnispflichtiger / anzeigepflichtiger Hund",
+          "definition": "Wenn der Hund die Halterin oder den Halter wechselt, in eine andere Kommune oder Stadt zieht, wenn der Hund abhanden kommt oder verstorben ist, muss der Hund abgemeldet werden. Die Abmeldepflicht gilt",
+          "bezug": [
+            "Landeshundgesetz NRW vom 18.12.2002 (LHundG NRW); Verwaltungsvorschriften zum Landeshundgesetz (VV LHundG NRW); Ordnungsbehördliche Verordnung\r\nzur Durchführung des Landeshundegesetzes NRW (DVO LHundG"
+          ],
+          "freigabe_status": 5,
+          "freigabe_status_label": "fachlich freigegeben (silber)",
+          "xdf_version": "2.0",
+          "steckbrief_id": "D05000028",
+          "is_latest": true,
+          "fts_match": null
+        },
+        {
+          "fim_id": "S05000035",
+          "fim_version": "1.0",
+          "nummernkreis": "05000",
+          "name": "Befreiung vom Leinenzwang / Maulkorbzwang",
+          "bezeichnung": "Befreiung vom Leinenzwang / Maulkorbzwang",
+          "definition": "Generell gilt für alle Hunde der Kategorien \"Gefährlicher Hund\" und \"Hunde bestimmter Rassen\" eine Maulkorb- und Anleinpflicht. Hiervon kann allerdings eine Ausnahmegenehmigung beantragt werden.\r\nDafü",
+          "bezug": [
+            "Landeshundgesetz NRW vom 18.12.2002 (LHundG NRW); Verwaltungsvorschriften zum Landeshundgesetz (VV LHundG NRW); Ordnungsbehördliche Verordnung\r\nzur Durchführung des Landeshundegesetzes NRW (DVO LHundG"
+          ],
+          "freigabe_status": 5,
+          "freigabe_status_label": "fachlich freigegeben (silber)",
+          "xdf_version": "2.0",
+          "steckbrief_id": "D05000029",
+          "is_latest": true,
+          "fts_match": null
+        },
+        {
+          "fim_id": "S05000036",
+          "fim_version": "1.0",
+          "nummernkreis": "05000",
+          "name": "Meldung von Halterdaten",
+          "bezeichnung": "Meldung von Halterdaten",
+          "definition": "Halterinnen oder Haltern gefährlicher Hunde und Hunde im Sinne von § 10 Abs. 1 gegenüber der zuständigen Ordnungsbehörde unterliegen einer Auskunfts- und Mitteilungspflichten gegenüber der zuständigen",
+          "bezug": [
+            "Landeshundgesetz NRW vom 18.12.2002 (LHundG NRW); Verwaltungsvorschriften zum Landeshundgesetz (VV LHundG NRW); "
+          ],
+          "freigabe_status": 5,
+          "freigabe_status_label": "fachlich freigegeben (silber)",
+          "xdf_version": "2.0",
+          "steckbrief_id": "D05000030",
+          "is_latest": true,
+          "fts_match": null
+        },
+        {
+          "fim_id": "S05000039",
+          "fim_version": "1.1",
+          "nummernkreis": "05000",
+          "name": "Anmeldung zur Hundesteuer",
+          "bezeichnung": "Anmeldung zur Hundesteuer",
+          "definition": "Die Hundesteuer gehört zu den örtlichen Steuern, die an die Haltung von Hunden anknüpft; sie wird von den Städten und Gemeinden erhoben.",
+          "bezug": [
+            "Rechtsgrundlage sind die Hundesteuergesetze bzw. Kommunalabgabengesetze der Länder, die die Gemeinden zur Steuererhebung verpflichten oder zum Erlass entsprechender Steuersatzungen berechtigen. Ob und"
+          ],
+          "freigabe_status": 6,
+          "freigabe_status_label": "fachlich freigegeben (gold)",
+          "xdf_version": "2.0",
+          "steckbrief_id": null,
+          "is_latest": true,
+          "fts_match": null
+        },
+        {
+          "fim_id": "S05000040",
+          "fim_version": "1.0",
+          "nummernkreis": "05000",
+          "name": "Abmeldung von der Hundesteuer",
+          "bezeichnung": "Abmeldung von der Hundesteuer",
+          "definition": "Die Hundesteuer gehört zu den örtlichen Steuern, die an die Haltung von Hunden anknüpft; sie wird von den Städten und Gemeinden erhoben. ",
+          "bezug": [
+            "Rechtsgrundlage sind die Hundesteuergesetze bzw. Kommunalabgabengesetze der Länder, die die Gemeinden zur Steuererhebung verpflichten oder zum Erlass entsprechender Steuersatzungen berechtigen. Ob und"
+          ],
+          "freigabe_status": 6,
+          "freigabe_status_label": "fachlich freigegeben (gold)",
+          "xdf_version": "2.0",
+          "steckbrief_id": "D05000034",
+          "is_latest": true,
+          "fts_match": null
+        },
+        {
+          "fim_id": "S05000069",
+          "fim_version": "1.0",
+          "nummernkreis": "05000",
+          "name": "Ermäßigung / Befreiung von der Hundesteuer",
+          "bezeichnung": "Ermäßigung / Befreiung von der Hundesteuer",
+          "definition": "Die Hundesteuer gehört zu den örtlichen Steuern, die an die Haltung von Hunden anknüpft; sie wird von den Städten und Gemeinden erhoben. Eine Ermäßigung kann meist beantragt werden durch Empfänger von",
+          "bezug": [
+            "Rechtsgrundlage sind die Hundesteuergesetze bzw. Kommunalabgabengesetze der Länder, die die Gemeinden zur Steuererhebung verpflichten oder zum Erlass entsprechender Steuersatzungen berechtigen. Ob und"
+          ],
+          "freigabe_status": 6,
+          "freigabe_status_label": "fachlich freigegeben (gold)",
+          "xdf_version": "2.0",
+          "steckbrief_id": "D05000035",
+          "is_latest": true,
+          "fts_match": null
+        }
+      ],
+      "offset": 0,
+      "limit": 10,
+      "count": 7,
+      "total_count": 7
+    },
+    "/api/v1/schemas/S05000039/latest": {
+      "fim_id": "S05000039",
+      "fim_version": "1.1",
+      "nummernkreis": "05000",
+      "name": "Anmeldung zur Hundesteuer",
+      "bezeichnung": "Anmeldung zur Hundesteuer",
+      "definition": "Die Hundesteuer gehört zu den örtlichen Steuern, die an die Haltung von Hunden anknüpft; sie wird von den Städten und Gemeinden erhoben.",
+      "bezug": [
+        "Rechtsgrundlage sind die Hundesteuergesetze bzw. Kommunalabgabengesetze der Länder, die die Gemeinden zur Steuererhebung verpflichten oder zum Erlass entsprechender Steuersatzungen berechtigen. Ob und wie Städte und Gemeinden eine Hundesteuer erheben, ist bei den entsprechenden Verwaltungen oder ggf. bei den jeweiligen Landesfinanzbehörden zu erfragen. (Bundesfinanzministerium)"
+      ],
+      "freigabe_status": 6,
+      "freigabe_status_label": "fachlich freigegeben (gold)",
+      "xdf_version": "2.0",
+      "steckbrief_id": null,
+      "is_latest": true,
+      "steckbrief_name": null,
+      "children": [
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000698",
+          "fim_version": "1.0",
+          "type": "Feld",
+          "anzahl": "1:1",
+          "bezug": []
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000276",
+          "fim_version": "1.0",
+          "type": "Gruppe",
+          "anzahl": "1:1",
+          "bezug": []
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000434",
+          "fim_version": "1.1",
+          "type": "Gruppe",
+          "anzahl": "1:1",
+          "bezug": []
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000442",
+          "fim_version": "1.1",
+          "type": "Gruppe",
+          "anzahl": "1:1",
+          "bezug": []
+        }
+      ],
+      "regeln": [
+        {
+          "fim_id": "R05000237",
+          "fim_version": "1.1"
+        }
+      ],
+      "datenfelder": [
+        {
+          "namespace": "baukasten",
+          "fim_id": "F00000013",
+          "fim_version": "1.0",
+          "name": "Familienname",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F00000016",
+          "fim_version": "1.2",
+          "name": "Hausnummer",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F00000035",
+          "fim_version": "1.2",
+          "name": "Ort",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F00000045",
+          "fim_version": "1.0",
+          "name": "Vorname",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F00000053",
+          "fim_version": "1.1",
+          "name": "Straße",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F00000054",
+          "fim_version": "1.2",
+          "name": "Postleitzahl",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F00000084",
+          "fim_version": "1.1",
+          "name": "Hausnummerzusatz",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000698",
+          "fim_version": "1.0",
+          "name": "Einwilligungserklärungstext Verarbeitung personenbezogener Daten ",
+          "feldart": "select",
+          "datentyp": "text",
+          "code_list_id": 777,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000728",
+          "fim_version": "1.1",
+          "name": "Weiterleitung der Daten",
+          "feldart": "select",
+          "datentyp": "text",
+          "code_list_id": 1443,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000740",
+          "fim_version": "1.0",
+          "name": "Hunderasse",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000744",
+          "fim_version": "1.0",
+          "name": "Mikrochipkennzeichnung des Hundes",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000756",
+          "fim_version": "1.0",
+          "name": "Geburtsdatum des Hundes",
+          "feldart": "input",
+          "datentyp": "date",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000758",
+          "fim_version": "1.0",
+          "name": "Name des Hundes ",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000764",
+          "fim_version": "1.0",
+          "name": "Akten- / Kassenzeichen",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000791",
+          "fim_version": "1.0",
+          "name": "Anzahl gehaltener Hunde",
+          "feldart": "input",
+          "datentyp": "num",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000795",
+          "fim_version": "1.1",
+          "name": "Abweichender Haltungsort",
+          "feldart": "input",
+          "datentyp": "bool",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000802",
+          "fim_version": "1.0",
+          "name": "Auswahl des Grundes für die Ermäßigung oder Befreiung der Hundesteuer",
+          "feldart": "select",
+          "datentyp": "text",
+          "code_list_id": 1844,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000803",
+          "fim_version": "1.1",
+          "name": "Weiterer Grund für die Ermäßigung oder Befreiung der Hundesteuer",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000804",
+          "fim_version": "1.0",
+          "name": "Unterlagen für die Ermäßigung oder Befreiung von der Hundesteuer",
+          "feldart": "input",
+          "datentyp": "file",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05000977",
+          "fim_version": "1.0",
+          "name": "Anzahl Hunde (Antragsstellung)",
+          "feldart": "input",
+          "datentyp": "num_int",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05001091",
+          "fim_version": "1.0",
+          "name": "Straße",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05001092",
+          "fim_version": "1.0",
+          "name": "Hausnummer",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05001093",
+          "fim_version": "1.0",
+          "name": "Hausnummerzusatz",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05001094",
+          "fim_version": "1.0",
+          "name": "Anschrift Zusatzangaben",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05001095",
+          "fim_version": "1.0",
+          "name": "Postleitzahl",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05001096",
+          "fim_version": "1.0",
+          "name": "Ort",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05001109",
+          "fim_version": "1.0",
+          "name": "E-Mail",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F05001111",
+          "fim_version": "1.0",
+          "name": "Anschrift Zusatzangaben",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung"
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "F60000240",
+          "fim_version": "1.0",
+          "name": "Telefon",
+          "feldart": "input",
+          "datentyp": "text",
+          "code_list_id": null,
+          "freigabe_status": 7,
+          "freigabe_status_label": "inaktiv"
+        }
+      ],
+      "datenfeldgruppen": [
+        {
+          "namespace": "baukasten",
+          "fim_id": "G00000113",
+          "fim_version": "1.2",
+          "name": "Ort Inland (ohne Ortsteil)",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F00000054",
+              "fim_version": "1.2",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F00000035",
+              "fim_version": "1.2",
+              "type": "Feld",
+              "anzahl": "1:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000276",
+          "fim_version": "1.0",
+          "name": "Antragstellende Person",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "G05000366",
+              "fim_version": "1.0",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "G05000527",
+              "fim_version": "1.0",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "G05000528",
+              "fim_version": "1.0",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000319",
+          "fim_version": "1.0",
+          "name": "Angaben zum Hund (Mittel)",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F05000756",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "0:1"
+            },
+            {
+              "fim_id": "F05000740",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000337",
+          "fim_version": "1.1",
+          "name": "Abweichende Anschrift des Hundes ",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F05000795",
+              "fim_version": "1.1",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "G05000529",
+              "fim_version": "1.0",
+              "type": "Gruppe",
+              "anzahl": "0:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000340",
+          "fim_version": "1.1",
+          "name": "Grund für die Ermäßigung oder Befreiung von der Hundesteuer ",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F05000802",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F05000803",
+              "fim_version": "1.1",
+              "type": "Feld",
+              "anzahl": "0:1"
+            },
+            {
+              "fim_id": "F05000804",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000366",
+          "fim_version": "1.0",
+          "name": "Persönliche Angaben (Familienname & Vorname)",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F00000013",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F00000045",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000428",
+          "fim_version": "1.0",
+          "name": "Straßenangaben",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F00000053",
+              "fim_version": "1.1",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F00000016",
+              "fim_version": "1.2",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F00000084",
+              "fim_version": "1.1",
+              "type": "Feld",
+              "anzahl": "0:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000434",
+          "fim_version": "1.1",
+          "name": "Anzahl (Hund)",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F05000728",
+              "fim_version": "1.1",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F05000977",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F05000791",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000436",
+          "fim_version": "1.0",
+          "name": "Steuer-ID (Hund)",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F05000764",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "0:1"
+            },
+            {
+              "fim_id": "F05000758",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "0:1"
+            },
+            {
+              "fim_id": "F05000744",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "0:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000442",
+          "fim_version": "1.1",
+          "name": "Angaben (Hund Steueranmeldung)",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "G05000436",
+              "fim_version": "1.0",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "G05000319",
+              "fim_version": "1.0",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "G05000337",
+              "fim_version": "1.1",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "G05000340",
+              "fim_version": "1.1",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000524",
+          "fim_version": "1.0",
+          "name": "Straßenangaben",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F05001091",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F05001092",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F05001093",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "0:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000525",
+          "fim_version": "1.0",
+          "name": "Ort Inland (ohne Ortsteil)",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F05001095",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F05001096",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "1:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000527",
+          "fim_version": "1.0",
+          "name": "Anschrift Inland Straßenanschrift",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "G05000428",
+              "fim_version": "1.0",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "G00000113",
+              "fim_version": "1.2",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F05001111",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "0:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000528",
+          "fim_version": "1.0",
+          "name": "Kommunikation (Telefon/E-Mail)",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "F60000240",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "0:1"
+            },
+            {
+              "fim_id": "F05001109",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "0:1"
+            }
+          ]
+        },
+        {
+          "namespace": "baukasten",
+          "fim_id": "G05000529",
+          "fim_version": "1.0",
+          "name": "Abweichende Anschrift des Hundes ",
+          "freigabe_status": 2,
+          "freigabe_status_label": "in Bearbeitung",
+          "children": [
+            {
+              "fim_id": "G05000524",
+              "fim_version": "1.0",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "G05000525",
+              "fim_version": "1.0",
+              "type": "Gruppe",
+              "anzahl": "1:1"
+            },
+            {
+              "fim_id": "F05001094",
+              "fim_version": "1.0",
+              "type": "Feld",
+              "anzahl": "0:1"
+            }
+          ]
+        }
+      ]
+    },
+    "/api/v1/schemas/S05000039/latest/quality-report": {
+      "schema_checks": [],
+      "group_reports": [
+        {
+          "identifier": {
+            "id": "G00000113",
+            "version": "1.2",
+            "nummernkreis": "00"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000276",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000319",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000337",
+            "version": "1.1",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000340",
+            "version": "1.1",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000366",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000428",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000434",
+            "version": "1.1",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000436",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000442",
+            "version": "1.1",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000524",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000525",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000527",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000528",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "G05000529",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        }
+      ],
+      "field_reports": [
+        {
+          "identifier": {
+            "id": "F00000013",
+            "version": "1.0",
+            "nummernkreis": "00"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F00000016",
+            "version": "1.2",
+            "nummernkreis": "00"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F00000035",
+            "version": "1.2",
+            "nummernkreis": "00"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F00000045",
+            "version": "1.0",
+            "nummernkreis": "00"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F00000053",
+            "version": "1.1",
+            "nummernkreis": "00"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F00000054",
+            "version": "1.2",
+            "nummernkreis": "00"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F00000084",
+            "version": "1.1",
+            "nummernkreis": "00"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000698",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000728",
+            "version": "1.1",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000740",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000744",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000756",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000758",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000764",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000791",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000795",
+            "version": "1.1",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000802",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": [
+            {
+              "code": 1005,
+              "error_type": "critical",
+              "message": "Ungültige URN: Grund für Ermäßigung oder Befreiung von der Hundesteuer. Erwartet wird eine URN im Format: https://www.rfc-editor.org/rfc/rfc8141.html."
+            }
+          ]
+        },
+        {
+          "identifier": {
+            "id": "F05000803",
+            "version": "1.1",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000804",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05000977",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05001091",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05001092",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05001093",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05001094",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05001095",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05001096",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05001109",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F05001111",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "F60000240",
+            "version": "1.0",
+            "nummernkreis": "60"
+          },
+          "failing_checks": []
+        }
+      ],
+      "rule_reports": [
+        {
+          "identifier": {
+            "id": "R05000237",
+            "version": "1.1",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "R05000239",
+            "version": "1.1",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "R05000264",
+            "version": "1.0",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        },
+        {
+          "identifier": {
+            "id": "R05000278",
+            "version": "1.1",
+            "nummernkreis": "05"
+          },
+          "failing_checks": []
+        }
+      ],
+      "total_checks": 1,
+      "total_group_checks": 0,
+      "total_field_checks": 1,
+      "total_rule_checks": 0
+    },
+    "/api/v1/leistung-steckbriefe/99008001012011": {
+      "redaktion_id": "B100019",
+      "leistung_id": "102241587",
+      "title": "Personalausweis Ausstellung für Deutsche mit Wohnsitz außerhalb Deutschlands",
+      "leistungsbezeichnung": "Personalausweis Ausstellung für Deutsche mit Wohnsitz außerhalb Deutschlands",
+      "leistungsbezeichnung_2": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+      "rechtsgrundlagen": "§ 1 Absatz 4 Nummer 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 5 Absatz 2 Nummer 9 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 7 Absatz 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 8 Absatz 2 und 4 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 23 Absatz 4 Satz 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 2 Gesetz über die Konsularbeamten, ihre Aufgaben und Befugnisse (Konsulargesetz - KonsG)\nG.5.2.1 und G.5.2.2 Allgemeine Verwaltungsvorschrift zur Durchführung des Personalausweisgesetzes und der Personalausweisverordnung (Personalausweisverwaltungsvorschrift - PAuswVwV)\n§ 35 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\nPersonalausweis- und eID-Karten-Gebührenverordnung",
+      "freigabe_status": 6,
+      "erstellt_datum_zeit": "2019-11-29T14:53:30Z",
+      "geaendert_datum_zeit": "2026-04-20T07:41:11.386000Z",
+      "leistungsadressat": [
+        "001"
+      ],
+      "leistungsschluessel": "99008001012011",
+      "typisierung": [
+        "1"
+      ],
+      "leistungstyp": "lovd",
+      "sdg_informationsbereiche": [
+        "1010100"
+      ],
+      "klassifizierung": [
+        {
+          "list_uri": "urn:xoev-de:fim:codeliste:pvlagen",
+          "value": "1070100"
+        }
+      ],
+      "leistung_stammtexte": [
+        {
+          "redaktion_id": "B100019",
+          "id": "102241587",
+          "title": "Personalausweis Ausstellung für Deutsche mit Wohnsitz außerhalb Deutschlands",
+          "leistungsschluessel": [
+            "99008001012011"
+          ]
+        },
+        {
+          "redaktion_id": "L100002",
+          "id": "121162416",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ]
+        },
+        {
+          "redaktion_id": "L100008",
+          "id": "407390482",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ]
+        },
+        {
+          "redaktion_id": "L100010",
+          "id": "100299427",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ]
+        },
+        {
+          "redaktion_id": "L100012",
+          "id": "315857991",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ]
+        },
+        {
+          "redaktion_id": "L100038",
+          "id": "221928439",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ]
+        },
+        {
+          "redaktion_id": "L100039",
+          "id": "288039747",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ]
+        },
+        {
+          "redaktion_id": "L100041",
+          "id": "130758752",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ]
+        },
+        {
+          "redaktion_id": "L100040",
+          "id": "308670309",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ]
+        },
+        {
+          "redaktion_id": "L100108",
+          "id": "L100108_326550",
+          "title": "Personalausweis für in Berlin nicht gemeldete Personen, Touristen und Deutsche mit Wohnsitz im Ausland",
+          "leistungsschluessel": [
+            "99008001012011"
+          ]
+        }
+      ],
+      "prozessklasse": null,
+      "ozg": {
+        "leistungsschluessel": "99008001012011",
+        "id": "10119",
+        "leistung": "Personalausweis",
+        "themenfeld": "querschnittsleistungen",
+        "themenfeld_label": "Querschnittsleistungen",
+        "vollzugsbehoerden": []
+      },
+      "replacements": []
+    },
+    "/api/v1/leistung-stammtexte": {
+      "items": [
+        {
+          "redaktion_id": "L100040",
+          "leistung_id": "308670309",
+          "source": "landesredaktion",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ],
+          "leistungstyp": "lovd",
+          "leistungsadressat": [],
+          "freigabe_status": null,
+          "leistungsbezeichnung": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz im Ausland beantragen",
+          "leistungsbezeichnung_2": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz im Ausland beantragen",
+          "kurztext": null,
+          "volltext": "<p>Als Person mit deutscher Staatsangehörigkeit und ständigem Wohnsitz im Ausland unterliegen Sie nicht der allgemeinen Meldepflicht und damit auch nicht der Ausweispflicht innerhalb Deutschlands.</p>",
+          "rechtsgrundlagen": "§ 1 Absatz 4 Nummer 2 Personalausweisgesetz (PAuswG);\n§ 8 Absatz 8 Personalausweisgesetz (PAuswG);\n§ 35 Personalausweisgesetz (PAuswG);\n§ 2 KonsG\n§ 1 Absatz 4 Nummer 2 Personalausweisgesetz (PAuswG)\n§",
+          "geaendert_datum_zeit": "2026-04-30T22:17:59.521000Z",
+          "ozg": [
+            {
+              "leistungsschluessel": "99008001012011",
+              "id": "10119",
+              "leistung": "Personalausweis",
+              "themenfeld": "querschnittsleistungen",
+              "themenfeld_label": "Querschnittsleistungen",
+              "vollzugsbehoerden": []
+            }
+          ]
+        },
+        {
+          "redaktion_id": "L100010",
+          "leistung_id": "100299427",
+          "source": "landesredaktion",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ],
+          "leistungstyp": "lovd",
+          "leistungsadressat": [
+            "001"
+          ],
+          "freigabe_status": null,
+          "leistungsbezeichnung": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsbezeichnung_2": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "kurztext": "<ul>\n <li>Beantragung eines Personalausweises für deutsche Staatsangehörige mit gewöhnlichem Aufenthalt bzw. ständigem Wohnsitz im Ausland</li>\n</ul>\n<ul>\n <li>\n  Beantragung:\n  <ul>\n   <li>im Ausland",
+          "volltext": "<p>Als Person mit deutscher Staatsangehörigkeit und mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland unterliegen Sie nicht der allgemeinen Meldepflicht und damit auch nicht de",
+          "rechtsgrundlagen": "§ 1 Absatz 4 Nummer 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 5 Absatz 2 Nummer 9 Gesetz über Personalausweise und den elektronischen ",
+          "geaendert_datum_zeit": "2026-04-20T21:08:02.718000Z",
+          "ozg": [
+            {
+              "leistungsschluessel": "99008001012011",
+              "id": "10119",
+              "leistung": "Personalausweis",
+              "themenfeld": "querschnittsleistungen",
+              "themenfeld_label": "Querschnittsleistungen",
+              "vollzugsbehoerden": []
+            }
+          ]
+        },
+        {
+          "redaktion_id": "L100008",
+          "leistung_id": "407390482",
+          "source": "landesredaktion",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ],
+          "leistungstyp": "lovd",
+          "leistungsadressat": [
+            "001"
+          ],
+          "freigabe_status": null,
+          "leistungsbezeichnung": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsbezeichnung_2": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "kurztext": null,
+          "volltext": "<p>Als Person mit deutscher Staatsangehörigkeit und mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland unterliegen Sie nicht der allgemeinen Meldepflicht und damit auch nicht de",
+          "rechtsgrundlagen": "§ 1 Absatz 4 Nummer 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 5 Absatz 2 Nummer 9 Gesetz über Personalausweise und den elektronischen ",
+          "geaendert_datum_zeit": "2026-06-12T06:12:55.940000Z",
+          "ozg": [
+            {
+              "leistungsschluessel": "99008001012011",
+              "id": "10119",
+              "leistung": "Personalausweis",
+              "themenfeld": "querschnittsleistungen",
+              "themenfeld_label": "Querschnittsleistungen",
+              "vollzugsbehoerden": []
+            }
+          ]
+        },
+        {
+          "redaktion_id": "L100038",
+          "leistung_id": "221928439",
+          "source": "landesredaktion",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ],
+          "leistungstyp": "lovd",
+          "leistungsadressat": [
+            "001"
+          ],
+          "freigabe_status": null,
+          "leistungsbezeichnung": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsbezeichnung_2": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "kurztext": null,
+          "volltext": "<p>Als Person mit deutscher Staatsangehörigkeit und mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland unterliegen Sie nicht der allgemeinen Meldepflicht und damit auch nicht de",
+          "rechtsgrundlagen": "§ 1 Absatz 4 Nummer 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 5 Absatz 2 Nummer 9 Gesetz über Personalausweise und den elektronischen ",
+          "geaendert_datum_zeit": "2026-10-20T03:07:40.480000Z",
+          "ozg": [
+            {
+              "leistungsschluessel": "99008001012011",
+              "id": "10119",
+              "leistung": "Personalausweis",
+              "themenfeld": "querschnittsleistungen",
+              "themenfeld_label": "Querschnittsleistungen",
+              "vollzugsbehoerden": []
+            }
+          ]
+        },
+        {
+          "redaktion_id": "L100039",
+          "leistung_id": "288039747",
+          "source": "landesredaktion",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ],
+          "leistungstyp": "lovd",
+          "leistungsadressat": [
+            "001"
+          ],
+          "freigabe_status": null,
+          "leistungsbezeichnung": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsbezeichnung_2": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "kurztext": null,
+          "volltext": "<p>Als Person mit deutscher Staatsangehörigkeit und mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland unterliegen Sie nicht der allgemeinen Meldepflicht und damit auch nicht de",
+          "rechtsgrundlagen": "§ 1 Absatz 4 Nummer 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 5 Absatz 2 Nummer 9 Gesetz über Personalausweise und den elektronischen ",
+          "geaendert_datum_zeit": "2026-06-12T05:15:02.923000Z",
+          "ozg": [
+            {
+              "leistungsschluessel": "99008001012011",
+              "id": "10119",
+              "leistung": "Personalausweis",
+              "themenfeld": "querschnittsleistungen",
+              "themenfeld_label": "Querschnittsleistungen",
+              "vollzugsbehoerden": []
+            }
+          ]
+        },
+        {
+          "redaktion_id": "L100002",
+          "leistung_id": "121162416",
+          "source": "landesredaktion",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ],
+          "leistungstyp": "lovd",
+          "leistungsadressat": [
+            "001"
+          ],
+          "freigabe_status": 6,
+          "leistungsbezeichnung": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsbezeichnung_2": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "kurztext": null,
+          "volltext": "<p>Als Person mit deutscher Staatsangehörigkeit und mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland unterliegen Sie nicht der allgemeinen Meldepflicht und damit auch nicht de",
+          "rechtsgrundlagen": "§ 1 Absatz 4 Nummer 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 5 Absatz 2 Nummer 9 Gesetz über Personalausweise und den elektronischen ",
+          "geaendert_datum_zeit": "2026-04-23T01:28:28.391000Z",
+          "ozg": [
+            {
+              "leistungsschluessel": "99008001012011",
+              "id": "10119",
+              "leistung": "Personalausweis",
+              "themenfeld": "querschnittsleistungen",
+              "themenfeld_label": "Querschnittsleistungen",
+              "vollzugsbehoerden": []
+            }
+          ]
+        },
+        {
+          "redaktion_id": "L100012",
+          "leistung_id": "315857991",
+          "source": "landesredaktion",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ],
+          "leistungstyp": "lovd",
+          "leistungsadressat": [
+            "001"
+          ],
+          "freigabe_status": null,
+          "leistungsbezeichnung": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsbezeichnung_2": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "kurztext": null,
+          "volltext": "<p>Als Person mit deutscher Staatsangehörigkeit und mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland unterliegen Sie nicht der allgemeinen Meldepflicht und damit auch nicht de",
+          "rechtsgrundlagen": "§ 1 Absatz 4 Nummer 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 5 Absatz 2 Nummer 9 Gesetz über Personalausweise und den elektronischen ",
+          "geaendert_datum_zeit": "2026-06-12T05:44:16.062000Z",
+          "ozg": [
+            {
+              "leistungsschluessel": "99008001012011",
+              "id": "10119",
+              "leistung": "Personalausweis",
+              "themenfeld": "querschnittsleistungen",
+              "themenfeld_label": "Querschnittsleistungen",
+              "vollzugsbehoerden": []
+            }
+          ]
+        },
+        {
+          "redaktion_id": "L100041",
+          "leistung_id": "130758752",
+          "source": "landesredaktion",
+          "title": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsschluessel": [
+            "99008001012011"
+          ],
+          "leistungstyp": "lovd",
+          "leistungsadressat": [
+            "001"
+          ],
+          "freigabe_status": null,
+          "leistungsbezeichnung": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "leistungsbezeichnung_2": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "kurztext": "<ul>\n <li>Beantragung eines Personalausweises für deutsche Staatsangehörige mit gewöhnlichem Aufenthalt bzw. ständigem Wohnsitz im Ausland</li>\n</ul>\n<ul>\n <li>\n  Beantragung:\n  <ul>\n   <li>im Ausland",
+          "volltext": "<p>Als Person mit deutscher Staatsangehörigkeit und mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland unterliegen Sie nicht der allgemeinen Meldepflicht und damit auch nicht de",
+          "rechtsgrundlagen": "§ 1 Absatz 4 Nummer 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 5 Absatz 2 Nummer 9 Gesetz über Personalausweise und den elektronischen ",
+          "geaendert_datum_zeit": "2026-10-11T21:35:14.782000Z",
+          "ozg": [
+            {
+              "leistungsschluessel": "99008001012011",
+              "id": "10119",
+              "leistung": "Personalausweis",
+              "themenfeld": "querschnittsleistungen",
+              "themenfeld_label": "Querschnittsleistungen",
+              "vollzugsbehoerden": []
+            }
+          ]
+        },
+        {
+          "redaktion_id": "B100019",
+          "leistung_id": "102241587",
+          "source": "pvog",
+          "title": "Personalausweis Ausstellung für Deutsche mit Wohnsitz außerhalb Deutschlands",
+          "leistungsschluessel": [
+            "99008001012011"
+          ],
+          "leistungstyp": "lovd",
+          "leistungsadressat": [
+            "001"
+          ],
+          "freigabe_status": 6,
+          "leistungsbezeichnung": "Personalausweis Ausstellung für Deutsche mit Wohnsitz außerhalb Deutschlands",
+          "leistungsbezeichnung_2": "Personalausweis für deutsche Staatsangehörige mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland beantragen",
+          "kurztext": "<ul>\n\t<li>Beantragung eines Personalausweises für deutsche Staatsangehörige mit gewöhnlichem Aufenthalt bzw. ständigem Wohnsitz im Ausland</li>\n</ul>\n\n<ul>\n\t<li>Beantragung:\n\t<ul>\n\t\t<li>im Ausland: Antrag muss persönlich bei der zuständigen deutschen Auslandsvertretung gestellt werden, in deren Amtsbezirk sich der Wohnort bzw. gewöhnliche Aufenthalt befindet</li>\n\t\t<li>in Deutschland: Antrag kann bei Vorliegen eines wichtigen Grundes in jedem Bürgeramt im Inland persönlich gestellt werden; ob der wichtige Grund anerkannt wird, sollte vorab telefonisch mit dem Bürgeramt abgesprochen werden</li>\n\t</ul>\n\t</li>\n</ul>",
+          "volltext": "<p>Als Person mit deutscher Staatsangehörigkeit und mit ständigem Wohnsitz beziehungsweise gewöhnlichem Aufenthalt im Ausland unterliegen Sie nicht der allgemeinen Meldepflicht und damit auch nicht der Ausweispflicht innerhalb Deutschlands.</p>\n\n<p>Sie können jedoch an der für Sie zuständigen deutschen Auslandsvertretung auch einen Personalausweis beantragen. Zuständig für die Personalausweisausstellung im Ausland ist in der Regel die deutsche Auslandsvertretung, in deren Amtsbezirk Sie sich gewöhnlich aufhalten.</p>\n\n<p>Sie können dort auch die elektronischen Zusatzfunktionen des Personalausweises aktivieren lassen, die selbst gewählte, sechsstellige PIN ändern oder die ausländische Anschrift auf Ihrem Personalausweis und im Chip eintragen lassen.</p>\n\n<p>Einige wenige Auslandsvertretungen nehmen allerdings keine Aufgaben als Personalausweisbehörde wahr. Bitte informieren Sie sich auf der Internetseite der für Ihren Wohnort zuständigen Auslandsvertretung.</p>\n\n<p>Um Ihnen weite Anreisewege zu ersparen, bieten auch einige Honorarkonsularbeamtinnen und Honorarkonsularbeamte gegen eine Zusatzgebühr die Entgegennahme von Personalausweisanträgen und Weiterleitung an die zuständige Auslandsvertretung an. Sie bieten nur die Antragsannahme an, nicht jedoch weitere Zusatzleistungen wie die Aktivierung oder Änderung Ihrer PIN oder eine Änderung der Anschrift.</p>\n\n<p>Wenn wichtige Gründe vorliegen, können Sie auch eine andere, örtlich nicht zuständige Auslandsvertretung oder eine Personalausweisbehörde im Inland aufsuchen. Den Personalausweis müssen Sie persönlich beantragen.</p>",
+          "rechtsgrundlagen": "§ 1 Absatz 4 Nummer 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 5 Absatz 2 Nummer 9 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 7 Absatz 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 8 Absatz 2 und 4 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 23 Absatz 4 Satz 2 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\n§ 2 Gesetz über die Konsularbeamten, ihre Aufgaben und Befugnisse (Konsulargesetz - KonsG)\nG.5.2.1 und G.5.2.2 Allgemeine Verwaltungsvorschrift zur Durchführung des Personalausweisgesetzes und der Personalausweisverordnung (Personalausweisverwaltungsvorschrift - PAuswVwV)\n§ 35 Gesetz über Personalausweise und den elektronischen Identitätsnachweis (Personalausweisgesetz - PAuswG)\nPersonalausweis- und eID-Karten-Gebührenverordnung",
+          "geaendert_datum_zeit": null,
+          "ozg": [
+            {
+              "leistungsschluessel": "99008001012011",
+              "id": "10119",
+              "leistung": "Personalausweis",
+              "themenfeld": "querschnittsleistungen",
+              "themenfeld_label": "Querschnittsleistungen",
+              "vollzugsbehoerden": []
+            }
+          ]
+        },
+        {
+          "redaktion_id": "L100108",
+          "leistung_id": "L100108_326550",
+          "source": "pvog",
+          "title": "Personalausweis für in Berlin nicht gemeldete Personen, Touristen und Deutsche mit Wohnsitz im Ausland",
+          "leistungsschluessel": [
+            "99008001012011"
+          ],
+          "leistungstyp": null,
+          "leistungsadressat": [
+            "001",
+            "002"
+          ],
+          "freigabe_status": null,
+          "leistungsbezeichnung": "Personalausweis für in Berlin nicht gemeldete Personen, Touristen und Deutsche mit Wohnsitz im Ausland",
+          "leistungsbezeichnung_2": "Personalausweis für in Berlin nicht gemeldete Personen, Touristen und Deutsche mit Wohnsitz im Ausland",
+          "kurztext": "",
+          "volltext": "Wenn Sie<br>\n<ul><li>sich in Berlin aufhalten, aber keine feste Wohnung haben (Wohnungslose),</li><li>oder sich vorübergehend in Berlin aufhalten und außerhalb Berlins aktuell gemeldet sind,</li></ul>",
+          "rechtsgrundlagen": "Personalausweisgesetz (PAuswG)Personalausweisgebührenverordnung (PAuswGebV)",
+          "geaendert_datum_zeit": null,
+          "ozg": [
+            {
+              "leistungsschluessel": "99008001012011",
+              "id": "10119",
+              "leistung": "Personalausweis",
+              "themenfeld": "querschnittsleistungen",
+              "themenfeld_label": "Querschnittsleistungen",
+              "vollzugsbehoerden": []
+            }
+          ]
+        }
+      ],
+      "offset": 0,
+      "limit": 200,
+      "count": 10,
+      "total_count": 10
+    }
+  },
+  "tools": 7,
+  "calls": [
+    {
+      "name": "findReusableFields",
+      "arguments": {
+        "query": "Staatsangehörigkeit"
+      },
+      "expect": {
+        "status": "ok",
+        "candidates.0.fimId": "F60000236",
+        "candidates.0.namespace": "baukasten"
+      }
+    },
+    {
+      "name": "auditSchemaQuality",
+      "arguments": {
+        "schema": "S05000039"
+      },
+      "expect": {
+        "status": "ok",
+        "bySeverity.critical": 1,
+        "issues.0.code": 1005
+      }
+    },
+    {
+      "name": "getSchemaBlueprint",
+      "arguments": {
+        "schema": "S05000039",
+        "limit": 3
+      },
+      "expect": {
+        "status": "ok",
+        "outline.0.id": "F05000698",
+        "nextOffset": 3
+      }
+    },
+    {
+      "name": "getServiceDossier",
+      "arguments": {
+        "service": "99008001012011"
+      },
+      "expect": {
+        "status": "ok",
+        "texts.0.redaktionId": "B100019",
+        "texts.0.source": "pvog"
+      }
+    },
+    {
+      "name": "searchCatalogue",
+      "arguments": {
+        "resource": "schemas",
+        "query": "Hundesteuer"
+      },
+      "expect": {
+        "status": "ok",
+        "total": 7,
+        "items.0.fimId": "S05000032"
+      }
+    },
+    {
+      "name": "findReusableFields",
+      "arguments": {
+        "query": "Staatsangehörigkeit",
+        "limit": 500
+      },
+      "error": true
+    }
+  ]
+}
