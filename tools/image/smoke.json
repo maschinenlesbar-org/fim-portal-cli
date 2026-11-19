@@ -1,0 +1,59 @@
+{
+  "comment": "What tools/image/smoke.mjs needs that is particular to this repo: the bin (its log topic), a command that makes one request, the exit code of a network error, the mock's answer to that request (by path, under --base-url http://mock:8080; the portal's paths start with /api/v1), and a string the printed answer contains. The answer is the first two schemas of a live search for Hundesteuer, recorded on 2026-11-19 and cut.",
+  "bin": "fim-portal",
+  "command": [
+    "schemas",
+    "search",
+    "--fts-query",
+    "Hundesteuer",
+    "--is-latest",
+    "--limit",
+    "2"
+  ],
+  "networkErrorExit": 1,
+  "answers": {
+    "/api/v1/schemas": {
+      "items": [
+        {
+          "fim_id": "S05000032",
+          "fim_version": "1.1",
+          "nummernkreis": "05000",
+          "name": "Anmeldung erlaubnispflichtiger / anzeigepflichtiger Hund",
+          "bezeichnung": "Anmeldung erlaubnispflichtiger / anzeigepflichtiger Hund",
+          "definition": "Wenn ein gefährlicher Hund oder ein besonders großer Hund (Widerristhöhe von mindestens 40 cm oder ein Gewicht von mindestens 20 kg) gehalten werden soll, werden für die Anmeldung und die ordnungsbehö",
+          "bezug": [
+            "Landeshundgesetz NRW vom 18.12.2002 (LHundG NRW); Verwaltungsvorschriften zum Landeshundgesetz (VV LHundG NRW); Ordnungsbehördliche Verordnung zur Durchführung des Landeshundegesetzes NRW (DVO LHundG "
+          ],
+          "freigabe_status": 5,
+          "freigabe_status_label": "fachlich freigegeben (silber)",
+          "xdf_version": "2.0",
+          "steckbrief_id": "D05000026",
+          "is_latest": true,
+          "fts_match": null
+        },
+        {
+          "fim_id": "S05000034",
+          "fim_version": "1.0",
+          "nummernkreis": "05000",
+          "name": "Abmeldung erlaubnispflichtiger / anzeigepflichtiger Hund",
+          "bezeichnung": "Abmeldung erlaubnispflichtiger / anzeigepflichtiger Hund",
+          "definition": "Wenn der Hund die Halterin oder den Halter wechselt, in eine andere Kommune oder Stadt zieht, wenn der Hund abhanden kommt oder verstorben ist, muss der Hund abgemeldet werden. Die Abmeldepflicht gilt",
+          "bezug": [
+            "Landeshundgesetz NRW vom 18.12.2002 (LHundG NRW); Verwaltungsvorschriften zum Landeshundgesetz (VV LHundG NRW); Ordnungsbehördliche Verordnung\r\nzur Durchführung des Landeshundegesetzes NRW (DVO LHundG"
+          ],
+          "freigabe_status": 5,
+          "freigabe_status_label": "fachlich freigegeben (silber)",
+          "xdf_version": "2.0",
+          "steckbrief_id": "D05000028",
+          "is_latest": true,
+          "fts_match": null
+        }
+      ],
+      "offset": 0,
+      "limit": 2,
+      "count": 2,
+      "total_count": 7
+    }
+  },
+  "expectStdout": "Anmeldung erlaubnispflichtiger / anzeigepflichtiger Hund"
+}
