@@ -41,6 +41,61 @@ Check it works:
 fim-portal --help
 ```
 
+### Docker
+
+From 0.10.0 every release is also a container image for linux/amd64 and linux/arm64 on the
+GitHub Container Registry, made from the same tarball as the npm package. It needs no Node.js and no
+install:
+
+```bash
+docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges \
+  ghcr.io/maschinenlesbar-org/fim-portal-cli:latest schemas search --fts-query Hundesteuer --is-latest --limit 5
+```
+
+The image's entrypoint is the program, so the command follows the image name directly;
+`… fim-portal-cli:latest fim-portal schemas search …` works too. Without `-o` a download goes
+to stdout, so redirect it on the host: `… fim-portal-cli:latest schemas xdf S05000039 > schema.xml`.
+
+In a container with a memory limit (`--memory`) the default `--max-response-bytes` is an eighth
+of that limit (at most the usual 100 MiB), so an oversized answer is refused with a clear
+error instead of the container being killed for memory. The largest answers, a widely used field
+with every schema version that uses it and a large schema, are a few MB.
+The CLI needs at least 12 processes and threads (`--pids-limit 12`): below that it refuses with
+an error, and with 4 or fewer Node.js itself hangs before the CLI can check.
+
+`latest` is the newest release. For scripts, name a release and pin its digest, which the
+[release notes](https://github.com/maschinenlesbar-org/fim-portal-cli/releases) give:
+`…/fim-portal-cli:0.10.0@sha256:<digest>`. Each image carries signed build provenance;
+check it with
+
+```bash
+gh attestation verify oci://ghcr.io/maschinenlesbar-org/fim-portal-cli:latest \
+  --repo maschinenlesbar-org/fim-portal-cli
+```
+
+### MCP server
+
+From 0.10.0 the same catalogue is also an [MCP](https://modelcontextprotocol.io/) server for AI
+agents, `@maschinenlesbar.org/fim-portal-mcp` (command `fim-portal-mcp`, image
+`ghcr.io/maschinenlesbar-org/fim-portal-mcp`): seven read-only tools, reusable fields and groups
+for a form (released, latest, ranked: the namesake, gold before silber, the central Baukasten), a
+schema's quality audit by severity, a schema as a form outline, a public service's dossier with
+every office's text and its source, a search over the eight catalogues, one element or its
+versions, and one service text in full, with the portal's traps handled (the full-text search
+matching element texts, the namespace before a field's id, the nesting in the group catalogue,
+the text's source the prefix doesn't tell), on stdio or Streamable HTTP. Setup for Claude Code,
+Claude Desktop and VS Code:
+[MCP.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/MCP.md).
+
+```bash
+npm i -g @maschinenlesbar.org/fim-portal-mcp
+claude mcp add fim-portal -- fim-portal-mcp
+```
+
+The portal publishes no licence for the catalogue data: every result names the source and says
+so, and running the server as a service for others may need FITKO's permission (we provide the
+tool, not the data).
+
 ## Quickstart
 
 No setup needed — the FIM Portal's open endpoints require no authentication. Your first search:
@@ -380,6 +435,7 @@ These apply to every command and may be given **before or after** it:
 - **[Usage.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/Usage.md)** — full use-case-driven cookbook.
 - **[GLOSSARY.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/GLOSSARY.md)** — every domain term and flag explained.
 - **[DEVELOPING.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/DEVELOPING.md)** — TypeScript library usage, architecture, testing, CI.
+- **[MCP.md](https://github.com/maschinenlesbar-org/fim-portal-cli/blob/main/MCP.md)** — the MCP server: tools, setup, options.
 
 ## Data license
 
