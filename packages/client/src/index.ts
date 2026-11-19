@@ -83,3 +83,4 @@ export type { CsvFilter, FilterOptions, ParamKind, ParamSpec } from "./filters.j
 export * from "./enums.js";
 export * from "./types.js";
 export * from "./params.js";
+export * from "./operations.js";
