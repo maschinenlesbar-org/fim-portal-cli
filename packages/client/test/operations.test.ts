@@ -7,7 +7,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FimPortalClient } from "../src/client.js";
-import { FimApiError, FimValidationError } from "../src/errors.js";
+import { FimApiError, FimParseError, FimValidationError } from "../src/errors.js";
 import type { Transport } from "../src/http.js";
 import type { JsonObject } from "../src/types.js";
 import {
@@ -185,6 +185,28 @@ test("auditSchemaQuality: an all-clean report passes; an unexpected severity is 
     assert.match(answer.verdict, verdict);
     assert.deepEqual(answer.bySeverity, severities);
   }
+});
+
+test("auditSchemaQuality: a report of another shape is an error, never a clean verdict; findings without a known severity are never 'no critical finding'", async () => {
+  const camel = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+  const renamed = Object.fromEntries(Object.entries(REPORT_S00000000239).map(([k, v]) => [camel(k), v]));
+  const keptTotal = { ...renamed, total_checks: 14 };
+  const reportAs = (report: JsonObject) => clientOf(makeMockTransport((request) => (request.url.endsWith("/quality-report") ? { status: 200, headers: { "content-type": "application/json" }, body: Buffer.from(JSON.stringify(report)) } : fimPortalAnswer(request))));
+  for (const report of [renamed, keptTotal]) {
+    await assert.rejects(auditSchemaQuality(reportAs(report), { schema: "S00000000239" }), (err) => err instanceof FimParseError && /quality report of S00000000239 .*unexpected shape.*schema_checks, group_reports, field_reports, rule_reports/.test(err.message));
+  }
+  // The severity under another key: 13 findings whose severity isn't known.
+  const rekey = (checks: JsonObject[]): JsonObject[] => checks.map(({ error_type, ...rest }) => ({ ...rest, severity: error_type ?? null }));
+  const severity = {
+    ...REPORT_S00000000239,
+    field_reports: (REPORT_S00000000239["field_reports"] as JsonObject[]).map((r) => ({ ...r, failing_checks: rekey(r["failing_checks"] as JsonObject[]) })),
+  };
+  const answer = await auditSchemaQuality(reportAs(severity), { schema: "S00000000239" });
+  assert.equal(answer.status, "ok");
+  if (answer.status !== "ok") return;
+  assert.equal(answer.bySeverity["unknown"], 13);
+  assert.doesNotMatch(answer.verdict, /no critical finding|reusable/);
+  assert.match(answer.verdict, /13 findings of unknown severity: check them before reuse/);
 });
 
 test("a schema by name: several titled hits are ambiguous; hits that only mention it are empty; one exact title is the answer", async () => {

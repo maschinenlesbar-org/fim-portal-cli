@@ -14,7 +14,7 @@
 // portal's XZuFi answers carry none.
 
 import type { FimPortalClient } from "./client.js";
-import { FimApiError, FimValidationError } from "./errors.js";
+import { FimApiError, FimParseError, FimValidationError } from "./errors.js";
 import type { Datentyp, Feldart, FreigabeStatus, XzufiSource } from "./enums.js";
 import { DatentypValues, FeldartValues, XzufiSourceValues } from "./enums.js";
 import type { JsonObject, JsonValue } from "./types.js";
@@ -581,6 +581,9 @@ export type SchemaAudit =
 /** The severities in the order an audit reports them; any other value follows. */
 const SEVERITY_ORDER = ["critical", "warning", "method", "info"];
 
+/** The lists every quality report has (empty when nothing failed). */
+const REPORT_LISTS = ["schema_checks", "group_reports", "field_reports", "rule_reports"] as const;
+
 /**
  * A schema's quality report, aggregated: every failing check of the schema, its groups, fields and
  * rules, counted by severity (`error_type`: critical, warning, method, info — there is no
@@ -602,6 +605,14 @@ export async function auditSchemaQuality(client: FimPortalClient, input: SchemaA
   } catch (err) {
     if (isNotFound(err)) return schemaNotFound(found.fimId, version);
     throw err;
+  }
+  // A report without its lists (renamed keys, another format) would read as "0 findings: clean":
+  // an error, never a verdict.
+  const missing = REPORT_LISTS.filter((key) => !Array.isArray(report[key]));
+  if (missing.length > 0) {
+    throw new FimParseError(
+      `The quality report of ${found.fimId} v${version} has an unexpected shape: no ${missing.join(", ")} list (the portal may have changed its format); no verdict can be given.`,
+    );
   }
   const fields = catalogueOf(objects(schema["datenfelder"]));
   const groups = catalogueOf(objects(schema["datenfeldgruppen"]));
@@ -660,7 +671,13 @@ export async function auditSchemaQuality(client: FimPortalClient, input: SchemaA
   const total = num(report["total_checks"]) ?? all.length;
   const critical = bySeverity["critical"] ?? 0;
   const split = Object.entries(bySeverity).map(([severity, n]) => `${n} ${severity}`).join(", ");
-  const judgement = all.length === 0 ? "passed, no findings: clean" : critical > 0 ? `needs fixes: ${critical} critical` : "reusable with caveats (no critical finding)";
+  // A severity this audit doesn't know (none given, or a new value) may be critical: never "no critical finding".
+  const unknown = Object.entries(bySeverity).reduce((sum, [severity, n]) => (SEVERITY_ORDER.includes(severity) ? sum : sum + n), 0);
+  const judgement =
+    all.length === 0 ? "passed, no findings: clean"
+    : critical > 0 ? `needs fixes: ${critical} critical`
+    : unknown > 0 ? `${unknown} findings of unknown severity: check them before reuse`
+    : "reusable with caveats (no critical finding)";
   const notes: string[] = [];
   if (all.length > 0) notes.push("error_type is the severity: critical must be fixed; warning, method and info are advisory. Lead with critical, never count warnings as errors.");
   if (total !== all.length) notes.push(`total_checks says ${total}; the reports hold ${all.length} failing checks.`);
