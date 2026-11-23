@@ -100,6 +100,16 @@ test("findReusableFields: a query of several words, punctuated or not, ranks the
   assert.deepEqual(both.status === "ok" ? both.candidates.slice(0, 2).map((c) => [c.fimId, c.nameMatch]) : [], [["F00000001839", "exact"], ["F60000236", "name"]]);
 });
 
+test("findReusableFields: when no candidate's name fits the query, best says so instead of recommending one", async () => {
+  const answer = await findReusableFields(clientOf(fimPortalApi({ fields: FIELD_ROWS })), { query: "Steuer-Identifikationsnummer" });
+  assert.equal(answer.status, "ok");
+  if (answer.status !== "ok") return;
+  assert.ok(answer.candidates.every((c) => c.nameMatch === "text"));
+  assert.doesNotMatch(answer.best, /is the most reusable/);
+  assert.match(answer.best, /^No released field is named for "Steuer-Identifikationsnummer": the 4 hits only mention it in their definition or references\./);
+  assert.match(answer.best, /F00000003381 Zweck des Aufenthalts \(Schweiz\) .* only as related/);
+});
+
 test("findReusableFields: an unreleased best match is flagged; nothing found says what to change; groups take no feldart; no filter is refused before any request", async () => {
   const draft = variant(row("F60000236"), { freigabe_status: 3, freigabe_status_label: "Entwurf" });
   const flagged = await findReusableFields(clientOf(fimPortalApi({ fields: [draft] })), { query: "Staatsangehörigkeit", includeUnreleased: true });

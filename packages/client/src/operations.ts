@@ -519,7 +519,13 @@ export async function findReusableFields(client: FimPortalClient, input: Reusabl
   if (!top.released) notes.push(`The best match is not released (${top.statusLabel}): say so, never present it as the ${kind} to use.`);
   if (!top.central && ranked.some((c) => c.central)) notes.push("The best match is not in the central Baukasten (00000): a central one has a lower status, and status wins.");
   if (kind === "field" && ranked.some((c) => c.feldart === "select")) notes.push("A select field's values are in its code list (codeListId); getElement gives the list's name and URL.");
-  const best = `${top.fimId} ${top.name} (${top.statusLabel}, Nummernkreis ${top.nummernkreis}${kind === "field" ? `, ${top.feldart} · ${top.datentyp}` : ""}) is the most reusable of ${page.total_count} ${input.includeUnreleased === true ? "" : "released "}${kind}s.`;
+  const described = `${top.fimId} ${top.name} (${top.statusLabel}, Nummernkreis ${top.nummernkreis}${kind === "field" ? `, ${top.feldart} · ${top.datentyp}` : ""})`;
+  const released = input.includeUnreleased === true ? "" : "released ";
+  // Ranked first among hits none of whose names fit the query is no recommendation.
+  const best =
+    top.nameMatch === "text" && wanted !== ""
+      ? `No ${released}${kind} is named for "${(query["name"] as string | undefined) ?? (query["fts_query"] as string)}": the ${page.total_count > items.length ? `first ${items.length} of ${page.total_count}` : items.length} hits only mention it in their definition or references. The first of them, ${described}, is likely not about it: offer it only as related.`
+      : `${described} is the most reusable of ${page.total_count} ${released}${kind}s.`;
   return { status: "ok", kind, searched, total: page.total_count, rankedAmong: items.length, best, candidates: ranked, notes };
 }
 
