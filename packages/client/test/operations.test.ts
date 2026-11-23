@@ -22,7 +22,7 @@ import {
   searchCatalogue,
 } from "../src/operations.js";
 import { makeMockTransport, queryOf } from "./helpers.js";
-import { FIELDS_STAATSANGEHOERIGKEIT, PROFILES_PERSONALAUSWEIS, REPORT_S00000000239, TEXT_B100019, fimPortalAnswer, fimPortalApi, variant } from "./portal.js";
+import { FIELDS_STAATSANGEHOERIGKEIT, PROFILES_PERSONALAUSWEIS, REPORT_S00000000239, SCHEMA_S05000039, TEXT_B100019, fimPortalAnswer, fimPortalApi, variant } from "./portal.js";
 
 const clientOf = (mock: { transport: Transport }) => new FimPortalClient({ transport: mock.transport });
 const recorded = () => {
@@ -251,6 +251,20 @@ test("getSchemaBlueprint: the outline is joined from the group catalogue, deeper
   assert.deepEqual([phone?.depth, phone?.cardinality, phone?.use, phone?.retired], [2, "0:1", "optional", "inaktiv"]);
   const reason = deep.outline.find((n) => n.id === "F05000802");
   assert.equal(reason?.codeListId, 1844);
+});
+
+test("getSchemaBlueprint: a schema without its element catalogues is an error; an element missing from them is noted, not an unnamed line in silence", async () => {
+  const schemaAs = (schema: JsonObject) => clientOf(makeMockTransport((request) => (new URL(request.url).pathname === "/api/v1/schemas/S05000039/latest" ? { status: 200, headers: { "content-type": "application/json" }, body: Buffer.from(JSON.stringify(schema)) } : fimPortalAnswer(request))));
+  const { datenfelder, datenfeldgruppen, ...rest } = SCHEMA_S05000039;
+  const renamed = { ...rest, dataFields: datenfelder, dataFieldGroups: datenfeldgruppen } as JsonObject;
+  await assert.rejects(getSchemaBlueprint(schemaAs(renamed), { schema: "S05000039", depth: 3 }), (err) => err instanceof FimParseError && /schema S05000039 .*unexpected shape.*datenfelder, datenfeldgruppen/.test(err.message));
+  await assert.rejects(auditSchemaQuality(schemaAs(renamed), { schema: "S05000039" }), FimParseError);
+  const fewer = { ...SCHEMA_S05000039, datenfelder: (datenfelder as JsonObject[]).filter((f) => f["fim_id"] !== "F05000698") };
+  const answer = await getSchemaBlueprint(schemaAs(fewer), { schema: "S05000039" });
+  assert.equal(answer.status, "ok");
+  if (answer.status !== "ok") return;
+  assert.equal(answer.outline.find((n) => n.id === "F05000698")?.name, null);
+  assert.match(answer.notes.join(" "), /1 line\(s\) of the outline have no entry in the schema's catalogues \(name null\): F05000698/);
 });
 
 test("getSchemaBlueprint: one group expanded on its own; a group not in the schema is empty with the schema's groups", async () => {

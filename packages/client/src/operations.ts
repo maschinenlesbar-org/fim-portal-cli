@@ -273,6 +273,21 @@ function schemaNotFound(fimId: string, version: string): { status: "empty"; sear
   };
 }
 
+/** The lists every full schema has: the top level, and the field and group catalogues it is joined from. */
+const SCHEMA_LISTS = ["children", "datenfelder", "datenfeldgruppen"] as const;
+
+/**
+ * A full schema as the operations read it, else an error: without its catalogues every element
+ * would be an unnamed line, or no element at all, with nothing saying so.
+ */
+function checkedSchema(schema: JsonObject, fimId: string, version: string): JsonObject {
+  const missing = SCHEMA_LISTS.filter((key) => !Array.isArray(schema[key]));
+  if (missing.length > 0) {
+    throw new FimParseError(`The schema ${fimId} v${version} has an unexpected shape: no ${missing.join(", ")} list (the portal may have changed its format).`);
+  }
+  return schema;
+}
+
 /** The schema's catalogue entries by id@version, and by id for a node without a version. */
 function catalogueOf(entries: JsonObject[]): Map<string, JsonObject> {
   const map = new Map<string, JsonObject>();
@@ -601,7 +616,7 @@ export async function auditSchemaQuality(client: FimPortalClient, input: SchemaA
   let schema: JsonObject;
   try {
     report = await client.schemas.qualityReport(found.fimId, version);
-    schema = await client.schemas.get(found.fimId, version);
+    schema = checkedSchema(await client.schemas.get(found.fimId, version), found.fimId, version);
   } catch (err) {
     if (isNotFound(err)) return schemaNotFound(found.fimId, version);
     throw err;
@@ -777,7 +792,7 @@ export async function getSchemaBlueprint(client: FimPortalClient, input: SchemaB
   if (found.status !== "ok") return found;
   let schema: JsonObject;
   try {
-    schema = await client.schemas.get(found.fimId, version);
+    schema = checkedSchema(await client.schemas.get(found.fimId, version), found.fimId, version);
   } catch (err) {
     if (isNotFound(err)) return schemaNotFound(found.fimId, version);
     throw err;
@@ -855,6 +870,8 @@ export async function getSchemaBlueprint(client: FimPortalClient, input: SchemaB
   const notes: string[] = [];
   if (outline.some((n) => n.hidden !== undefined)) notes.push(`Groups below depth ${depth} are counted (hidden), not shown: call again with group set to one of their ids, or a larger depth.`);
   if (cut_) notes.push(`The outline stops at ${MAX_OUTLINE} lines: expand one group at a time.`);
+  const unnamed = [...new Set(outline.filter((n) => n.name === null).map((n) => n.id))];
+  if (unnamed.length > 0) notes.push(`${unnamed.length} line(s) of the outline have no entry in the schema's catalogues (name null): ${unnamed.slice(0, 10).join(", ")}${unnamed.length > 10 ? ", …" : ""}. Their type and status are unknown; getElement may know them.`);
   if (/freigegeben/.test(facts.statusLabel) && [...fieldEntries, ...groupEntries].some((e) => (num(e["freigabe_status"]) ?? 0) < 5)) {
     notes.push(`The schema is ${facts.statusLabel}, but some of its elements are not released: the elements' statuses are their own (elementStatuses).`);
   }
