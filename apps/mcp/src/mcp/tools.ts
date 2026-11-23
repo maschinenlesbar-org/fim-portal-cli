@@ -333,7 +333,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     source: (args) => {
       const kind = str(args, "kind") as ElementKind;
       const ns = kind === "field" || kind === "group" ? `${seg(str(args, "namespace") ?? "baukasten")}/` : "";
-      const base = `${ELEMENT_PATHS[kind]}/${ns}${seg(str(args, "id"))}`;
+      const given = (str(args, "id") ?? "").trim().normalize("NFC");
+      // The client upper-cases an XDatenfelder id typed in lower case (the portal's are upper case).
+      const id = kind !== "processClass" && /^[SFGDR]\d{5,}$/i.test(given) ? given.toUpperCase() : given;
+      const base = `${ELEMENT_PATHS[kind]}/${ns}${seg(id)}`;
       return flag(args, "versions") === true ? base : `${base}/${seg(str(args, "version") ?? "latest")}`;
     },
     async run(args, context) {

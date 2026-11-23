@@ -112,6 +112,9 @@ test("searchCatalogue and getElement: a page with the next offset; a field with 
   assert.equal(field["status"], "ok");
   assert.equal(((field["element"] as Record<string, unknown>)["codeList"] as Record<string, unknown>)["id"], 12451);
   assert.equal(field["source"], `${API}/api/v1/fields/baukasten/F60000236/latest`);
+  const lower = (await connection.call("getElement", { kind: "field", id: "f60000236" })).structuredContent ?? {};
+  assert.equal(lower["status"], "ok", "an id typed in lower case is the element's");
+  assert.equal(lower["source"], transport.last().url);
   const versions = (await connection.call("getElement", { kind: "schema", id: "S05000039", versions: true })).structuredContent ?? {};
   assert.equal((versions["versions"] as unknown[]).length, 2);
   assert.equal(versions["source"], `${API}/api/v1/schemas/S05000039`);

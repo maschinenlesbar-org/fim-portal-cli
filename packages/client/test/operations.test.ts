@@ -352,6 +352,19 @@ test("a 404 that isn't the portal's (an HTML page, an unknown route: a wrong bas
   assert.equal((await getElement(portal, { kind: "schema", id: "S05000039" })).status, "empty");
 });
 
+test("getElement: an id typed in lower case is the element's (the portal's ids are upper case and case-sensitive)", async () => {
+  const { mock, client } = recorded();
+  const schema = await getElement(client, { kind: "schema", id: " s05000039 " });
+  assert.equal(schema.status, "ok");
+  assert.equal(new URL(mock.last().url).pathname, "/api/v1/schemas/S05000039/latest");
+  const field = await getElement(client, { kind: "field", id: "f60000236" });
+  assert.equal(field.status, "ok");
+  const versions = await getElement(client, { kind: "schema", id: "s05000039", versions: true });
+  assert.equal(versions.status, "ok");
+  const missing = await getElement(client, { kind: "field", id: "f12345" });
+  assert.equal(missing.status === "empty" ? missing.searched["id"] : missing.status, "F12345");
+});
+
 test("plainText: tags dropped, list items and blocks as lines, entities decoded, nothing reworded", () => {
   assert.equal(plainText("<p>Erste&nbsp;Zeile &amp; mehr</p><ul><li>a</li><li>b&#252;</li></ul>"), "Erste Zeile & mehr\n\n- a\n- bü");
   assert.equal(plainText(null), "");

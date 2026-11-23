@@ -1244,7 +1244,10 @@ function elementFacts(e: JsonObject): JsonObject {
  */
 export async function getElement(client: FimPortalClient, input: ElementInput): Promise<Element> {
   const kind = assertValid("kind", input.kind, oneOfProblem(ELEMENT_KINDS));
-  const id = normalizeText(assertValid("id", input.id, textProblem));
+  const given = normalizeText(assertValid("id", input.id, textProblem));
+  // The portal's ids are upper case and it matches them case-sensitively (s05000039 is a 404):
+  // an XDatenfelder id typed in lower case is the element's, as for the use-case functions.
+  const id = kind !== "processClass" && ELEMENT_ID.test(given) ? given.toUpperCase() : given;
   const version = versionOf(input.version);
   const namespace = optionalText("namespace", input.namespace) ?? "baukasten";
   if (kind === "processClass" && input.version === undefined) throw new FimValidationError("Invalid version: a process class needs its version (from a search, e.g. 01.01.00).");
