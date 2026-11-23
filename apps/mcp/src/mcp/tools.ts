@@ -199,7 +199,14 @@ export const TOOLS: readonly ToolDefinition[] = [
     outputSchema: output({ kind: str_, total: int, rankedAmong: int, best: str_, candidates: arr }),
     source: (args) => {
       const input = reusableInput(args);
-      return `api/v1/${input.kind === "group" ? "groups" : "fields"}?${buildQueryString(reusableFieldsQuery(input))}`;
+      const path = `api/v1/${input.kind === "group" ? "groups" : "fields"}`;
+      // run refuses the same arguments first, so a call never cites the bare path; it serves a
+      // caller that swaps run (the shared tests), where the source must not throw.
+      try {
+        return `${path}?${buildQueryString(reusableFieldsQuery(input))}`;
+      } catch {
+        return path;
+      }
     },
     async run(args, context) {
       return { ...(await findReusableFields(context.client, reusableInput(args))) };
