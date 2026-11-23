@@ -923,7 +923,7 @@ export type ServiceDossier =
       notes: string[];
     }
   | { status: "ambiguous"; searched: { service: string }; total: number; candidates: ServiceCandidate[]; reason: string }
-  | { status: "empty"; searched: { service: string }; reason: string };
+  | { status: "empty"; searched: { service: string }; reason: string; total?: number; candidates?: ServiceCandidate[] };
 
 /** How many service hits a name is looked up among. */
 const SERVICE_CANDIDATES = 10;
@@ -956,21 +956,35 @@ export async function getServiceDossier(client: FimPortalClient, input: ServiceD
     const exact = items.filter((i) => names(i).some((t) => fold(t) === wanted));
     // The full-text search also matches a service's texts: a hit whose names hold every word is likelier.
     const named = items.filter((i) => namesAll(wanted, names(i)));
-    const pick = items.length === 1 ? items[0] : exact.length === 1 ? exact[0] : exact.length === 0 && named.length === 1 ? named[0] : undefined;
+    // A hit whose names don't hold every word only mentions them (in its texts, its legal bases):
+    // never taken for the service, even as the only hit.
+    const pick = exact.length === 1 ? exact[0] : exact.length === 0 && named.length === 1 ? named[0] : undefined;
     if (items.length === 0) return { status: "empty", searched, reason: `No service matches "${given}". Try fewer or other words (German: Personalausweis, Hundesteuer), or give the 14-digit Leistungsschlüssel.` };
+    const candidates = [...named, ...items.filter((i) => !named.includes(i))].map(
+      (i): ServiceCandidate => ({
+        key: str(i["leistungsschluessel"]) ?? "",
+        title: str(i["title"]) ?? "",
+        citizenName: str(i["leistungsbezeichnung_2"]) ?? null,
+        themenfeld: str(obj(i["ozg"])?.["themenfeld_label"]) ?? null,
+        statusLabel: freigabeStatusLabel(i["freigabe_status"]),
+        changed: str(i["geaendert_datum_zeit"]) ?? null,
+      }),
+    );
+    if (pick === undefined && named.length === 0 && exact.length === 0) {
+      return {
+        status: "empty",
+        searched,
+        total,
+        candidates,
+        reason: `No service's name holds every word of "${given}": the hits (${items.length} of ${total}) only mention it in their texts or legal bases, so none is about it. Say so; offer them only as related, or try other words or the Leistungsschlüssel.`,
+      };
+    }
     if (pick === undefined) {
       return {
         status: "ambiguous",
         searched,
         total,
-        candidates: [...named, ...items.filter((i) => !named.includes(i))].map((i) => ({
-          key: str(i["leistungsschluessel"]) ?? "",
-          title: str(i["title"]) ?? "",
-          citizenName: str(i["leistungsbezeichnung_2"]) ?? null,
-          themenfeld: str(obj(i["ozg"])?.["themenfeld_label"]) ?? null,
-          statusLabel: freigabeStatusLabel(i["freigabe_status"]),
-          changed: str(i["geaendert_datum_zeit"]) ?? null,
-        })),
+        candidates,
         reason: `${total} services match "${given}"${total > items.length ? ` (the first ${items.length} listed)` : ""}${named.length > 1 ? `, ${named.length} of them named with every word (listed first)` : ""}: ask which one, or narrow the words, then call again with its key.`,
       };
     }

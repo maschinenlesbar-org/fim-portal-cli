@@ -22,7 +22,7 @@ import {
   searchCatalogue,
 } from "../src/operations.js";
 import { makeMockTransport, queryOf } from "./helpers.js";
-import { FIELDS_STAATSANGEHOERIGKEIT, REPORT_S00000000239, TEXT_B100019, fimPortalAnswer, fimPortalApi, variant } from "./portal.js";
+import { FIELDS_STAATSANGEHOERIGKEIT, PROFILES_PERSONALAUSWEIS, REPORT_S00000000239, TEXT_B100019, fimPortalAnswer, fimPortalApi, variant } from "./portal.js";
 
 const clientOf = (mock: { transport: Transport }) => new FimPortalClient({ transport: mock.transport });
 const recorded = () => {
@@ -279,6 +279,24 @@ test("getServiceDossier: by name, several hits are ambiguous; one exact name, or
   assert.equal(queryOf(mock.calls[0]!).get("sprache"), "Deutsch");
   const unknown = await getServiceDossier(client, { service: "99999999999999" });
   assert.equal(unknown.status, "empty");
+});
+
+test("getServiceDossier: hits whose names don't hold the words are not taken for the service, one or several: empty, with them listed", async () => {
+  const rows = PROFILES_PERSONALAUSWEIS["items"] as JsonObject[];
+  // The profile search answers every query with these rows, as the full-text search does for a
+  // word in a service's texts or legal bases.
+  for (const [profiles, total] of [[rows.slice(0, 1), 1], [rows, 2]] as const) {
+    const mock = fimPortalApi({ serviceProfiles: [...profiles] });
+    const answer = await getServiceDossier(clientOf(mock), { service: "Hundesteuer" });
+    assert.equal(answer.status, "empty");
+    assert.equal(mock.calls.length, 1, "no profile fetched for a hit that isn't named for it");
+    if (answer.status !== "empty") continue;
+    assert.equal(answer.total, total);
+    assert.deepEqual(answer.candidates?.map((c) => c.key), profiles.map((r) => r["leistungsschluessel"]));
+    assert.match(answer.reason, /No service's name holds every word of "Hundesteuer": .* only mention it/);
+  }
+  const named = await getServiceDossier(clientOf(fimPortalApi({ serviceProfiles: rows.slice(0, 1) })), { service: "Personalausweis Ausland" });
+  assert.equal(named.status === "ok" ? named.service.key : named.status, "99008001012011", "one hit named with every word is the answer");
 });
 
 test("getServiceText: with the source; without it looked up by the key; a wrong source is empty; neither is refused before any request", async () => {
