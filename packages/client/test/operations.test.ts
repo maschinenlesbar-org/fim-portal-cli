@@ -77,6 +77,29 @@ test("findReusableFields: with the unreleased, status wins among namesakes (gold
   assert.match(answer.notes.join(" "), /name is a substring match/);
 });
 
+test("findReusableFields: a query of several words, punctuated or not, ranks the field named for one of them first, not as text", async () => {
+  // Every field search answers the four recorded Staatsangehörigkeit rows.
+  const mock = fimPortalApi({ fields: FIELD_ROWS });
+  for (const query of ["Staatsangehörigkeit, Nationalität", "Staatsangehörigkeit Nationalität", "Nationalität (Staatsangehörigkeit)"]) {
+    const answer = await findReusableFields(clientOf(mock), { query });
+    assert.equal(answer.status, "ok");
+    if (answer.status !== "ok") continue;
+    assert.deepEqual(answer.candidates.map((c) => [c.fimId, c.nameMatch]), [
+      ["F60000236", "name"],
+      ["F00000001839", "partial"],
+      ["F00000003381", "text"],
+      ["F00000003398", "text"],
+    ], query);
+    assert.match(answer.best, /^F60000236 Staatsangehörigkeit/);
+  }
+  // Short words and articles don't make a name match: "des" is in "Zweck des Aufenthalts".
+  const articles = await findReusableFields(clientOf(mock), { query: "Staatsangehörigkeit des Kindes" });
+  assert.equal(articles.status === "ok" ? articles.candidates.find((c) => c.fimId === "F00000003381")?.nameMatch : "", "text");
+  // The name that is the whole query leads; one that is one of its words follows.
+  const both = await findReusableFields(clientOf(mock), { query: "frühere Staatsangehörigkeit" });
+  assert.deepEqual(both.status === "ok" ? both.candidates.slice(0, 2).map((c) => [c.fimId, c.nameMatch]) : [], [["F00000001839", "exact"], ["F60000236", "name"]]);
+});
+
 test("findReusableFields: an unreleased best match is flagged; nothing found says what to change; groups take no feldart; no filter is refused before any request", async () => {
   const draft = variant(row("F60000236"), { freigabe_status: 3, freigabe_status_label: "Entwurf" });
   const flagged = await findReusableFields(clientOf(fimPortalApi({ fields: [draft] })), { query: "Staatsangehörigkeit", includeUnreleased: true });

@@ -349,8 +349,13 @@ export interface ReusableFieldsInput {
 /** One building block, ranked. */
 export interface ReusableCandidate {
   rank: number;
-  /** exact: the name is the searched text; name: it contains its words; text: it matched elsewhere (definition, bezug), likely not about it. */
-  nameMatch: "exact" | "name" | "text";
+  /**
+   * exact: the name is the searched text; name: it contains every word, or is one of them (a
+   * query of several words often names one concept several ways: "Staatsangehörigkeit,
+   * Nationalität"); partial: it contains some of them; text: none, it matched elsewhere
+   * (definition, bezug), likely not about it. Words under three letters and articles don't count.
+   */
+  nameMatch: NameMatch;
   fimId: string;
   /** Needed with fimId to fetch the element (getElement); in practice `baukasten`. */
   namespace: string;
@@ -379,6 +384,24 @@ export type ReusableFields =
 
 /** How many hits are fetched and ranked (the API's largest page). */
 const RANK_AMONG = 200;
+
+/** How a candidate's name fits the searched text (ReusableCandidate.nameMatch). */
+type NameMatch = "exact" | "name" | "partial" | "text";
+
+/** Short German words that say nothing about a field's concept ("Staatsangehörigkeit des Kindes"). */
+const FILLER_WORDS = new Set(["der", "die", "das", "des", "dem", "den", "ein", "eine", "einer", "eines", "einem", "einen", "und", "oder", "für", "von", "mit", "bei", "zur", "zum", "auf", "aus", "nach", "über", "unter", "vor", "ohne", "gegen"]);
+
+/**
+ * The words of a folded text: split at anything not a letter or digit (spaces, commas, hyphens,
+ * brackets), and, unless `all`, without words under three letters and filler words; when nothing
+ * is left, every word.
+ */
+function wordsOf(folded: string, all = true): string[] {
+  const every = folded.split(/[^\p{L}\p{N}]+/u).filter((word) => word !== "");
+  if (!all) return every;
+  const telling = every.filter((word) => word.length >= 3 && !FILLER_WORDS.has(word));
+  return telling.length > 0 ? telling : every;
+}
 
 /** Rank of a status for reuse: gold, silber, methodisch freigegeben, then the drafts. */
 const STATUS_RANK: Readonly<Record<number, number>> = { 6: 0, 5: 1, 4: 2, 3: 3, 2: 4, 1: 5 };
@@ -436,13 +459,18 @@ export async function findReusableFields(client: FimPortalClient, input: Reusabl
     return { status: "empty", kind, searched, total: 0, reason };
   }
   const wanted = fold((query["name"] as string | undefined) ?? (query["fts_query"] as string | undefined));
-  const matchOf = (item: JsonObject): "exact" | "name" | "text" => {
+  const words = wordsOf(wanted);
+  const matchOf = (item: JsonObject): NameMatch => {
     const name = fold(str(item["name"]));
     if (wanted === "") return "name";
-    if (name === wanted) return "exact";
-    return wanted.split(" ").every((word) => name.includes(word)) ? "name" : "text";
+    const bare = wordsOf(name, false).join(" ");
+    if (name === wanted || bare === wordsOf(wanted, false).join(" ")) return "exact";
+    const found = words.filter((word) => name.includes(word)).length;
+    // A name that is one of the words is that word's namesake: several words often name one
+    // concept several ways ("Staatsangehörigkeit, Nationalität").
+    return found === words.length || words.includes(bare) ? "name" : found > 0 ? "partial" : "text";
   };
-  const MATCH_RANK = { exact: 0, name: 1, text: 2 } as const;
+  const MATCH_RANK: Readonly<Record<NameMatch, number>> = { exact: 0, name: 1, partial: 2, text: 3 };
   const ranked = items
     .map((item, index) => ({ item, index, match: matchOf(item) }))
     .sort((a, b) => {
@@ -482,6 +510,7 @@ export async function findReusableFields(client: FimPortalClient, input: Reusabl
   if (page.total_count > items.length) notes.push(`Ranked among the first ${items.length} of ${page.total_count} matches in the portal's order; narrow with query or name rather than paging.`);
   if (page.total_count > 1000) notes.push(`${page.total_count} ${kind}s match: a broad filter. Add a query or a name.`);
   if (query["name"] !== undefined) notes.push(`name is a substring match ("Name" also matches Familienname, Vorname); query searches the concept.`);
+  if (ranked.some((c) => c.nameMatch === "partial")) notes.push("Candidates with nameMatch partial hold only some of the searched words in their name: check that they are about it.");
   if (wanted !== "" && ranked.some((c) => c.nameMatch === "text")) notes.push("Candidates with nameMatch text matched only in their definition or references: likely not about it; say so rather than offering them as the field.");
   const second = ranked[1];
   if (second !== undefined && second.nameMatch === top.nameMatch && second.freigabeStatus === top.freigabeStatus && second.central === top.central) {
