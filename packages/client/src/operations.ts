@@ -906,6 +906,8 @@ const SERVICE_TYPES: Readonly<Record<string, string>> = { lo: "Leistungsobjekt",
 export interface ServiceDossierInput {
   /** A Leistungsschlüssel (14 digits) or words of the service's name. */
   service: string;
+  /** The most pages of 200 texts read (1–100, default 10). */
+  maxPages?: number | undefined;
 }
 
 /** A service hit, as an ambiguous answer lists it. */
@@ -962,6 +964,9 @@ export type ServiceDossier =
 /** How many service hits a name is looked up among. */
 const SERVICE_CANDIDATES = 10;
 
+/** A page of a service's texts (the API's largest). */
+const TEXT_PAGE = 200;
+
 function levelOf(redaktionId: string): string {
   if (redaktionId.startsWith("B")) return "federal";
   if (redaktionId.startsWith("L")) return "state";
@@ -974,11 +979,12 @@ function levelOf(redaktionId: string): string {
  * mapped to its label since the profile carries none, OZG and SDG, legal bases), the linked
  * process class or that there is none, and every editorial office's master text with the source
  * getServiceText needs (looked up: it can't be told from the Redaktion's prefix), federal first;
- * the federal text's summary as plain text. By key: two requests; by name: a search first, and
- * several hits are `ambiguous`.
+ * the federal text's summary as plain text. By key: two requests (a page more per 200 texts, up to
+ * maxPages); by name: a search first, and several hits are `ambiguous`.
  */
 export async function getServiceDossier(client: FimPortalClient, input: ServiceDossierInput): Promise<ServiceDossier> {
   const given = normalizeText(assertValid("service", input.service, textProblem));
+  const maxPages = bounded("maxPages", input.maxPages, 10, 1, 100);
   const searched = { service: given };
   let key = given;
   if (!SERVICE_KEY.test(given)) {
@@ -1031,9 +1037,17 @@ export async function getServiceDossier(client: FimPortalClient, input: ServiceD
     if (isNotFound(err)) return { status: "empty", searched, reason: `The portal has no service with the key ${key}. Search by name, or check the key (14 digits, from a search).` };
     throw err;
   }
-  const textPage = await client.serviceTexts.search({ leistungsschluessel: key, limit: 200 });
+  // The texts, a page of 200 at a time, up to maxPages pages (a service rarely has more than 20).
+  const textItems: Awaited<ReturnType<typeof client.serviceTexts.search>>["items"] = [];
+  let textTotal = 0;
+  for (let pageNo = 0; pageNo < maxPages; pageNo++) {
+    const textPage = await client.serviceTexts.search({ leistungsschluessel: key, ...(pageNo === 0 ? {} : { offset: textItems.length }), limit: TEXT_PAGE });
+    textItems.push(...textPage.items);
+    textTotal = textPage.total_count;
+    if (textPage.items.length < TEXT_PAGE || textItems.length >= textTotal) break;
+  }
   const found = new Map<string, ServiceTextRef & { kurztext: string | null; volltext: string | null }>();
-  for (const t of textPage.items) {
+  for (const t of textItems) {
     found.set(`${t.redaktion_id}/${t.leistung_id}`, {
       redaktionId: t.redaktion_id,
       leistungId: t.leistung_id,
@@ -1075,6 +1089,7 @@ export async function getServiceDossier(client: FimPortalClient, input: ServiceD
   if (replacements.length === 0) notes.push("No replacements: it neither supersedes nor is superseded.");
   notes.push("Statuses are mapped from the codes here: the portal sends no label for services and texts (unset: none given).");
   notes.push("To read one text in full: getServiceText with its redaktionId, leistungId and source from texts (never guess the source from the prefix).");
+  if (textItems.length < textTotal) notes.push(`${textItems.length} of the ${textTotal} texts the search lists were read (maxPages ${maxPages}): the others are not listed.`);
   if (texts.some((t) => t.source === null)) notes.push("Texts with source null are listed by the profile but not found by the text search: getServiceText can't fetch them without a source.");
   if (canonical !== null) notes.push("The summary is the federal text's short text, HTML dropped, not reworded.");
   const levels = Object.entries(byLevel).map(([level, n]) => `${n} ${level}`).join(", ");

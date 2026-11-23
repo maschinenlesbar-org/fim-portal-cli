@@ -10,7 +10,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { listTools } from "../src/mcp/server.js";
 import { connect } from "./harness.js";
-import { fimPortalAnswer, fimPortalApi, makeMockTransport, TEXT_B100019, variant } from "./helpers.js";
+import { fimPortalAnswer, fimPortalApi, makeMockTransport, TEXT_B100019, TEXTS_99008001012011, variant } from "./helpers.js";
 
 const API = "https://fimportal.de";
 
@@ -86,6 +86,20 @@ test("getServiceDossier and getServiceText: the texts with their sources, then o
   const ambiguous = (await connection.call("getServiceDossier", { service: "Personalausweis" })).structuredContent ?? {};
   assert.equal(ambiguous["status"], "ambiguous");
   await connection.close();
+});
+
+test("--max-pages limits the pages of a service's texts getServiceDossier reads; the source names each", async () => {
+  const first = (TEXTS_99008001012011["items"] as Record<string, unknown>[])[0]!;
+  const texts = Array.from({ length: 450 }, (_, i) => ({ ...first, redaktion_id: `L${100000 + i}`, leistung_id: String(i) }));
+  for (const [maxPages, read] of [[1, 200], [10, 450]] as const) {
+    const transport = fimPortalApi({ serviceTexts: texts as never });
+    const connection = await connect({ transport, config: { maxPages, maxResultChars: 1_000_000 } });
+    const dossier = (await connection.call("getServiceDossier", { service: "99008001012011" })).structuredContent ?? {};
+    await connection.close();
+    assert.equal((dossier["texts"] as { source: string | null }[]).filter((t) => t.source !== null).length, read);
+    assert.equal(transport.calls.length, 1 + Math.ceil(read / 200));
+    assert.equal(dossier["source"], `${API}/{api/v1/leistung-steckbriefe/99008001012011,${transport.calls.slice(1).map((c) => c.url.slice(API.length + 1)).join(",")}}`);
+  }
 });
 
 test("an empty answer's source names the requests it made, never the bare base", async () => {

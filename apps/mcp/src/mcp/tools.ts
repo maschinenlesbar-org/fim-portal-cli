@@ -273,11 +273,14 @@ export const TOOLS: readonly ToolDefinition[] = [
       const search = byKey ? [] : [`api/v1/leistung-steckbriefe?${buildQueryString({ fts_query: given, sprache: "Deutsch", limit: 10 })}`];
       const key = (answer["service"] as { key?: string } | undefined)?.key;
       // A key the portal doesn't know: its profile was asked for, the texts weren't.
-      const profile = key === undefined ? (byKey ? [`api/v1/leistung-steckbriefe/${seg(given)}`] : []) : [`api/v1/leistung-steckbriefe/${seg(key)}`, `api/v1/leistung-stammtexte?${buildQueryString({ leistungsschluessel: key, limit: 200 })}`];
+      // The texts' pages: one of 200, more when the search listed more (up to --max-pages).
+      const listed = ((answer["texts"] as { source: string | null }[] | undefined) ?? []).filter((t) => t.source !== null).length;
+      const pages = Array.from({ length: Math.max(1, Math.ceil(listed / 200)) }, (_, i) => `api/v1/leistung-stammtexte?${buildQueryString({ leistungsschluessel: key, offset: i === 0 ? undefined : i * 200, limit: 200 })}`);
+      const profile = key === undefined ? (byKey ? [`api/v1/leistung-steckbriefe/${seg(given)}`] : []) : [`api/v1/leistung-steckbriefe/${seg(key)}`, ...pages];
       return paths([...search, ...profile]);
     },
     async run(args, context) {
-      return { ...(await getServiceDossier(context.client, { service: str(args, "service") ?? "" })) };
+      return { ...(await getServiceDossier(context.client, { service: str(args, "service") ?? "", maxPages: context.maxPages })) };
     },
   },
   {

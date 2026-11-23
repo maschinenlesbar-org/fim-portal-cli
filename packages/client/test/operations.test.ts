@@ -22,7 +22,7 @@ import {
   searchCatalogue,
 } from "../src/operations.js";
 import { makeMockTransport, queryOf } from "./helpers.js";
-import { FIELDS_STAATSANGEHOERIGKEIT, PROFILES_PERSONALAUSWEIS, REPORT_S00000000239, SCHEMA_S05000039, TEXT_B100019, fimPortalAnswer, fimPortalApi, variant } from "./portal.js";
+import { FIELDS_STAATSANGEHOERIGKEIT, PROFILES_PERSONALAUSWEIS, REPORT_S00000000239, SCHEMA_S05000039, TEXT_B100019, TEXTS_99008001012011, fimPortalAnswer, fimPortalApi, variant } from "./portal.js";
 
 const clientOf = (mock: { transport: Transport }) => new FimPortalClient({ transport: mock.transport });
 const recorded = () => {
@@ -299,6 +299,22 @@ test("getServiceDossier: by key, the profile, every text with its source (federa
   assert.match(answer.canonical?.summary ?? "", /^- Beantragung eines Personalausweises/);
   assert.match(answer.notes.join(" "), /No process class is linked/);
   assert.match(answer.verdict, /10 editorial offices have a text \(9 state, 1 federal\); no process linked/);
+});
+
+test("getServiceDossier: a service with more texts than one page reads up to maxPages pages of them, and says when it stopped", async () => {
+  const first = (TEXTS_99008001012011["items"] as JsonObject[])[0]!;
+  const texts = Array.from({ length: 450 }, (_, i) => variant(first, { redaktion_id: `L${100000 + i}`, leistung_id: String(i) }));
+  const all = fimPortalApi({ serviceTexts: texts });
+  const whole = await getServiceDossier(clientOf(all), { service: "99008001012011" });
+  assert.equal(whole.status === "ok" ? whole.texts.filter((t) => t.source !== null).length : 0, 450);
+  assert.doesNotMatch(whole.status === "ok" ? whole.notes.join(" ") : "", /maxPages/);
+  assert.deepEqual(all.calls.slice(1).map((c) => queryOf(c).get("offset")), [null, "200", "400"]);
+  const two = fimPortalApi({ serviceTexts: texts });
+  const part = await getServiceDossier(clientOf(two), { service: "99008001012011", maxPages: 2 });
+  assert.equal(two.calls.length, 3);
+  assert.equal(part.status === "ok" ? part.texts.filter((t) => t.source !== null).length : 0, 400);
+  assert.match(part.status === "ok" ? part.notes.join(" ") : "", /400 of the 450 texts the search lists were read \(maxPages 2\)/);
+  await assert.rejects(getServiceDossier(clientOf(two), { service: "99008001012011", maxPages: 0 }), FimValidationError);
 });
 
 test("getServiceDossier: by name, several hits are ambiguous; one exact name, or the one hit named with every word, is the answer; an unknown key is empty", async () => {

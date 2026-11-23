@@ -103,6 +103,9 @@ loses its middle, never its end, where the reason is).
 --log-format <text|jsonl>  the log records on stderr (default text)
 ```
 
+`--max-pages` limits the pages of a service's texts (200 a page) `getServiceDossier` reads; the
+other tools read one page per request by design (`findReusableFields` ranks the first 200 hits).
+
 ## What it does and doesn't do
 
 - **Read-only.** No tool changes anything, here or upstream.
