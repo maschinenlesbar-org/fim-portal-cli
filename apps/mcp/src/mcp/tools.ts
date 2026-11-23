@@ -285,7 +285,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     title: "Search the FIM catalogues",
     description: [
       'One page of a search in one of the FIM catalogues: schemas, fields, groups, documentProfiles (Dokumentsteckbriefe), serviceProfiles (Leistungssteckbriefe), serviceTexts (Leistungsstammtexte), processClasses or processes (XProzess). Use it for "suche Datenschemata zum Thema Gewerbe", "welche Prozesse gibt es zum Personalausweis?", "Dokumentsteckbriefe zur Hundesteuer", "list schemas about Wohngeld", "search process classes", "find service texts of Bayern".',
-      "Rows carry ids and what tells them apart (name, status, version); fetch one with getElement (fields and groups need namespace and fimId) or, for services, getServiceDossier. Newest version only unless latestOnly is false. The full-text query also matches text inside an element: check the name. name filters by a part of the name (title for services and texts); processes and process classes have none, service texts no status; leistungsschluessel only for services and texts. status takes Freigabestatus codes: 1 in Planung, 2 in Bearbeitung, 3 Entwurf, 4 methodisch freigegeben, 5 silber, 6 gold, 7 inaktiv, 8 zum Löschen. Page with offset and limit (nextOffset). For reusable fields, findReusableFields ranks them.",
+      "Rows carry ids and what tells them apart (name, status, version); fetch one with getElement (fields and groups need namespace and fimId) or, for services, getServiceDossier. Newest version only unless latestOnly is false (schemas, fields, groups, documentProfiles, processClasses; processes come in every version). The full-text query also matches text inside an element: check the name. name filters by a part of the name (title for services and texts); processes and process classes have none, service texts no status; leistungsschluessel only for services and texts. status takes Freigabestatus codes: 1 in Planung, 2 in Bearbeitung, 3 Entwurf, 4 methodisch freigegeben, 5 silber, 6 gold, 7 inaktiv, 8 zum Löschen. Page with offset and limit (nextOffset). For reusable fields, findReusableFields ranks them.",
       RULES,
     ].join("\n\n"),
     inputSchema: input(
@@ -294,7 +294,7 @@ export const TOOLS: readonly ToolDefinition[] = [
         query: text("Full-text search, German."),
         name: text("A part of the name (title for serviceProfiles and serviceTexts)."),
         status: { type: "array", items: { type: "integer", minimum: 1, maximum: 8 }, minItems: 1, maxItems: 8, description: "Freigabestatus codes (5, 6: released)." },
-        latestOnly: { type: "boolean", description: "One row per element, its newest version (default true)." },
+        latestOnly: { type: "boolean", description: "One row per element, its newest version (default true; not for processes, serviceProfiles, serviceTexts)." },
         leistungsschluessel: { type: "string", minLength: 14, maxLength: 14, pattern: "^[0-9]{14}$", description: "A service key: its profile or its texts." },
         offset,
         limit: limit(50, 20),

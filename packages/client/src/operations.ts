@@ -1027,7 +1027,11 @@ export interface CatalogueSearchInput {
   name?: string | undefined;
   /** Freigabestatus codes 1–8 (not for service texts). */
   status?: number[] | undefined;
-  /** One row per element, its newest version (default true; schemas, fields, groups, document profiles, process classes). */
+  /**
+   * One row per element, its newest version (default true; schemas, fields, groups, document
+   * profiles, process classes). The portal can't narrow processes, service profiles or texts so:
+   * the answer's notes say so.
+   */
   latestOnly?: boolean | undefined;
   /** A Leistungsschlüssel (service profiles and texts). */
   leistungsschluessel?: string | undefined;
@@ -1171,6 +1175,9 @@ export async function searchCatalogue(client: FimPortalClient, input: CatalogueS
   }
   const notes: string[] = [];
   if (query["is_latest"] !== true && HAS_LATEST.includes(resource)) notes.push("Every version is listed (latestOnly false): an element appears once per version.");
+  // The portal has no newest-version filter for these: latestOnly can't narrow them.
+  if (resource === "processes") notes.push("Processes are listed in every version (the portal has no newest-only filter for them): an id can appear more than once, version tells them apart.");
+  else if (!HAS_LATEST.includes(resource) && input.latestOnly !== undefined) notes.push(`latestOnly does nothing for ${resource}: the portal has no version filter for them.`);
   if (query["fts_query"] !== undefined && (resource === "schemas" || resource === "fields" || resource === "groups")) notes.push("The full-text search also matches text inside an element: check name and title, not only that it was found.");
   if (resource === "fields" || resource === "groups") notes.push("Fetch one with getElement: it needs the namespace and the fimId.");
   const next = offset + items.length;

@@ -302,6 +302,20 @@ test("searchCatalogue: latest only by default, rows cut to their ids, the next p
   assert.equal(past.status, "empty");
 });
 
+test("searchCatalogue: a catalogue the portal can't narrow to the newest version says so; latestOnly there does nothing and says so", async () => {
+  const { mock, client } = recorded();
+  const processes = await searchCatalogue(client, { resource: "processes", query: "Personalausweis" });
+  assert.equal(processes.status, "ok");
+  assert.equal(queryOf(mock.last()).get("is_latest"), null);
+  if (processes.status === "ok") assert.match(processes.notes.join(" "), /Processes are listed in every version/);
+  const profiles = await searchCatalogue(client, { resource: "serviceProfiles", query: "Personalausweis", latestOnly: true });
+  if (profiles.status === "ok") assert.match(profiles.notes.join(" "), /latestOnly does nothing for serviceProfiles/);
+  const plain = await searchCatalogue(client, { resource: "serviceProfiles", query: "Personalausweis" });
+  if (plain.status === "ok") assert.doesNotMatch(plain.notes.join(" "), /latestOnly/);
+  const schemas = await searchCatalogue(client, { resource: "schemas", query: "Hundesteuer" });
+  if (schemas.status === "ok") assert.doesNotMatch(schemas.notes.join(" "), /every version|latestOnly/);
+});
+
 test("searchCatalogue past the last page: total is still the number of hits, as the reason says", async () => {
   const past = await searchCatalogue(recorded().client, { resource: "schemas", query: "Hundesteuer", offset: 100 });
   assert.equal(past.status, "empty");
