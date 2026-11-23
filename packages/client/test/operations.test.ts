@@ -7,7 +7,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FimPortalClient } from "../src/client.js";
-import { FimValidationError } from "../src/errors.js";
+import { FimApiError, FimValidationError } from "../src/errors.js";
 import type { Transport } from "../src/http.js";
 import type { JsonObject } from "../src/types.js";
 import {
@@ -334,6 +334,22 @@ test("getElement: a field's code list and use count (not its 1 MB of schemas); a
   await assert.rejects(getElement(client, { kind: "processClass", id: "99008001012000" }), /needs its version/);
   const profile = await getElement(client, { kind: "documentProfile", id: "D05000033" });
   assert.deepEqual(profile.status === "ok" && "element" in profile ? profile.element["schemas"] : undefined, [{ fimId: "S05000039", version: "1.0", name: "Anmeldung zur Hundesteuer", statusLabel: "inaktiv" }]);
+});
+
+test("a 404 that isn't the portal's (an HTML page, an unknown route: a wrong base path) is an error, never 'the portal has no such element'", async () => {
+  const html = { status: 404, headers: { "content-type": "text/html" }, body: Buffer.from("<html><body><h1>404 Not Found</h1>nginx</body></html>") };
+  const route = { status: 404, headers: { "content-type": "application/json" }, body: Buffer.from('{"detail":"unknown route"}') };
+  for (const answer of [html, route]) {
+    const client = clientOf(makeMockTransport(() => answer));
+    await assert.rejects(getElement(client, { kind: "schema", id: "S05000039" }), (err) => err instanceof FimApiError && err.status === 404);
+    await assert.rejects(getSchemaBlueprint(client, { schema: "S05000039" }), FimApiError);
+    await assert.rejects(auditSchemaQuality(client, { schema: "S05000039" }), FimApiError);
+    await assert.rejects(getServiceDossier(client, { service: "99008001012011" }), FimApiError);
+    await assert.rejects(getServiceText(client, { redaktionId: "B100019", leistungId: "102241587", source: "pvog" }), FimApiError);
+  }
+  // The portal's own answer for an id it doesn't know (as live, 2026-11-23): empty, with what to check.
+  const portal = clientOf(makeMockTransport(() => ({ status: 404, headers: { "content-type": "application/json" }, body: Buffer.from('{"detail":"Could not find schema s05000039Vlatest."}') })));
+  assert.equal((await getElement(portal, { kind: "schema", id: "S05000039" })).status, "empty");
 });
 
 test("plainText: tags dropped, list items and blocks as lines, entities decoded, nothing reworded", () => {

@@ -72,9 +72,16 @@ function namesAll(wanted: string, texts: (string | null | undefined)[]): boolean
   return wanted.split(" ").every((word) => haystack.includes(word));
 }
 
-/** True for the API's 404 answer. */
+/** What the portal's router answers for a path it has no route for (live, 2026-11-23), and FastAPI's default. */
+const ROUTE_MISSES = new Set(["unknown route", "not found"]);
+
+/**
+ * True for the portal's answer that an element it routes to doesn't exist: a 404 with its JSON
+ * `detail` ("Could not find schema …"). A 404 without one (an HTML page of a proxy) or the
+ * router's "unknown route" (a wrong base path) is about the service, not the element: an error.
+ */
 function isNotFound(err: unknown): err is FimApiError {
-  return err instanceof FimApiError && err.status === 404;
+  return err instanceof FimApiError && err.status === 404 && err.detail !== undefined && err.detail.trim() !== "" && !ROUTE_MISSES.has(err.detail.trim().toLowerCase());
 }
 
 /** A whole number from `min` to `max`, else a validation error naming the input. */
@@ -1233,7 +1240,7 @@ function elementFacts(e: JsonObject): JsonObject {
  * and the list as an object) and how many schemas use it (a widely used field's answer runs past
  * 1 MB: only the count and the first 25 are kept); a group with its direct children named; a
  * document profile with its schemas; a process class with its processes. Or, with `versions`,
- * the element's versions. A 404 is `empty`, with what to check. One request.
+ * the element's versions. The portal's 404 is `empty`, with what to check. One request.
  */
 export async function getElement(client: FimPortalClient, input: ElementInput): Promise<Element> {
   const kind = assertValid("kind", input.kind, oneOfProblem(ELEMENT_KINDS));
