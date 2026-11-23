@@ -95,17 +95,55 @@ function versionOf(version: string | undefined): string {
 
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
 
+/** What a tag (the text between "<" and ">") becomes: a line break, a list item's "- ", or nothing. */
+function tagText(tag: string): string {
+  // Read by index, not by a regular expression with two optional runs of spaces, which
+  // backtracks over a long run of them.
+  let i = 0;
+  const spaces = (): void => {
+    while (i < tag.length && /\s/.test(tag[i] as string)) i++;
+  };
+  spaces();
+  const closing = tag[i] === "/";
+  if (closing) {
+    i++;
+    spaces();
+  }
+  const start = i;
+  while (i < tag.length && /[a-z0-9]/i.test(tag[i] as string)) i++;
+  const name = tag.slice(start, i).toLowerCase();
+  const rest = tag.slice(i);
+  if (!closing && name.startsWith("li")) return "\n- ";
+  if (!closing && name === "br" && /^\s*\/?$/.test(rest)) return "\n";
+  if (closing && rest.trim() === "" && /^(p|div|ul|ol|h[1-6]|table|tr)$/.test(name)) return "\n";
+  return "";
+}
+
+/**
+ * `html` with its tags replaced (tagText): a tag runs from "<" to the next ">"; a "<" with no ">"
+ * after it is text. One pass with indexOf, so linear: a regular expression tried at every "<"
+ * rescans the rest of a text without a ">" (quadratic).
+ */
+function withoutTags(html: string): string {
+  const out: string[] = [];
+  let at = 0;
+  for (let open = html.indexOf("<"); open !== -1; open = html.indexOf("<", at)) {
+    const close = html.indexOf(">", open + 1);
+    if (close === -1) break;
+    out.push(html.slice(at, open), tagText(html.slice(open + 1, close)));
+    at = close + 1;
+  }
+  out.push(html.slice(at));
+  return out.join("");
+}
+
 /**
  * Plain text of the HTML the XZuFi texts carry: tags dropped, block ends and line breaks as new
  * lines, list items as "- ", entities decoded, blank runs collapsed. Nothing is reworded.
  */
 export function plainText(html: string | null | undefined): string {
   if (html === null || html === undefined) return "";
-  return html
-    .replace(/<\s*li[^>]*>/gi, "\n- ")
-    .replace(/<\s*br\s*\/?>/gi, "\n")
-    .replace(/<\s*\/\s*(p|div|ul|ol|h[1-6]|table|tr)\s*>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
+  return withoutTags(html)
     .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, name: string) => {
       if (name[0] === "#") {
         const code = name[1] === "x" || name[1] === "X" ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10);

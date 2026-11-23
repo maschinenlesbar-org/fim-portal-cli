@@ -327,3 +327,17 @@ test("plainText: tags dropped, list items and blocks as lines, entities decoded,
   assert.equal(freigabeStatusLabel(null), "unset");
   assert.equal(freigabeStatusLabel(6), "fachlich freigegeben (gold)");
 });
+
+test("plainText is linear: an opening bracket with no closing one never rescans the rest of the text", () => {
+  // `/<[^>]*>/` and `/<\s*li[^>]*>/` tried every "<" against the rest of the text: quadratic, so
+  // 120 000 characters of "<li" took seconds, and a service text of a few MiB held the event loop.
+  const text = "<li".repeat(40_000);
+  const start = performance.now();
+  const out = plainText(text);
+  const ms = performance.now() - start;
+  assert.ok(ms < 500, `${Math.round(ms)} ms`);
+  assert.ok(out.startsWith("<li<li"), "a bracket that closes no tag is text, as before");
+  assert.equal(plainText("a < b <p>c</p> d > e"), "a c\nd > e", "a tag runs from < to the next >, as before");
+  assert.equal(plainText("x<br />y<br>z<brx>w< / h2 >v<li-x>u"), "x\ny\nzw\nv\n- u");
+  assert.equal(plainText("<P>Ein</P><BR/>Zwei<UL><LI>Drei</LI></UL>< /div >Vier"), "Ein\n\nZwei\n- Drei\n\nVier");
+});
