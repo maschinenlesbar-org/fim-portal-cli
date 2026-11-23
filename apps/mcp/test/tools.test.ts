@@ -88,6 +88,23 @@ test("getServiceDossier and getServiceText: the texts with their sources, then o
   await connection.close();
 });
 
+test("an empty answer's source names the requests it made, never the bare base", async () => {
+  const transport = fimPortalApi();
+  const connection = await connect({ transport });
+  const unknown = (await connection.call("getServiceDossier", { service: "99999999999999" })).structuredContent ?? {};
+  assert.equal(unknown["status"], "empty");
+  assert.equal(unknown["source"], `${API}/api/v1/leistung-steckbriefe/99999999999999`);
+  assert.equal(unknown["source"], transport.last().url);
+  const group = (await connection.call("getSchemaBlueprint", { schema: "S05000039", group: "G99999999" })).structuredContent ?? {};
+  assert.equal(group["status"], "empty");
+  assert.equal(group["source"], `${API}/api/v1/schemas/S05000039/latest`);
+  assert.equal(group["source"], transport.last().url);
+  const schema = (await connection.call("auditSchemaQuality", { schema: "S99999999" })).structuredContent ?? {};
+  assert.equal(schema["status"], "empty");
+  assert.match(String(schema["source"]), /S99999999\/latest/);
+  await connection.close();
+});
+
 test("getServiceText: the text's source is given back as textSource, which the next page takes; source is the citation", async () => {
   const transport = fimPortalApi();
   const connection = await connect({ transport });

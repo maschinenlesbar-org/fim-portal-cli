@@ -99,25 +99,22 @@ const seg = (value: string | undefined): string => encodeURIComponent((value ?? 
 /** One path, or several in braces, under the API's base. */
 const paths = (list: readonly string[]): string => (list.length === 1 ? (list[0] as string) : `{${list.join(",")}}`);
 
-/** What a call answered, by its arguments: the source names the requests that answer made. */
-const answers = new WeakMap<Record<string, unknown>, Record<string, unknown>>();
-const remember = <T extends object>(args: Record<string, unknown>, answer: T): Record<string, unknown> => {
-  const record = { ...answer } as Record<string, unknown>;
-  answers.set(args, record);
-  return record;
-};
-
 /** The search a schema name is looked up with; none for an id. */
 const schemaSearch = (schema: string | undefined): string[] => {
   const given = (schema ?? "").trim().normalize("NFC");
   return /^[SFGDR]\d{5,}$/i.test(given) ? [] : [`api/v1/schemas?${buildQueryString({ fts_query: given, is_latest: true, limit: 10 })}`];
 };
 
-/** The schema an answer resolved to, as its request path; undefined when none was fetched. */
-const schemaPath = (args: Record<string, unknown>): string | undefined => {
-  const answer = answers.get(args);
-  const schema = answer?.["schema"] as { fimId?: string } | undefined;
-  const id = schema?.fimId ?? (answer?.["status"] === "empty" && (answer["searched"] as { version?: string } | undefined)?.version !== undefined ? (answer["searched"] as { schema: string }).schema : undefined);
+/**
+ * The schema an answer resolved to, as its request path; undefined when none was fetched. An empty
+ * answer names it in `searched` when it was fetched: with the version it isn't found in, or with
+ * the group that isn't in it.
+ */
+const schemaPath = (args: Record<string, unknown>, answer: Record<string, unknown>): string | undefined => {
+  const schema = answer["schema"] as { fimId?: string } | undefined;
+  const searched = answer["searched"] as { schema?: string; version?: string; group?: string } | undefined;
+  const fetched = answer["status"] === "empty" && (searched?.version !== undefined || searched?.group !== undefined);
+  const id = schema?.fimId ?? (fetched ? searched?.schema : undefined);
   return id === undefined ? undefined : `api/v1/schemas/${seg(id)}/${seg(str(args, "version") ?? "latest")}`;
 };
 
@@ -222,12 +219,12 @@ export const TOOLS: readonly ToolDefinition[] = [
     ].join("\n\n"),
     inputSchema: input({ schema: schemaInput, version, perIssue: { type: "integer", minimum: 1, maximum: 20, description: "Element ids listed per issue (default 5)." } }, ["schema"]),
     outputSchema: output({ schema: obj, verdict: str_, totalChecks: int, bySeverity: obj, findings: obj, checked: obj, issues: arr, total: int, candidates }),
-    source: (args) => {
-      const schema = schemaPath(args);
+    source: (args, _apiBase, answer) => {
+      const schema = schemaPath(args, answer);
       return paths([...schemaSearch(str(args, "schema")), ...(schema === undefined ? [] : [`${schema}/quality-report`, schema])]);
     },
     async run(args, context) {
-      return remember(args, await auditSchemaQuality(context.client, { schema: str(args, "schema") ?? "", version: str(args, "version"), perIssue: num(args, "perIssue") }));
+      return { ...(await auditSchemaQuality(context.client, { schema: str(args, "schema") ?? "", version: str(args, "version"), perIssue: num(args, "perIssue") })) };
     },
   },
   {
@@ -250,13 +247,13 @@ export const TOOLS: readonly ToolDefinition[] = [
       ["schema"],
     ),
     outputSchema: output({ schema: obj, group: obj, elementStatuses: obj, retired: arr, outline: arr, outlineLines: int, nextOffset: int, groups: arr, total: int, candidates }),
-    source: (args) => {
-      const schema = schemaPath(args);
+    source: (args, _apiBase, answer) => {
+      const schema = schemaPath(args, answer);
       return paths([...schemaSearch(str(args, "schema")), ...(schema === undefined ? [] : [schema])]);
     },
     paged: (args) => ({ list: "outline", offset: num(args, "offset") ?? 0 }),
     async run(args, context) {
-      const answer = remember(args, await getSchemaBlueprint(context.client, { schema: str(args, "schema") ?? "", version: str(args, "version"), group: str(args, "group"), depth: num(args, "depth") }));
+      const answer: Record<string, unknown> = { ...(await getSchemaBlueprint(context.client, { schema: str(args, "schema") ?? "", version: str(args, "version"), group: str(args, "group"), depth: num(args, "depth") })) };
       return answer["status"] === "ok" ? pageOf(answer, "outline", "outlineLines", num(args, "offset") ?? 0, num(args, "limit") ?? 100) : answer;
     },
   },
@@ -270,14 +267,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     ].join("\n\n"),
     inputSchema: input({ service: text("A Leistungsschlüssel (99008001012011) or German words of the service's name (Personalausweis Wohnsitz im Ausland).") }, ["service"]),
     outputSchema: output({ verdict: str_, service: obj, texts: arr, byLevel: obj, canonical: nullableObj, total: int, candidates: arr }),
-    source: (args) => {
+    source: (args, _apiBase, answer) => {
       const given = (str(args, "service") ?? "").trim().normalize("NFC");
-      const search = /^\d{14}$/.test(given) ? [] : [`api/v1/leistung-steckbriefe?${buildQueryString({ fts_query: given, sprache: "Deutsch", limit: 10 })}`];
-      const key = (answers.get(args)?.["service"] as { key?: string } | undefined)?.key;
-      return paths([...search, ...(key === undefined ? [] : [`api/v1/leistung-steckbriefe/${seg(key)}`, `api/v1/leistung-stammtexte?${buildQueryString({ leistungsschluessel: key, limit: 200 })}`])]);
+      const byKey = /^\d{14}$/.test(given);
+      const search = byKey ? [] : [`api/v1/leistung-steckbriefe?${buildQueryString({ fts_query: given, sprache: "Deutsch", limit: 10 })}`];
+      const key = (answer["service"] as { key?: string } | undefined)?.key;
+      // A key the portal doesn't know: its profile was asked for, the texts weren't.
+      const profile = key === undefined ? (byKey ? [`api/v1/leistung-steckbriefe/${seg(given)}`] : []) : [`api/v1/leistung-steckbriefe/${seg(key)}`, `api/v1/leistung-stammtexte?${buildQueryString({ leistungsschluessel: key, limit: 200 })}`];
+      return paths([...search, ...profile]);
     },
     async run(args, context) {
-      return remember(args, await getServiceDossier(context.client, { service: str(args, "service") ?? "" }));
+      return { ...(await getServiceDossier(context.client, { service: str(args, "service") ?? "" })) };
     },
   },
   {
@@ -379,7 +379,8 @@ export const TOOLS: readonly ToolDefinition[] = [
     }),
     source: (args, _apiBase, answer) => {
       const key = str(args, "leistungsschluessel");
-      const source = str(args, "source") ?? (answer["textSource"] as string | undefined);
+      // The source given, or the one looked up: in the answer, or in an empty answer's searched.
+      const source = str(args, "source") ?? (answer["textSource"] as string | undefined) ?? (answer["searched"] as { source?: string } | undefined)?.source;
       const lookup = str(args, "source") === undefined && key !== undefined ? [`api/v1/leistung-stammtexte?${buildQueryString({ leistungsschluessel: key, redaktion_id: str(args, "redaktionId")?.trim(), limit: 200 })}`] : [];
       const text = source === undefined ? [] : [`api/v1/leistung-stammtexte/${seg(str(args, "redaktionId"))}/${seg(str(args, "leistungId"))}/${seg(source)}`];
       return paths([...lookup, ...text]);
