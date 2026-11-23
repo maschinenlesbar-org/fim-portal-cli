@@ -302,6 +302,15 @@ test("searchCatalogue: latest only by default, rows cut to their ids, the next p
   assert.equal(past.status, "empty");
 });
 
+test("searchCatalogue past the last page: total is still the number of hits, as the reason says", async () => {
+  const past = await searchCatalogue(recorded().client, { resource: "schemas", query: "Hundesteuer", offset: 100 });
+  assert.equal(past.status, "empty");
+  assert.equal(past.total, 7);
+  if (past.status === "empty") assert.match(past.reason, /The search has 7 hits; offset 100 is past them/);
+  const none = await searchCatalogue(recorded().client, { resource: "schemas", query: "Zzzz" });
+  assert.equal(none.total, 0);
+});
+
 test("getElement: a field's code list and use count (not its 1 MB of schemas); a group without children says so; versions; a 404 names the namespace", async () => {
   const { client } = recorded();
   const field = await getElement(client, { kind: "field", id: "F60000236" });

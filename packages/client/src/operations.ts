@@ -1039,7 +1039,7 @@ export interface CatalogueSearchInput {
 /** The answer of {@link searchCatalogue}. */
 export type CatalogueSearch =
   | { status: "ok"; resource: CatalogueResource; total: number; offset: number; items: JsonObject[]; nextOffset?: number; notes: string[] }
-  | { status: "empty"; resource: CatalogueResource; searched: Record<string, unknown>; total: 0; reason: string };
+  | { status: "empty"; resource: CatalogueResource; searched: Record<string, unknown>; total: number; reason: string };
 
 const HAS_LATEST: readonly CatalogueResource[] = ["schemas", "fields", "groups", "documentProfiles", "processClasses"];
 const HAS_NAME: readonly CatalogueResource[] = ["schemas", "fields", "groups", "documentProfiles", "serviceProfiles", "serviceTexts"];
@@ -1166,7 +1166,8 @@ export async function searchCatalogue(client: FimPortalClient, input: CatalogueS
   const searched = Object.fromEntries(Object.entries({ query: query["fts_query"], name: input.name, status: input.status, leistungsschluessel: query["leistungsschluessel"], offset: offset === 0 ? undefined : offset }).filter(([, v]) => v !== undefined));
   if (items.length === 0) {
     const reason = total > 0 ? `The search has ${total} hits; offset ${offset} is past them.` : `No ${resource} match. Try another word (the catalogue is German), fewer filters, or query instead of name.`;
-    return { status: "empty", resource, searched, total: 0, reason };
+    // total stays the number of hits (past the last page, there are some): the reason says so too.
+    return { status: "empty", resource, searched, total, reason };
   }
   const notes: string[] = [];
   if (query["is_latest"] !== true && HAS_LATEST.includes(resource)) notes.push("Every version is listed (latestOnly false): an element appears once per version.");
