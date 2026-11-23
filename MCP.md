@@ -74,10 +74,11 @@ For scripts and shared configs, pin a release and its digest from the
 | `getServiceText` | One office's master text of a service in full, as plain text, a page of paragraphs at a time. |
 
 Every tool only reads. An answer is JSON (`structuredContent` and the same as text), with the
-`source` it came from and the data licence. A schema or service name that fits several is
-answered as `ambiguous`, with the candidates, never one picked; a full-text hit that only mentions
-the name inside its elements is not taken for it. A failure is a tool error that says what to
-change.
+`source` it came from and the data licence. A schema or service name that fits several is answered
+as `ambiguous`, with the candidates, never one picked; a full-text hit that only mentions the name
+inside its elements is not taken for it. A text over 2000 characters is cut and ends in
+`…[cut, N characters in all]`, and the answer says `truncated`. A failure is a tool error that
+says what to change.
 
 ## Options
 
