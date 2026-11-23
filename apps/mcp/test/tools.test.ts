@@ -9,6 +9,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { listTools } from "../src/mcp/server.js";
+import { DEADLINE_HINT, SIZE_HINT, TOOLS } from "../src/mcp/tools.js";
 import { connect } from "./harness.js";
 import { fimPortalAnswer, fimPortalApi, makeMockTransport, TEXT_B100019, TEXTS_99008001012011, variant } from "./helpers.js";
 
@@ -16,6 +17,30 @@ const API = "https://fimportal.de";
 
 test("seven tools: the four use cases, then search, one element and one service text", () => {
   assert.deepEqual(listTools().map((t) => t.name), ["findReusableFields", "auditSchemaQuality", "getSchemaBlueprint", "getServiceDossier", "searchCatalogue", "getElement", "getServiceText"]);
+});
+
+test("the deadline's and the size cap's advice fit every tool: each option is named with the tools that take it", async () => {
+  const properties = new Map(TOOLS.map((tool) => [tool.name, Object.keys((tool.inputSchema as { properties: Record<string, unknown> }).properties)]));
+  const options = new Set([...properties.values()].flat());
+  for (const hint of [DEADLINE_HINT, SIZE_HINT]) {
+    const [, advice = ""] = hint.split(/ask for less: /i);
+    const segments = advice.replace(/\.$/, "").split("; ");
+    assert.ok(segments.length >= 3, hint);
+    for (const segment of segments) {
+      const [, before = "", tools = ""] = /^(.*?) \(([A-Za-z, ]+)\)/.exec(segment) ?? [];
+      const named = before.split(/\W+/).filter((word) => options.has(word));
+      assert.ok(named.length > 0 && tools !== "", `${segment}: names no option or no tool`);
+      for (const tool of tools.split(", ")) {
+        for (const option of named) assert.ok(properties.get(tool)?.includes(option), `${tool} takes no ${option}: ${hint}`);
+      }
+    }
+  }
+  // The deadline's text, as a call stopped at it answers.
+  const hanging = { transport: (): Promise<never> => new Promise<never>(() => {}) };
+  const connection = await connect({ transport: hanging, config: { callTimeoutMs: 30 } });
+  const text = (await connection.call("getElement", { kind: "schema", id: "S05000039" })).content[0]?.text ?? "";
+  await connection.close();
+  assert.match(text, /took longer than .* and was stopped\. The FIM Portal is sometimes slow: try again shortly/);
 });
 
 test("findReusableFields: the gold namesake first, with its namespace; the request asks for released, latest ones; the source and the terms", async () => {
