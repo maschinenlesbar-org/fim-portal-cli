@@ -95,8 +95,11 @@ function versionOf(version: string | undefined): string {
 
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
 
-/** What a tag (the text between "<" and ">") becomes: a line break, a list item's "- ", or nothing. */
-function tagText(tag: string): string {
+/**
+ * What a tag (the text between "<" and ">") becomes: a line break, a list item's "- ", `blockEnd`
+ * for the end of a block (a paragraph, a list, a heading), or nothing.
+ */
+function tagText(tag: string, blockEnd: string): string {
   // Read by index, not by a regular expression with two optional runs of spaces, which
   // backtracks over a long run of them.
   let i = 0;
@@ -115,7 +118,7 @@ function tagText(tag: string): string {
   const rest = tag.slice(i);
   if (!closing && name.startsWith("li")) return "\n- ";
   if (!closing && name === "br" && /^\s*\/?$/.test(rest)) return "\n";
-  if (closing && rest.trim() === "" && /^(p|div|ul|ol|h[1-6]|table|tr)$/.test(name)) return "\n";
+  if (closing && rest.trim() === "" && /^(p|div|ul|ol|h[1-6]|table|tr)$/.test(name)) return blockEnd;
   return "";
 }
 
@@ -124,13 +127,13 @@ function tagText(tag: string): string {
  * after it is text. One pass with indexOf, so linear: a regular expression tried at every "<"
  * rescans the rest of a text without a ">" (quadratic).
  */
-function withoutTags(html: string): string {
+function withoutTags(html: string, blockEnd: string): string {
   const out: string[] = [];
   let at = 0;
   for (let open = html.indexOf("<"); open !== -1; open = html.indexOf("<", at)) {
     const close = html.indexOf(">", open + 1);
     if (close === -1) break;
-    out.push(html.slice(at, open), tagText(html.slice(open + 1, close)));
+    out.push(html.slice(at, open), tagText(html.slice(open + 1, close), blockEnd));
     at = close + 1;
   }
   out.push(html.slice(at));
@@ -142,8 +145,13 @@ function withoutTags(html: string): string {
  * lines, list items as "- ", entities decoded, blank runs collapsed. Nothing is reworded.
  */
 export function plainText(html: string | null | undefined): string {
+  return textOf(html, "\n");
+}
+
+/** plainText, with `blockEnd` for the end of a block. */
+function textOf(html: string | null | undefined, blockEnd: string): string {
   if (html === null || html === undefined) return "";
-  return withoutTags(html)
+  return withoutTags(html, blockEnd)
     .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, name: string) => {
       if (name[0] === "#") {
         const code = name[1] === "x" || name[1] === "X" ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10);
@@ -168,9 +176,13 @@ function linesOf(text: string | undefined, max: number): string[] {
     .slice(0, max);
 }
 
-/** The paragraphs of an HTML text: its blocks as plain text, empty ones left out. */
+/**
+ * The paragraphs of an HTML text: its blocks as plain text, empty ones left out. A block's end is
+ * a paragraph's end even with no line break after it in the HTML (`<p>a</p><p>b</p>`); a `<br>`
+ * stays inside its paragraph.
+ */
 function paragraphsOf(html: string | null | undefined): string[] {
-  return plainText(html)
+  return textOf(html, "\n\n")
     .split(/\n{2,}|\n(?=- )/)
     .map((p) => p.trim())
     .filter((p) => p !== "");

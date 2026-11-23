@@ -10,7 +10,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { listTools } from "../src/mcp/server.js";
 import { connect } from "./harness.js";
-import { fimPortalApi } from "./helpers.js";
+import { fimPortalAnswer, fimPortalApi, makeMockTransport, TEXT_B100019, variant } from "./helpers.js";
 
 const API = "https://fimportal.de";
 
@@ -86,6 +86,20 @@ test("getServiceDossier and getServiceText: the texts with their sources, then o
   const ambiguous = (await connection.call("getServiceDossier", { service: "Personalausweis" })).structuredContent ?? {};
   assert.equal(ambiguous["status"], "ambiguous");
   await connection.close();
+});
+
+test("getServiceText: a paragraph of the office's text comes whole, not cut like other upstream text", async () => {
+  const long = "lang ".repeat(1000).trim();
+  const volltext = `<p>Absatz eins</p><p>${long}</p>${"<p>p</p>".repeat(500)}`;
+  const transport = makeMockTransport((request) => (new URL(request.url).pathname.endsWith("/pvog") ? { status: 200, headers: { "content-type": "application/json" }, body: Buffer.from(JSON.stringify(variant(TEXT_B100019, { volltext }))) } : fimPortalAnswer(request)));
+  const connection = await connect({ transport });
+  const text = (await connection.call("getServiceText", { redaktionId: "B100019", leistungId: "102241587", source: "pvog", limit: 3 })).structuredContent ?? {};
+  await connection.close();
+  assert.equal(text["status"], "ok");
+  assert.deepEqual(text["paragraphs"], ["Absatz eins", long, "p"]);
+  assert.equal(text["paragraphCount"], 502);
+  assert.equal(text["nextOffset"], 3);
+  assert.equal(text["truncated"], undefined);
 });
 
 test("searchCatalogue and getElement: a page with the next offset; a field with its code list and use count", async () => {

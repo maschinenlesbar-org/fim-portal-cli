@@ -382,6 +382,9 @@ export const TOOLS: readonly ToolDefinition[] = [
       return paths([...lookup, ...text]);
     },
     paged: (args) => ({ list: "paragraphs", offset: num(args, "offset") ?? 0 }),
+    // The text is the office's and comes in full: a paragraph is kept whole up to this length
+    // (a page under the default size cap still holds one), not cut like other upstream text.
+    maxFieldLength: 20_000,
     async run(args, context) {
       const answer = remember(
         args,

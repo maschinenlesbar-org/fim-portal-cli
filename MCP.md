@@ -71,7 +71,7 @@ For scripts and shared configs, pin a release and its digest from the
 | `getServiceDossier` | A public service (Leistung) by key or name: citizen name, addressees, status, OZG, SDG, legal bases, the linked process, and every office's text with its source. |
 | `searchCatalogue` | A page of a search in one catalogue: schemas, fields, groups, document profiles, service profiles, service texts, process classes or processes. |
 | `getElement` | One schema, document profile, field (with its code list and use count), group or process class, or its versions. |
-| `getServiceText` | One office's master text of a service in full, as plain text, a page of paragraphs at a time. |
+| `getServiceText` | One office's master text of a service in full, as plain text, a page of paragraphs at a time (a paragraph whole up to 20 000 characters). |
 
 Every tool only reads. An answer is JSON (`structuredContent` and the same as text), with the
 `source` it came from (whole, never cut like the data) and the data licence. A schema or service

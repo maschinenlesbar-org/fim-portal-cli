@@ -22,7 +22,7 @@ import {
   searchCatalogue,
 } from "../src/operations.js";
 import { makeMockTransport, queryOf } from "./helpers.js";
-import { FIELDS_STAATSANGEHOERIGKEIT, REPORT_S00000000239, fimPortalAnswer, fimPortalApi, variant } from "./portal.js";
+import { FIELDS_STAATSANGEHOERIGKEIT, REPORT_S00000000239, TEXT_B100019, fimPortalAnswer, fimPortalApi, variant } from "./portal.js";
 
 const clientOf = (mock: { transport: Transport }) => new FimPortalClient({ transport: mock.transport });
 const recorded = () => {
@@ -263,6 +263,21 @@ test("getServiceText: with the source; without it looked up by the key; a wrong 
   const before = mock.calls.length;
   await assert.rejects(getServiceText(client, { redaktionId: "B100019", leistungId: "102241587" }), /can't be told from the redaktionId/);
   assert.equal(mock.calls.length, before);
+});
+
+test("getServiceText: paragraphs written without a line break between them stay apart, a long one whole", async () => {
+  // The portal's HTML may close one <p> and open the next with nothing between them: a block's end
+  // was one line break, and only blank lines split paragraphs, so the whole text was one paragraph.
+  const long = "lang ".repeat(1000).trim();
+  const volltext = `<p>Absatz eins</p><p>${long}</p>${"<p>p</p>".repeat(500)}<ul><li>a</li><li>b</li></ul><p>Zeile<br>zwei</p><h3>Titel</h3>Ende`;
+  const mock = makeMockTransport((request) => (new URL(request.url).pathname.endsWith("/pvog") ? { status: 200, headers: { "content-type": "application/json" }, body: Buffer.from(JSON.stringify(variant(TEXT_B100019, { volltext }))) } : fimPortalAnswer(request)));
+  const text = await getServiceText(clientOf(mock), { redaktionId: "B100019", leistungId: "102241587", source: "pvog" });
+  assert.equal(text.status, "ok");
+  if (text.status !== "ok") return;
+  assert.equal(text.paragraphs.length, 507);
+  assert.deepEqual(text.paragraphs.slice(0, 3), ["Absatz eins", long, "p"]);
+  assert.deepEqual(text.paragraphs.slice(-5), ["- a", "- b", "Zeile\nzwei", "Titel", "Ende"], "a <br> stays inside its paragraph");
+  assert.equal(plainText("<p>a</p><p>b</p>"), "a\nb", "plainText itself keeps one line per block");
 });
 
 test("searchCatalogue: latest only by default, rows cut to their ids, the next page; a filter a resource doesn't take is refused", async () => {
