@@ -348,7 +348,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     title: "One service text in full",
     description: [
       'One editorial office\'s master text of a service (Leistungsstammtext) in full, as plain text: the short text, the full text paragraph by paragraph, the legal bases. Use it for "lies mir den Text der Bundesredaktion vor", "was steht im Text von Bayern zu dieser Leistung?", "Volltext der Leistungsbeschreibung", "show the federal text of this service", "read the full service description", "what does Berlin\'s text say?".',
-      "Take redaktionId, leistungId and source from getServiceDossier's texts. The source (leika, landesredaktion, pvog) can't be told from the prefix: the federal B100019 text is under leika for one service and pvog for another, and a wrong one is not found (empty). Without source, give the leistungsschluessel and it is looked up (one more request). The text is the office's, German, HTML dropped and nothing reworded: quote it as theirs. Long texts come a page of paragraphs at a time (offset, limit; nextOffset).",
+      "Take redaktionId, leistungId and source from getServiceDossier's texts; the answer gives the source back as textSource (source is the citation). The source (leika, landesredaktion, pvog) can't be told from the prefix: the federal B100019 text is under leika for one service and pvog for another, and a wrong one is not found (empty). Without source, give the leistungsschluessel and it is looked up (one more request). The text is the office's, German, HTML dropped and nothing reworded: quote it as theirs. Long texts come a page of paragraphs at a time (offset, limit; nextOffset).",
       RULES,
     ].join("\n\n"),
     inputSchema: input(
@@ -365,7 +365,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     outputSchema: output({
       redaktionId: str_,
       leistungId: str_,
-      source: str_,
+      textSource: { type: "string", enum: [...XzufiSourceValues], description: "The text's source (looked up when not given): pass it as source for the next page." },
       sourceLookedUp: bool,
       title: nullableStr,
       citizenName: nullableStr,
@@ -377,9 +377,9 @@ export const TOOLS: readonly ToolDefinition[] = [
       legalBases: arr,
       nextOffset: int,
     }),
-    source: (args) => {
+    source: (args, _apiBase, answer) => {
       const key = str(args, "leistungsschluessel");
-      const source = str(args, "source") ?? (answers.get(args)?.["source"] as string | undefined);
+      const source = str(args, "source") ?? (answer["textSource"] as string | undefined);
       const lookup = str(args, "source") === undefined && key !== undefined ? [`api/v1/leistung-stammtexte?${buildQueryString({ leistungsschluessel: key, redaktion_id: str(args, "redaktionId")?.trim(), limit: 200 })}`] : [];
       const text = source === undefined ? [] : [`api/v1/leistung-stammtexte/${seg(str(args, "redaktionId"))}/${seg(str(args, "leistungId"))}/${seg(source)}`];
       return paths([...lookup, ...text]);
@@ -389,16 +389,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     // (a page under the default size cap still holds one), not cut like other upstream text.
     maxFieldLength: 20_000,
     async run(args, context) {
-      const answer = remember(
-        args,
-        await getServiceText(context.client, {
-          redaktionId: str(args, "redaktionId") ?? "",
-          leistungId: str(args, "leistungId") ?? "",
-          source: str(args, "source") as (typeof XzufiSourceValues)[number] | undefined,
-          leistungsschluessel: str(args, "leistungsschluessel"),
-        }),
-      );
-      return answer["status"] === "ok" ? pageOf(answer, "paragraphs", "paragraphCount", num(args, "offset") ?? 0, num(args, "limit") ?? 40) : answer;
+      const answer = await getServiceText(context.client, {
+        redaktionId: str(args, "redaktionId") ?? "",
+        leistungId: str(args, "leistungId") ?? "",
+        source: str(args, "source") as (typeof XzufiSourceValues)[number] | undefined,
+        leistungsschluessel: str(args, "leistungsschluessel"),
+      });
+      if (answer.status !== "ok") return { ...answer };
+      // Every result's `source` is the citation (server.ts): the text's own source is textSource.
+      const { source, ...rest } = answer;
+      const shaped = { ...rest, textSource: source };
+      return pageOf(shaped, "paragraphs", "paragraphCount", num(args, "offset") ?? 0, num(args, "limit") ?? 40);
     },
   },
 ];

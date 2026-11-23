@@ -88,6 +88,18 @@ test("getServiceDossier and getServiceText: the texts with their sources, then o
   await connection.close();
 });
 
+test("getServiceText: the text's source is given back as textSource, which the next page takes; source is the citation", async () => {
+  const transport = fimPortalApi();
+  const connection = await connect({ transport });
+  const first = (await connection.call("getServiceText", { redaktionId: "B100019", leistungId: "102241587", leistungsschluessel: "99008001012011", limit: 2 })).structuredContent ?? {};
+  assert.deepEqual([first["status"], first["textSource"], first["sourceLookedUp"]], ["ok", "pvog", true]);
+  assert.equal(first["source"], `${API}/{api/v1/leistung-stammtexte?leistungsschluessel=99008001012011&redaktion_id=B100019&limit=200,api/v1/leistung-stammtexte/B100019/102241587/pvog}`);
+  const next = await connection.call("getServiceText", { redaktionId: "B100019", leistungId: "102241587", source: first["textSource"], offset: 2, limit: 2 });
+  await connection.close();
+  assert.equal(next.isError, undefined, next.content[0]?.text);
+  assert.equal(next.structuredContent?.["textSource"], "pvog");
+});
+
 test("getServiceText: a paragraph of the office's text comes whole, not cut like other upstream text", async () => {
   const long = "lang ".repeat(1000).trim();
   const volltext = `<p>Absatz eins</p><p>${long}</p>${"<p>p</p>".repeat(500)}`;
