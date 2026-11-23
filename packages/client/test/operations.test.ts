@@ -54,6 +54,9 @@ test("findReusableFields: released (5, 6) and latest only, never the retired; th
   assert.match(answer.best, /^F60000236 Staatsangehörigkeit \(fachlich freigegeben \(gold\), Nummernkreis 60000, select · text\) is the most reusable of 4 released fields\.$/);
   assert.match(answer.notes.join(" "), /namespace: getElement needs both/);
   assert.match(answer.notes.join(" "), /matched only in their definition/);
+  // The central F00000001839 is gold too: the best leads by its name, not by status.
+  assert.match(answer.notes.join(" "), /not in the central Baukasten \(00000\): the central one's name fits the search less well \(F00000001839, nameMatch name\)/);
+  assert.doesNotMatch(answer.notes.join(" "), /lower status/);
 });
 
 test("findReusableFields: with the unreleased, status wins among namesakes (gold before the central draft), retired ones are never asked for", async () => {
@@ -73,7 +76,7 @@ test("findReusableFields: with the unreleased, status wins among namesakes (gold
     ["F00000000039", false],
     ["F60000000236", false],
   ]);
-  assert.match(answer.notes.join(" "), /a central one has a lower status, and status wins/);
+  assert.match(answer.notes.join(" "), /a central one has a lower status \(F00000000039, Entwurf\), and status wins/);
   assert.match(answer.notes.join(" "), /name is a substring match/);
 });
 

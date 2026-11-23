@@ -517,7 +517,16 @@ export async function findReusableFields(client: FimPortalClient, input: Reusabl
     notes.push(`The first candidates are alike by name, status and Baukasten: choose by the name's qualifier, or compare how widely each is used (getElement: usedIn).`);
   }
   if (!top.released) notes.push(`The best match is not released (${top.statusLabel}): say so, never present it as the ${kind} to use.`);
-  if (!top.central && ranked.some((c) => c.central)) notes.push("The best match is not in the central Baukasten (00000): a central one has a lower status, and status wins.");
+  // Why a central one ranks below the best, in the sort's order: by name first, then by status
+  // (with both alike, the central one would lead).
+  const central = ranked.find((c) => c.central);
+  if (!top.central && central !== undefined) {
+    const why =
+      MATCH_RANK[central.nameMatch] > MATCH_RANK[top.nameMatch]
+        ? `the central one's name fits the search less well (${central.fimId}, nameMatch ${central.nameMatch})`
+        : `a central one has a lower status (${central.fimId}, ${central.statusLabel}), and status wins`;
+    notes.push(`The best match is not in the central Baukasten (00000): ${why}.`);
+  }
   if (kind === "field" && ranked.some((c) => c.feldart === "select")) notes.push("A select field's values are in its code list (codeListId); getElement gives the list's name and URL.");
   const described = `${top.fimId} ${top.name} (${top.statusLabel}, Nummernkreis ${top.nummernkreis}${kind === "field" ? `, ${top.feldart} · ${top.datentyp}` : ""})`;
   const released = input.includeUnreleased === true ? "" : "released ";
