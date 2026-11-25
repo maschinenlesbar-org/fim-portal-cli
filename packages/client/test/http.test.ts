@@ -100,6 +100,45 @@ test("nodeHttpTransport enforces a wall-clock deadline against a trickling serve
   );
 });
 
+/** Start a throwaway loopback server for one test and return its base URL. */
+async function withServer(handler: http.RequestListener, fn: (baseUrl: string) => Promise<void>): Promise<void> {
+  const own = http.createServer(handler);
+  await new Promise<void>((resolve) => own.listen(0, "127.0.0.1", resolve));
+  try {
+    await fn(`http://127.0.0.1:${(own.address() as AddressInfo).port}`);
+  } finally {
+    // A test that failed mid-request leaves its connection open; close() alone would wait for it.
+    own.closeAllConnections();
+    await new Promise<void>((resolve) => own.close(() => resolve()));
+  }
+}
+
+test("a signal its caller aborts stops the request as aborted, not as a timeout it didn't have; the engine's deadline keeps its text", async () => {
+  // The MCP server passes a tool call's signal to each request: a cancelled call or its deadline
+  // read "Request exceeded deadline of 30000ms", a deadline that never passed. Each signal aborts
+  // once the server has the request, which never gets an answer.
+  const caller = new AbortController();
+  await withServer(
+    () => caller.abort(),
+    async (baseUrl) => {
+      await assert.rejects(
+        () => nodeHttpTransport({ method: "GET", url: baseUrl, timeoutMs: 30_000, signal: caller.signal }),
+        (err: unknown) => err instanceof FimNetworkError && err.message === "Request aborted by its caller before it finished",
+      );
+    },
+  );
+  const engine = new AbortController();
+  await withServer(
+    () => engine.abort(new FimNetworkError("Request exceeded deadline of 80ms")),
+    async (baseUrl) => {
+      await assert.rejects(
+        () => nodeHttpTransport({ method: "GET", url: baseUrl, timeoutMs: 30_000, signal: engine.signal }),
+        (err: unknown) => err instanceof FimNetworkError && err.message === "Request exceeded deadline of 80ms",
+      );
+    },
+  );
+});
+
 test("nodeHttpTransport caps a timeoutMs beyond Node's timer range instead of firing after 1 ms", async () => {
   const warnings: string[] = [];
   const onWarning = (warning: Error) => void warnings.push(warning.name);

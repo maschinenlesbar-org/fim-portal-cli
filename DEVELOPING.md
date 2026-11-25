@@ -219,8 +219,11 @@ errors. Sits between the client's resource methods and the transport.
 built-in `http`/`https`; tests inject a mock. This is the only HTTP seam. The engine
 holds every transport to the same contract, so a custom one (a `fetch` adapter, a test
 double) needs none of it itself: each call runs under the overall `timeoutMs` deadline
-(the request carries an `AbortSignal`, `HttpRequest.signal`, that fires then, and the
-call rejects at the deadline whether the transport stops or not); `maxResponseBytes` is
+(the request carries an `AbortSignal`, `HttpRequest.signal`, that fires then with the
+timeout error as its reason, and the call rejects at the deadline whether the transport stops
+or not; the built-in transport stops with the signal's reason, and for a signal some other
+caller aborted (the MCP server's tool call: its deadline, a cancellation) it says "Request
+aborted by its caller before it finished", never a deadline it didn't have); `maxResponseBytes` is
 checked on the body it returns; headers may come as a plain record in any case, a
 `Headers` object or a `Map`; the body may be a `Buffer`, any `ArrayBuffer` view or an
 `ArrayBuffer` (from any realm). Whatever else a transport throws or returns — a plain
