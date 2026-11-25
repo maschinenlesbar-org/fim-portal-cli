@@ -54,6 +54,8 @@ before(async () => {
 });
 
 after(async () => {
+  // A test that failed mid-request leaves its connection open; close() alone would wait for it.
+  server.closeAllConnections();
   await new Promise<void>((resolve, reject) =>
     server.close((err) => (err ? reject(err) : resolve())),
   );
@@ -144,8 +146,10 @@ test("nodeHttpTransport caps a timeoutMs beyond Node's timer range instead of fi
   const onWarning = (warning: Error) => void warnings.push(warning.name);
   process.on("warning", onWarning);
   try {
-    // /slow answers after 100 ms; an overflowing timer would fire after 1 ms.
-    const res = await nodeHttpTransport({ method: "GET", url: `${base}/slow`, timeoutMs: 3_000_000_000 });
+    // /slow answers after 100 ms; an overflowing timer would fire after 1 ms. The capped deadline
+    // is about 24.8 days: the test bounds the request itself, so a request that hangs (a loaded
+    // machine) fails here instead of keeping the test process alive after the test's own timeout.
+    const res = await nodeHttpTransport({ method: "GET", url: `${base}/slow`, timeoutMs: 3_000_000_000, signal: AbortSignal.timeout(4_000) });
     assert.equal(res.body.toString("utf8"), "late");
     await new Promise((resolve) => setImmediate(resolve));
     assert.deepEqual(warnings.filter((name) => name === "TimeoutOverflowWarning"), []);
