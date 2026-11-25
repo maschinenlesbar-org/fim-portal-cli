@@ -1,6 +1,6 @@
 {
   "name": "@maschinenlesbar.org/fim-portal-mcp",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "MCP server for the FIM Portal of FITKO: reusable form fields, a schema's quality audit and form outline, a public service's dossier and texts, for AI agents (stdio and Streamable HTTP)",
   "type": "module",
   "bin": {
